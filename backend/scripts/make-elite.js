@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 'use strict';
 
-const Database = require('better-sqlite3');
-const path = require('path');
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+
+const { Pool } = require('pg');
 
 const email = process.argv[2];
 if (!email) {
@@ -10,15 +11,29 @@ if (!email) {
   process.exit(1);
 }
 
-const db = new Database(path.join(__dirname, '..', 'edgelog.db'));
-
-const user = db.prepare('SELECT id, email, plan FROM users WHERE email = ?').get(email);
-if (!user) {
-  console.error(`No user found with email: ${email}`);
+if (!process.env.DATABASE_URL) {
+  console.error('DATABASE_URL environment variable is required');
   process.exit(1);
 }
 
-db.prepare('UPDATE users SET plan = ? WHERE id = ?').run('elite', user.id);
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
 
-const updated = db.prepare('SELECT id, email, plan FROM users WHERE id = ?').get(user.id);
-console.log(`Updated: ${updated.email} → plan: ${updated.plan}`);
+async function main() {
+  const { rows } = await pool.query('SELECT id, email, plan FROM users WHERE email = $1', [email]);
+  if (!rows.length) {
+    console.error(`No user found with email: ${email}`);
+    process.exit(1);
+  }
+  await pool.query('UPDATE users SET plan = $1 WHERE id = $2', ['elite', rows[0].id]);
+  const { rows: updated } = await pool.query('SELECT id, email, plan FROM users WHERE id = $1', [rows[0].id]);
+  console.log(`Updated: ${updated[0].email} → plan: ${updated[0].plan}`);
+  await pool.end();
+}
+
+main().catch(err => {
+  console.error(err.message);
+  process.exit(1);
+});
