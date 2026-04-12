@@ -1,11 +1,28 @@
 const { Pool } = require('pg');
 
+// Use SSL for any remote database (anything that isn't localhost / 127.0.0.1)
+const isRemote = process.env.DATABASE_URL &&
+  !process.env.DATABASE_URL.includes('localhost') &&
+  !process.env.DATABASE_URL.includes('127.0.0.1');
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: isRemote ? { rejectUnauthorized: false } : false,
 });
 
 async function initDb() {
+  console.log('Connecting to database...');
+  console.log('DATABASE_URL set:', !!process.env.DATABASE_URL);
+  console.log('SSL enabled:', isRemote);
+  try {
+    await pool.query('SELECT 1'); // verify connection before running schema
+    console.log('Database connection successful');
+  } catch (err) {
+    console.error('Database connection failed:', err.message);
+    console.error('Full error:', err);
+    throw err;
+  }
+  try {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       id                     SERIAL PRIMARY KEY,
@@ -49,6 +66,12 @@ async function initDb() {
       created_at         TIMESTAMPTZ DEFAULT NOW()
     );
   `);
+    console.log('Database schema ready');
+  } catch (err) {
+    console.error('Schema creation failed:', err.message);
+    console.error('Full error:', err);
+    throw err;
+  }
 }
 
 function rowToTrade(row) {
