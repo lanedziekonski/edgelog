@@ -1,9 +1,13 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 
-// On Railway: set DB_PATH=/data/edgelog.db and mount a volume at /data
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'edgelog.db');
-const db = new Database(DB_PATH);
+const dbPath = process.env.DB_PATH || path.join(__dirname, 'edgelog.db');
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
+const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
