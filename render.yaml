@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: edgelog-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: DB_PATH
+        value: /var/data/edgelog.db
+    disk:
+      name: edgelog-db
+      mountPath: /var/data
+      sizeGB: 1
