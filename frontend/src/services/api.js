@@ -16,3 +16,48 @@ async function call(endpoint, options = {}, token = null) {
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
 }
+
+export const api = {
+  // Auth
+  register: (email, password, name) =>
+    call('/auth/register', { method: 'POST', body: JSON.stringify({ email, password, name }) }),
+  login: (email, password) =>
+    call('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  me: (token) => call('/auth/me', {}, token),
+
+  // Trades
+  getTrades: (token) => call('/trades', {}, token),
+  createTrade: (token, trade) =>
+    call('/trades', { method: 'POST', body: JSON.stringify(trade) }, token),
+  updateTrade: (token, id, trade) =>
+    call(`/trades/${id}`, { method: 'PUT', body: JSON.stringify(trade) }, token),
+  deleteTrade: (token, id) =>
+    call(`/trades/${id}`, { method: 'DELETE' }, token),
+
+  // AI
+  chat: (token, messages, mode, context) =>
+    call('/chat', { method: 'POST', body: JSON.stringify({ messages, mode, context }) }, token),
+  planChat: (token, messages) =>
+    call('/plan-chat', { method: 'POST', body: JSON.stringify({ messages }) }, token),
+
+  // Stripe
+  createCheckoutSession: (token, plan) =>
+    call('/stripe/create-checkout-session', { method: 'POST', body: JSON.stringify({ plan }) }, token),
+  createPortalSession: (token) =>
+    call('/stripe/create-portal-session', { method: 'POST' }, token),
+
+  // CSV import
+  importCsv: (token, rows) =>
+    call('/trades/import-csv', { method: 'POST', body: JSON.stringify({ rows }) }, token),
+
+  // Plaid / linked accounts
+  getLinkedAccounts: (token) => call('/plaid/accounts', {}, token),
+  createLinkToken: (token) =>
+    call('/plaid/create-link-token', { method: 'POST' }, token),
+  exchangePlaidToken: (token, public_token, institution, accounts) =>
+    call('/plaid/exchange-token', { method: 'POST', body: JSON.stringify({ public_token, institution, accounts }) }, token),
+  syncLinkedAccount: (token, id) =>
+    call(`/plaid/sync/${id}`, { method: 'POST' }, token),
+  deleteLinkedAccount: (token, id) =>
+    call(`/plaid/accounts/${id}`, { method: 'DELETE' }, token),
+};
