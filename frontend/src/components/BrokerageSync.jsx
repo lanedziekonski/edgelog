@@ -595,7 +595,7 @@ export default function BrokerageSync({ onTradesImported }) {
   const [importResult, setImportResult] = useState(null);
   const [error, setError]               = useState('');
   const [showAllTrades, setShowAllTrades] = useState(false);
-  const [importAccount, setImportAccount] = useState('Apex Funded');
+  const [importAccount, setImportAccount] = useState('');
   // Store raw text so we can re-parse when account changes
   const [rawCsvText, setRawCsvText] = useState('');
 
@@ -757,13 +757,12 @@ export default function BrokerageSync({ onTradesImported }) {
             <label style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: 5 }}>
               Assign to account
             </label>
-            <select
+            <input
+              placeholder="e.g. Tradeify, My Apex Account…"
               value={importAccount}
               onChange={e => handleAccountChange(e.target.value)}
-              style={{ width: '100%', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 7, padding: '8px 10px', fontSize: 13, color: 'var(--text)', fontFamily: 'Barlow' }}
-            >
-              {['Apex Funded', 'FTMO', 'tastytrade'].map(a => <option key={a}>{a}</option>)}
-            </select>
+              style={{ width: '100%', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 7, padding: '8px 10px', fontSize: 13, color: 'var(--text)', fontFamily: 'Barlow', boxSizing: 'border-box' }}
+            />
           </div>
 
           {/* Errors / warnings */}

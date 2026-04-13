@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { fmtPnl, todayStr } from '../hooks/useTrades';
 
 const SETUPS = ['ORB', 'VWAP Reclaim', 'Bull Flag', 'Gap Fill', 'Fade High'];
-const ACCOUNTS = ['Apex Funded', 'FTMO', 'tastytrade'];
 const EMOTIONS_BEFORE = ['Calm', 'Confident', 'Anxious', 'FOMO', 'Frustrated'];
 const EMOTIONS_AFTER = ['Satisfied', 'Neutral', 'Frustrated', 'Regret', 'Excited'];
 
@@ -10,7 +9,7 @@ const emptyForm = () => ({
   date: todayStr(),
   symbol: '',
   setup: 'ORB',
-  account: 'Apex Funded',
+  account: '',
   pnl: '',
   entryTime: '',
   exitTime: '',
@@ -183,9 +182,11 @@ export default function Journal({ trades, addTrade, deleteTrade }) {
               </div>
               <div className="form-field">
                 <label className="form-label">Account</label>
-                <select value={form.account} onChange={e => set('account', e.target.value)}>
-                  {ACCOUNTS.map(a => <option key={a}>{a}</option>)}
-                </select>
+                <input
+                  placeholder="e.g. Tradeify, My Apex…"
+                  value={form.account}
+                  onChange={e => set('account', e.target.value)}
+                />
               </div>
             </div>
 

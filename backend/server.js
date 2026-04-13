@@ -188,7 +188,7 @@ app.post('/api/trades', requireAuth, async (req, res) => {
       [
         id, req.userId,
         t.date || new Date().toISOString().split('T')[0],
-        t.symbol, t.setup || 'ORB', t.account || 'Apex Funded',
+        t.symbol, t.setup || 'ORB', t.account || '',
         Number(t.pnl), t.entryTime || '', t.exitTime || '',
         t.emotionBefore || 'Calm', t.emotionAfter || 'Neutral',
         t.followedPlan ?? true, t.notes || '', 'manual',
@@ -559,7 +559,7 @@ app.post('/api/trades/import-csv', requireAuth, requirePlan('trader'), async (re
           t.date || new Date().toISOString().split('T')[0],
           String(t.symbol).toUpperCase().trim(),
           t.setup || 'ORB',
-          t.account || 'Apex Funded',
+          t.account || '',
           Number(t.pnl),
           t.entryTime || t.entry_time || '',
           t.exitTime  || t.exit_time  || '',

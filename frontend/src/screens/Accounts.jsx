@@ -3,26 +3,13 @@ import { fmtPnl, todayStr } from '../hooks/useTrades';
 import { useAuth, hasAccess } from '../context/AuthContext';
 import BrokerageSync from '../components/BrokerageSync';
 
-// Known account configs — matched by name when trades arrive
-const ACCOUNT_CONFIGS = {
-  'Apex Funded': {
-    type: 'Prop Firm', color: '#00f07a', badge: 'FUNDED',
-    startingBalance: 100000, dailyLossLimit: 2000, maxDrawdown: 3000, profitTarget: 6000,
-  },
-  'FTMO': {
-    type: 'Evaluation', color: '#6c63ff', badge: 'EVAL',
-    startingBalance: 50000, dailyLossLimit: 2500, maxDrawdown: 5000, profitTarget: 5000,
-  },
-  'tastytrade': {
-    type: 'Live Account', color: '#f0a500', badge: 'LIVE',
-    startingBalance: 25000, dailyLossLimit: null, maxDrawdown: null, profitTarget: null,
-  },
-};
-
-const DEFAULT_CONFIG = {
-  type: 'Live Account', color: '#888888', badge: 'LIVE',
-  startingBalance: 0, dailyLossLimit: null, maxDrawdown: null, profitTarget: null,
-};
+// Generate a consistent accent color from an account name
+function accountColor(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
+  const hues = [160, 200, 260, 30, 340, 180, 45];
+  return `hsl(${hues[h % hues.length]}, 70%, 55%)`;
+}
 
 export default function Accounts({ trades }) {
   const { user }    = useAuth();
@@ -96,126 +83,50 @@ export default function Accounts({ trades }) {
             </div>
           </div>
         ) : (
-          accountNames.map(name => {
-            const cfg = ACCOUNT_CONFIGS[name] || { ...DEFAULT_CONFIG };
-            return <AccountCard key={name} name={name} cfg={cfg} trades={trades} today={today} />;
-          })
+          accountNames.map(name => (
+            <AccountCard key={name} name={name} color={accountColor(name)} trades={trades} today={today} />
+          ))
         )}
       </div>
     </div>
   );
 }
 
-function AccountCard({ name, cfg, trades, today }) {
+function AccountCard({ name, color, trades, today }) {
   const acctTrades  = trades.filter(t => t.account === name);
   const todayTrades = acctTrades.filter(t => t.date === today);
   const totalPnl    = acctTrades.reduce((s, t) => s + t.pnl, 0);
   const dailyPnl    = todayTrades.reduce((s, t) => s + t.pnl, 0);
-  const currentBalance = cfg.startingBalance + totalPnl;
-
-  // Daily loss used
-  const dailyLossUsed = Math.abs(Math.min(dailyPnl, 0));
-  const dailyLossPct  = cfg.dailyLossLimit ? (dailyLossUsed / cfg.dailyLossLimit) * 100 : 0;
-
-  // Drawdown: running peak vs current
-  let peak = cfg.startingBalance;
-  let runningBalance = cfg.startingBalance;
-  const sorted = [...acctTrades].sort((a, b) => a.date.localeCompare(b.date));
-  sorted.forEach(t => {
-    runningBalance += t.pnl;
-    if (runningBalance > peak) peak = runningBalance;
-  });
-  const currentDrawdown = peak - currentBalance;
-  const drawdownPct = cfg.maxDrawdown ? (currentDrawdown / cfg.maxDrawdown) * 100 : 0;
-
-  // Profit progress
-  const profitPct = cfg.profitTarget ? (Math.max(totalPnl, 0) / cfg.profitTarget) * 100 : 0;
-
-  const tradeCount = todayTrades.length;
-  const maxTradesReached = tradeCount >= 3;
+  const wins        = acctTrades.filter(t => t.pnl > 0).length;
+  const winRate     = acctTrades.length > 0 ? Math.round((wins / acctTrades.length) * 100) : 0;
+  const tradeCount  = todayTrades.length;
 
   return (
-    <div
-      className="card"
-      style={{ marginBottom: 16, borderLeft: `3px solid ${cfg.color}` }}
-    >
+    <div className="card" style={{ marginBottom: 16, borderLeft: `3px solid ${color}` }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, letterSpacing: '0.5px' }}>
-              {name}
-            </div>
-            <span style={{
-              fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
-              background: `${cfg.color}22`, color: cfg.color, letterSpacing: '0.5px',
-            }}>
-              {cfg.badge}
-            </span>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, letterSpacing: '0.5px' }}>
+            {name}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{cfg.type}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+            {acctTrades.length} trade{acctTrades.length !== 1 ? 's' : ''} · {winRate}% win rate
+          </div>
         </div>
-        {cfg.startingBalance > 0 && (
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700 }}>
-              ${currentBalance.toLocaleString()}
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>balance</div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: totalPnl >= 0 ? 'var(--green)' : 'var(--red)' }}>
+            {fmtPnl(totalPnl)}
           </div>
-        )}
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>all-time P&L</div>
+        </div>
       </div>
 
-      {/* P&L row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
-        <PnlCell label="All-Time"     value={fmtPnl(totalPnl)}   positive={totalPnl >= 0} />
-        <PnlCell label="Today"        value={fmtPnl(dailyPnl)}   positive={dailyPnl >= 0} />
-        <PnlCell label="Trades Today" value={`${tradeCount}/3`}  positive={!maxTradesReached} warn={maxTradesReached} />
+      {/* Stats row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+        <PnlCell label="Today"        value={fmtPnl(dailyPnl)}  positive={dailyPnl >= 0} />
+        <PnlCell label="Trades Today" value={String(tradeCount)} positive={tradeCount < 3} warn={tradeCount >= 3} />
+        <PnlCell label="Win Rate"     value={`${winRate}%`}      positive={winRate >= 50} />
       </div>
-
-      {/* Limits */}
-      {cfg.dailyLossLimit && (
-        <LimitBar
-          label="Daily Loss Limit"
-          used={dailyLossUsed}
-          limit={cfg.dailyLossLimit}
-          pct={dailyLossPct}
-          color={dailyLossPct > 75 ? 'var(--red)' : dailyLossPct > 50 ? 'var(--yellow)' : 'var(--green)'}
-          prefix="-$"
-        />
-      )}
-      {cfg.maxDrawdown && (
-        <LimitBar
-          label="Max Drawdown"
-          used={currentDrawdown}
-          limit={cfg.maxDrawdown}
-          pct={drawdownPct}
-          color={drawdownPct > 75 ? 'var(--red)' : drawdownPct > 50 ? 'var(--yellow)' : 'var(--green)'}
-          prefix="-$"
-        />
-      )}
-      {cfg.profitTarget && (
-        <LimitBar
-          label="Profit Target"
-          used={Math.max(totalPnl, 0)}
-          limit={cfg.profitTarget}
-          pct={profitPct}
-          color={cfg.color}
-          prefix="$"
-          goal
-        />
-      )}
-
-      {/* Status tags */}
-      {cfg.profitTarget && totalPnl >= cfg.profitTarget && (
-        <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--green-dim)', border: '1px solid var(--green)', borderRadius: 8, fontSize: 13, fontWeight: 700, color: 'var(--green)', textAlign: 'center', letterSpacing: '0.5px' }}>
-          🎯 PROFIT TARGET HIT
-        </div>
-      )}
-      {cfg.dailyLossLimit && dailyLossUsed >= cfg.dailyLossLimit && (
-        <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--red-dim)', border: '1px solid var(--red)', borderRadius: 8, fontSize: 13, fontWeight: 700, color: 'var(--red)', textAlign: 'center', letterSpacing: '0.5px' }}>
-          ⛔ DAILY LOSS LIMIT HIT — DONE FOR TODAY
-        </div>
-      )}
     </div>
   );
 }
@@ -231,24 +142,3 @@ function PnlCell({ label, value, positive, warn }) {
   );
 }
 
-function LimitBar({ label, used, limit, pct, color, prefix, goal }) {
-  const clampedPct = Math.min(pct, 100);
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{label}</span>
-        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-          {prefix}{Math.round(used).toLocaleString()} / ${limit.toLocaleString()}
-        </span>
-      </div>
-      <div className="progress-bar">
-        <div className="progress-fill" style={{ width: `${clampedPct}%`, background: color }} />
-      </div>
-      {goal && (
-        <div style={{ fontSize: 11, color: 'var(--text-secondary)', textAlign: 'right', marginTop: 3 }}>
-          {Math.round(clampedPct)}% complete
-        </div>
-      )}
-    </div>
-  );
-}
