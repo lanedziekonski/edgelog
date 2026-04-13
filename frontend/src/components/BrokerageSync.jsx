@@ -10,7 +10,9 @@ function detectFormat(headers) {
   if (
     lower.some(h => h === 'b/s') ||
     lower.some(h => h === 'avg fill price') ||
-    lower.some(h => h === 'filled qty')
+    lower.some(h => h === 'avgprice') ||
+    lower.some(h => h === 'filled qty') ||
+    lower.some(h => h === 'filledqty')
   ) return 'tradovate';
   return 'generic';
 }
@@ -65,14 +67,14 @@ function parseTradovateCSV(text, account) {
   const contractIdx = col('contract');
   const productIdx  = col('product');
   const bsIdx       = col('b/s');
-  const priceIdx    = col('avg fill price');
-  const fillTimeIdx = col('fill time');
+  const priceIdx    = col('avg fill price', 'avgprice', 'avg price');
+  const fillTimeIdx = col('fill time', 'filltime');
   const dateIdx     = col('date');
-  const qtyIdx      = col('filled qty');
+  const qtyIdx      = col('filled qty', 'filledqty', 'filled_qty');
   const statusIdx   = col('status');
 
   if (bsIdx === -1 || priceIdx === -1 || qtyIdx === -1) {
-    throw new Error('Not a Tradovate CSV — expected columns: B/S, Avg Fill Price, Filled Qty');
+    throw new Error('Not a Tradovate CSV — expected columns: B/S, avgPrice (or Avg Fill Price), filledQty (or Filled Qty)');
   }
 
   const get = (vals, idx) => idx !== -1 ? (vals[idx] ?? '').trim() : '';
