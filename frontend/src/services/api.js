@@ -41,4 +41,19 @@ export const api = {
     call('/stripe/create-checkout-session', { method: 'POST', body: JSON.stringify({ plan }) }, token),
   createPortalSession: (token) =>
     call('/stripe/create-portal-session', { method: 'POST' }, token),
+
+  // CSV import
+  importCsv: (token, rows) =>
+    call('/trades/import-csv', { method: 'POST', body: JSON.stringify({ rows }) }, token),
+
+  // Plaid / linked accounts
+  getLinkedAccounts: (token) => call('/plaid/accounts', {}, token),
+  createLinkToken: (token) =>
+    call('/plaid/create-link-token', { method: 'POST' }, token),
+  exchangePlaidToken: (token, public_token, institution, accounts) =>
+    call('/plaid/exchange-token', { method: 'POST', body: JSON.stringify({ public_token, institution, accounts }) }, token),
+  syncLinkedAccount: (token, id) =>
+    call(`/plaid/sync/${id}`, { method: 'POST' }, token),
+  deleteLinkedAccount: (token, id) =>
+    call(`/plaid/accounts/${id}`, { method: 'DELETE' }, token),
 };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { usePlaidLink } from 'react-plaid-link';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
 
 // ── CSV format detection ──────────────────────────────────────────────────
 
@@ -289,12 +290,7 @@ function PlaidLinkButton({ onSuccess, onError }) {
   const fetchLinkToken = async () => {
     setLoading(true); setErr('');
     try {
-      const r = await fetch('/api/plaid/create-link-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-      });
-      const res = await r.json();
-      if (res.error) { setErr(res.error); return; }
+      const res = await api.createLinkToken(authToken);
       setLinkToken(res.link_token);
     } catch (e) {
       setErr(e.message);
@@ -307,13 +303,7 @@ function PlaidLinkButton({ onSuccess, onError }) {
     token: linkToken || '',
     onSuccess: async (publicToken, metadata) => {
       try {
-        const r = await fetch('/api/plaid/exchange-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-          body: JSON.stringify({ public_token: publicToken, institution: metadata.institution, accounts: metadata.accounts }),
-        });
-        const data = await r.json();
-        if (data.error) { onError(data.error); return; }
+        const data = await api.exchangePlaidToken(authToken, publicToken, metadata.institution, metadata.accounts);
         onSuccess(data);
       } catch (e) { onError(e.message); }
     },
@@ -368,8 +358,7 @@ export default function BrokerageSync({ onTradesImported }) {
   const [importAccount, setImportAccount] = useState('tastytrade');
 
   useEffect(() => {
-    fetch('/api/plaid/accounts', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
+    api.getLinkedAccounts(token)
       .then(data => { if (Array.isArray(data)) setLinkedAccounts(data); })
       .catch(() => {});
   }, [token]);
@@ -409,13 +398,7 @@ export default function BrokerageSync({ onTradesImported }) {
     setImporting(true);
     setError('');
     try {
-      const r = await fetch('/api/trades/import-csv', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ rows: csvRows }),
-      });
-      const data = await r.json();
-      if (data.error) { setError(data.error); return; }
+      const data = await api.importCsv(token, csvRows);
       setImportResult(data);
       setCsvRows(null);
       onTradesImported && onTradesImported();
@@ -430,12 +413,7 @@ export default function BrokerageSync({ onTradesImported }) {
     setSyncing(accountId);
     setError('');
     try {
-      const r = await fetch(`/api/plaid/sync/${accountId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      });
-      const data = await r.json();
-      if (data.error) { setError(data.error); return; }
+      const data = await api.syncLinkedAccount(token, accountId);
       setImportResult({ imported: data.imported });
       if (data.imported > 0) onTradesImported && onTradesImported();
       setLinkedAccounts(prev => prev.map(a => a.id === accountId ? { ...a, last_synced: new Date().toISOString() } : a));
@@ -447,10 +425,9 @@ export default function BrokerageSync({ onTradesImported }) {
   };
 
   const handleDisconnect = async (accountId) => {
-    await fetch(`/api/plaid/accounts/${accountId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    try {
+      await api.deleteLinkedAccount(token, accountId);
+    } catch (_) { /* best-effort */ }
     setLinkedAccounts(prev => prev.filter(a => a.id !== accountId));
   };
 
