@@ -147,6 +147,8 @@ function GhostText({ children, style }) {
         lineHeight: 1,
         whiteSpace: 'nowrap',
         zIndex: 0,
+        maskImage: 'linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)',
+        WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)',
         ...style,
       }}
     >
@@ -199,12 +201,24 @@ function HeroSection({ stats, todayPnl, weekPnl, sectionId }) {
       id={sectionId} ref={ref}
       style={{
         minHeight: '100svh', position: 'relative', overflow: 'hidden',
-        background: BG, display: 'flex', flexDirection: 'column',
+        background: 'radial-gradient(ellipse at 50% 42%, #0f1f0f 0%, #080c08 68%)',
+        display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         paddingBottom: 80,
       }}
     >
       <ParticleCanvas />
+      {/* Radial vignette over particles */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
+        background: 'radial-gradient(ellipse at 50% 50%, transparent 25%, rgba(8,12,8,0.65) 75%)',
+      }} />
+      {/* Bottom section blend → BG2 */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: 160,
+        background: 'linear-gradient(to bottom, transparent 0%, #0d1a0d 100%)',
+        pointerEvents: 'none', zIndex: 3,
+      }} />
 
       {/* Ghost layer: slightly offset number behind */}
       <GhostText style={{ top: '22%', left: '50%', transform: 'translateX(-50%)', fontSize: 'clamp(60px, 18vw, 130px)', opacity: 0.04 }}>
@@ -283,11 +297,24 @@ function WinRateSection({ stats, sectionId }) {
     <section
       id={sectionId} ref={ref}
       style={{
-        minHeight: '100svh', background: BG2, position: 'relative', overflow: 'hidden',
+        minHeight: '100svh', position: 'relative', overflow: 'hidden',
+        background: 'radial-gradient(ellipse at 50% 50%, #122012 0%, #0d1a0d 65%)',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
         padding: '40px 28px 100px',
       }}
     >
+      {/* Top blend from BG */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 140,
+        background: 'linear-gradient(to bottom, #080c08 0%, transparent 100%)',
+        pointerEvents: 'none', zIndex: 3,
+      }} />
+      {/* Bottom blend → BG3 */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: 160,
+        background: 'linear-gradient(to bottom, transparent 0%, #0a120a 100%)',
+        pointerEvents: 'none', zIndex: 3,
+      }} />
       <GhostText style={{ top: '-2%', left: '50%', transform: 'translateX(-50%)', whiteSpace: 'pre', textAlign: 'center', lineHeight: 0.9 }}>{"WIN\nRATE"}</GhostText>
 
       <motion.div
@@ -364,11 +391,24 @@ function RecentTradesSection({ trades, sectionId }) {
     <section
       id={sectionId} ref={ref}
       style={{
-        minHeight: '100svh', background: BG3, position: 'relative', overflow: 'hidden',
+        minHeight: '100svh', position: 'relative', overflow: 'hidden',
+        background: 'radial-gradient(ellipse at 50% 50%, #0f1a0f 0%, #0a120a 65%)',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
         padding: '40px 0 100px',
       }}
     >
+      {/* Top blend from BG2 */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 140,
+        background: 'linear-gradient(to bottom, #0d1a0d 0%, transparent 100%)',
+        pointerEvents: 'none', zIndex: 3,
+      }} />
+      {/* Bottom blend → BG */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: 160,
+        background: 'linear-gradient(to bottom, transparent 0%, #080c08 100%)',
+        pointerEvents: 'none', zIndex: 3,
+      }} />
       <GhostText style={{ top: '5%', left: '4%' }}>TRADES</GhostText>
 
       <motion.div
@@ -478,11 +518,24 @@ function EquitySection({ curve, stats, sectionId }) {
     <section
       id={sectionId} ref={ref}
       style={{
-        minHeight: '100svh', background: BG, position: 'relative', overflow: 'hidden',
+        minHeight: '100svh', position: 'relative', overflow: 'hidden',
+        background: 'radial-gradient(ellipse at 50% 55%, #0d1a0d 0%, #080c08 68%)',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
         padding: '40px 0 100px',
       }}
     >
+      {/* Top blend from BG3 */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 140,
+        background: 'linear-gradient(to bottom, #0a120a 0%, transparent 100%)',
+        pointerEvents: 'none', zIndex: 3,
+      }} />
+      {/* Bottom blend → BG2 */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: 160,
+        background: 'linear-gradient(to bottom, transparent 0%, #0d1a0d 100%)',
+        pointerEvents: 'none', zIndex: 3,
+      }} />
       <GhostText style={{ bottom: '10%', right: '4%' }}>EQUITY</GhostText>
 
       <motion.div
@@ -519,8 +572,10 @@ function EquitySection({ curve, stats, sectionId }) {
           <AreaChart data={curve} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   stopColor={isPos ? G : R} stopOpacity={0.25} />
-                <stop offset="100%" stopColor={isPos ? G : R} stopOpacity={0} />
+                <stop offset="0%"   stopColor={isPos ? G : R} stopOpacity={0.40} />
+                <stop offset="30%"  stopColor={isPos ? G : R} stopOpacity={0.22} />
+                <stop offset="75%"  stopColor={isPos ? G : R} stopOpacity={0.07} />
+                <stop offset="100%" stopColor={isPos ? G : R} stopOpacity={0.01} />
               </linearGradient>
             </defs>
             <XAxis
@@ -612,11 +667,18 @@ function PlaybookSection({ stats, sectionId }) {
     <section
       id={sectionId} ref={ref}
       style={{
-        minHeight: '100svh', background: BG2, position: 'relative', overflow: 'hidden',
+        minHeight: '100svh', position: 'relative', overflow: 'hidden',
+        background: 'radial-gradient(ellipse at 50% 50%, #122012 0%, #0d1a0d 65%)',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
         padding: '40px 20px 100px',
       }}
     >
+      {/* Top blend from BG2 (equity) */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 140,
+        background: 'linear-gradient(to bottom, #0d1a0d 0%, transparent 100%)',
+        pointerEvents: 'none', zIndex: 3,
+      }} />
       <GhostText style={{ top: '5%', left: '50%', transform: 'translateX(-50%)', fontSize: 'clamp(56px, 18vw, 120px)' }}>PLAYBOOK</GhostText>
 
       <motion.div
@@ -655,7 +717,7 @@ function PlaybookSection({ stats, sectionId }) {
               variants={cardVariants}
               whileHover={{ scale: 1.01, borderColor: `rgba(0,255,65,0.35)` }}
               style={{
-                background: '#111811',
+                background: 'linear-gradient(170deg, #161e16 0%, #0b140b 100%)',
                 border: '1px solid rgba(255,255,255,0.07)',
                 borderRadius: 12,
                 padding: '16px 18px',
