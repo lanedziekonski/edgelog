@@ -10,18 +10,33 @@ const pool = new Pool({
   ssl: isRemote ? { rejectUnauthorized: false } : false,
 });
 
+// Prevent uncaught exceptions from idle client errors crashing the process
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle database client:', err.message);
+});
+
+async function waitForDb(retries = 8, delayMs = 3000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      await pool.query('SELECT 1');
+      return; // connected
+    } catch (err) {
+      if (i < retries - 1) {
+        console.warn(`Database not ready (attempt ${i + 1}/${retries}): ${err.message} — retrying in ${delayMs}ms`);
+        await new Promise(r => setTimeout(r, delayMs));
+      } else {
+        throw err;
+      }
+    }
+  }
+}
+
 async function initDb() {
   console.log('Connecting to database...');
   console.log('DATABASE_URL set:', !!process.env.DATABASE_URL);
   console.log('SSL enabled:', isRemote);
-  try {
-    await pool.query('SELECT 1'); // verify connection before running schema
-    console.log('Database connection successful');
-  } catch (err) {
-    console.error('Database connection failed:', err.message);
-    console.error('Full error:', err);
-    throw err;
-  }
+  await waitForDb();
+  console.log('Database connection successful');
   try {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (

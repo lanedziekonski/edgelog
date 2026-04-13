@@ -17,6 +17,10 @@ backend/edgelog.db
 backend/edgelog.db-shm
 backend/edgelog.db-wal
 
+# Uploaded screenshots — tracked via .gitkeep placeholder, not actual files
+backend/uploads/*
+!backend/uploads/.gitkeep
+
 # OS
 .DS_Store
 Thumbs.db
