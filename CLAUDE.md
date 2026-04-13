@@ -32,6 +32,9 @@ STRIPE_PRICE_TRADER=price_...
 STRIPE_PRICE_PRO=price_...
 STRIPE_PRICE_ELITE=price_...
 FRONTEND_URL=http://localhost:5173
+
+# PostgreSQL (Render provides this automatically; for local dev use Neon/Supabase or local PG)
+DATABASE_URL=postgresql://user:password@host:5432/edgelog
 ```
 
 To receive Stripe webhooks locally:
@@ -43,7 +46,7 @@ stripe listen --forward-to localhost:3001/api/stripe/webhook
 
 ### Backend (`backend/`)
 Single-file Express server (`server.js`) with:
-- `database.js` — SQLite via `better-sqlite3`. Three tables: `users`, `trades`, `linked_accounts`. New accounts start empty — no seed data. All prepared statements live here; `rowToTrade()` maps snake_case DB columns to camelCase JS.
+- `database.js` — PostgreSQL via `pg` Pool. Three tables: `users`, `trades`, `linked_accounts`. New accounts start empty — no seed data. `rowToTrade()` maps snake_case DB columns to camelCase JS. SSL is auto-enabled when `DATABASE_URL` doesn't contain `localhost`/`127.0.0.1`.
 - `middleware/auth.js` — `requireAuth` (JWT verification), `requirePlan(...plans)` (plan-level gating), `signToken()`.
 - Stripe is lazily initialised — only active when `STRIPE_SECRET_KEY` is set and not a placeholder. The app degrades gracefully without it.
 

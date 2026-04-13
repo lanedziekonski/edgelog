@@ -475,8 +475,13 @@ app.post('/api/plaid/sync/:id', requireAuth, requirePlan('trader'), async (req, 
 });
 
 app.delete('/api/plaid/accounts/:id', requireAuth, requirePlan('trader'), async (req, res) => {
-  await pool.query(`DELETE FROM linked_accounts WHERE id = $1 AND user_id = $2`, [req.params.id, req.userId]);
-  res.json({ success: true });
+  try {
+    await pool.query(`DELETE FROM linked_accounts WHERE id = $1 AND user_id = $2`, [req.params.id, req.userId]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete linked account error:', err);
+    res.status(500).json({ error: 'Failed to delete account' });
+  }
 });
 
 async function doPlaidSync(linked) {
@@ -581,6 +586,20 @@ app.post('/api/trades/import-csv', requireAuth, requirePlan('trader'), async (re
 // ─── MISC ─────────────────────────────────────────────────────────────────
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+
+// ─── 404 + GLOBAL ERROR HANDLER ──────────────────────────────────────────
+
+app.use((req, res) => {
+  res.status(404).json({ error: `Route not found: ${req.method} ${req.path}` });
+});
+
+// Must have 4 parameters for Express to treat it as an error handler
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err.message);
+  if (res.headersSent) return;
+  res.status(500).json({ error: err.message || 'Internal server error' });
+});
 
 // ─── START ────────────────────────────────────────────────────────────────
 
