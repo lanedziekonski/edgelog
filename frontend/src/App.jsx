@@ -29,6 +29,7 @@ const TAB_PLANS = {
 function AppInner() {
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [focusTradeId, setFocusTradeId] = useState(null);
   const tradeContext   = useTrades();
   const accountContext = useAccounts();
 
@@ -93,8 +94,9 @@ function AppInner() {
 
   const userPlan = user.plan || 'free';
 
-  const handleNavigate = (tab) => {
+  const handleNavigate = (tab, tradeId) => {
     setActiveTab(tab);
+    if (tradeId) setFocusTradeId(tradeId);
   };
 
   const renderScreen = () => {
@@ -112,8 +114,8 @@ function AppInner() {
 
     switch (activeTab) {
       case 'dashboard': return <Dashboard {...tradeContext} />;
-      case 'journal':   return <Journal {...tradeContext} />;
-      case 'calendar':  return <Calendar {...tradeContext} />;
+      case 'journal':   return <Journal {...tradeContext} focusTradeId={focusTradeId} onFocusConsumed={() => setFocusTradeId(null)} />;
+      case 'calendar':  return <Calendar {...tradeContext} onNavigate={handleNavigate} />;
       case 'accounts':  return <Accounts {...tradeContext} {...accountContext} />;
       case 'plan':      return <TradingPlan />;
       case 'coach':     return <AICoach {...tradeContext} />;

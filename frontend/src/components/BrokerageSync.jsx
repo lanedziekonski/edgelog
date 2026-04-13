@@ -396,10 +396,14 @@ function fifoMatchToTrades(fills, account) {
         account,
         entryTime:     '',
         exitTime:      f.time || '',
-        emotionBefore: 'Calm',
-        emotionAfter:  'Neutral',
+        emotionBefore: '',
+        emotionAfter:  '',
         followedPlan:  true,
         notes:         'Auto-imported from IBKR',
+        side:          null,
+        quantity:      null,
+        entryPrice:    null,
+        exitPrice:     null,
       });
     } else {
       matchFills.push(f);
@@ -438,10 +442,14 @@ function fifoMatchToTrades(fills, account) {
         account,
         entryTime:     entry.time || '',
         exitTime:      exit.time || '',
-        emotionBefore: 'Calm',
-        emotionAfter:  'Neutral',
+        emotionBefore: '',
+        emotionAfter:  '',
         followedPlan:  true,
         notes:         `${side} ${unit} · entry ${entry.price} → exit ${exit.price}`,
+        side,
+        quantity:      matchQty,
+        entryPrice:    entry.price,
+        exitPrice:     exit.price,
       });
     };
 

@@ -183,8 +183,9 @@ app.post('/api/trades', requireAuth, async (req, res) => {
   try {
     await pool.query(
       `INSERT INTO trades (id, user_id, date, symbol, setup, account, pnl, entry_time, exit_time,
-        emotion_before, emotion_after, followed_plan, notes, source)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+        emotion_before, emotion_after, followed_plan, notes, source,
+        entry_price, exit_price, quantity, side)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
       [
         id, req.userId,
         t.date || new Date().toISOString().split('T')[0],
@@ -192,6 +193,10 @@ app.post('/api/trades', requireAuth, async (req, res) => {
         Number(t.pnl), t.entryTime || '', t.exitTime || '',
         t.emotionBefore || 'Calm', t.emotionAfter || 'Neutral',
         t.followedPlan ?? true, t.notes || '', 'manual',
+        t.entryPrice != null ? Number(t.entryPrice) : null,
+        t.exitPrice  != null ? Number(t.exitPrice)  : null,
+        t.quantity   != null ? parseInt(t.quantity) : null,
+        t.side       || null,
       ]
     );
     const { rows } = await pool.query(`SELECT * FROM trades WHERE id = $1`, [id]);
@@ -208,13 +213,18 @@ app.put('/api/trades/:id', requireAuth, async (req, res) => {
     const result = await pool.query(
       `UPDATE trades SET date=$1, symbol=$2, setup=$3, account=$4, pnl=$5,
         entry_time=$6, exit_time=$7, emotion_before=$8, emotion_after=$9,
-        followed_plan=$10, notes=$11
-       WHERE id=$12 AND user_id=$13`,
+        followed_plan=$10, notes=$11,
+        entry_price=$12, exit_price=$13, quantity=$14, side=$15
+       WHERE id=$16 AND user_id=$17`,
       [
         t.date, t.symbol, t.setup, t.account, Number(t.pnl),
         t.entryTime || '', t.exitTime || '',
         t.emotionBefore || 'Calm', t.emotionAfter || 'Neutral',
         t.followedPlan ?? true, t.notes || '',
+        t.entryPrice != null ? Number(t.entryPrice) : null,
+        t.exitPrice  != null ? Number(t.exitPrice)  : null,
+        t.quantity   != null ? parseInt(t.quantity) : null,
+        t.side       || null,
         req.params.id, req.userId,
       ]
     );
@@ -648,8 +658,9 @@ app.post('/api/trades/import-csv', requireAuth, requirePlan('trader'), async (re
       const id = `csv-${req.userId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       await client.query(
         `INSERT INTO trades (id, user_id, date, symbol, setup, account, account_id, pnl,
-          entry_time, exit_time, emotion_before, emotion_after, followed_plan, notes, source)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+          entry_time, exit_time, emotion_before, emotion_after, followed_plan, notes, source,
+          entry_price, exit_price, quantity, side)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
         [
           id, req.userId, date, sym,
           t.setup || 'ORB',
@@ -657,7 +668,11 @@ app.post('/api/trades/import-csv', requireAuth, requirePlan('trader'), async (re
           accountId,
           pnlNum,
           entryTime, exitTime,
-          '', '', true, '', 'csv',
+          '', '', true, t.notes || '', 'csv',
+          t.entryPrice != null ? Number(t.entryPrice) : null,
+          t.exitPrice  != null ? Number(t.exitPrice)  : null,
+          t.quantity   != null ? parseInt(t.quantity) : null,
+          t.side       || null,
         ]
       );
       imported++;

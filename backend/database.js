@@ -80,6 +80,10 @@ async function initDb() {
   `);
     // Migrations — safe to run on every boot
     await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS account_id TEXT`);
+    await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS entry_price NUMERIC`);
+    await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS exit_price NUMERIC`);
+    await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS quantity INTEGER`);
+    await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS side TEXT`);
     console.log('Database schema ready');
   } catch (err) {
     console.error('Schema creation failed:', err.message);
@@ -104,6 +108,10 @@ function rowToTrade(row) {
     followedPlan:  row.followed_plan === true,
     notes:         row.notes,
     source:        row.source || 'manual',
+    entryPrice:    row.entry_price != null ? parseFloat(row.entry_price) : null,
+    exitPrice:     row.exit_price  != null ? parseFloat(row.exit_price)  : null,
+    quantity:      row.quantity    != null ? parseInt(row.quantity)      : null,
+    side:          row.side        || null,
   };
 }
 

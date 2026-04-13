@@ -5,7 +5,18 @@ import { fmtPnl } from '../hooks/useTrades';
 const G = '#00ff41';
 const R = '#ff2d2d';
 
-export default function Calendar({ trades }) {
+// ── Symbol helpers ─────────────────────────────────────────────────────────
+const FUTURES_ROOTS = new Set(['ES','MES','NQ','MNQ','YM','MYM','RTY','M2K','CL','GC','SI','ZB','ZN','ZF']);
+const CONTRACT_MONTH_RE = /[FGHJKMNQUVXZ]\d{1,2}$/;
+
+function fmtSymbol(raw) {
+  if (!raw) return '';
+  const s = raw.toUpperCase().replace(/^\//, '');
+  const base = s.replace(CONTRACT_MONTH_RE, '') || s;
+  return FUTURES_ROOTS.has(base) ? `${base}1!` : base;
+}
+
+export default function Calendar({ trades, onNavigate }) {
   const now = new Date();
   const [viewDate, setViewDate]     = useState({ year: now.getFullYear(), month: now.getMonth() });
   const [selectedDate, setSelectedDate] = useState(null);
@@ -225,51 +236,89 @@ export default function Calendar({ trades }) {
                 </div>
               </div>
 
-              <div style={{ maxHeight: 380, overflowY: 'auto', scrollbarWidth: 'none' }}>
+              <div style={{ maxHeight: 400, overflowY: 'auto', scrollbarWidth: 'none' }}>
                 {selectedData.trades
                   .slice()
                   .sort((a, b) => (a.entryTime || '').localeCompare(b.entryTime || ''))
                   .map((t, i) => (
-                    <div
+                    <motion.div
                       key={t.id}
+                      whileTap={onNavigate ? { scale: 0.98 } : {}}
+                      onClick={() => {
+                        if (onNavigate) {
+                          setSelectedDate(null);
+                          onNavigate('journal', t.id);
+                        }
+                      }}
                       style={{
                         padding: '12px 0',
                         borderBottom: i < selectedData.trades.length - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none',
+                        cursor: onNavigate ? 'pointer' : 'default',
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 17, fontWeight: 700, letterSpacing: '0.5px', color: '#fff' }}>
-                              {t.symbol}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        {/* Left: symbol + badges + detail */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {/* Symbol + side badge row */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: '0.5px', color: '#fff' }}>
+                              {fmtSymbol(t.symbol)}
                             </span>
-                            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{t.setup}</span>
+                            {t.side && (
+                              <span style={{
+                                fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                                background: t.side === 'Long' ? `${G}20` : `${R}20`,
+                                color: t.side === 'Long' ? G : R,
+                                border: `1px solid ${t.side === 'Long' ? G : R}40`,
+                              }}>
+                                {t.side.toUpperCase()}
+                              </span>
+                            )}
                             {!t.followedPlan && (
-                              <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 8, background: `${R}20`, color: R, border: `1px solid ${R}40` }}>
-                                Broke Rules
+                              <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: `${R}20`, color: R, border: `1px solid ${R}40` }}>
+                                RULES
                               </span>
                             )}
                           </div>
-                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
-                            {t.account}
-                            {t.entryTime && t.exitTime ? ` · ${t.entryTime} – ${t.exitTime}` : t.entryTime ? ` · ${t.entryTime}` : ''}
+                          {/* Detail row: contracts · entry→exit · setup */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            {t.quantity != null && (
+                              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+                                {t.quantity}ct
+                              </span>
+                            )}
+                            {t.entryPrice != null && t.exitPrice != null && (
+                              <>
+                                {t.quantity != null && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>·</span>}
+                                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
+                                  {Math.round(t.entryPrice).toLocaleString()} → {Math.round(t.exitPrice).toLocaleString()}
+                                </span>
+                              </>
+                            )}
+                            {t.setup && (
+                              <>
+                                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>·</span>
+                                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{t.setup}</span>
+                              </>
+                            )}
                           </div>
-                          {t.notes && (
-                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', marginTop: 5, lineHeight: 1.4 }}>
-                              "{t.notes}"
-                            </div>
+                        </div>
+
+                        {/* Right: P&L + chevron */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 12 }}>
+                          <div style={{
+                            fontFamily: "'Barlow Condensed', sans-serif",
+                            fontSize: 20, fontWeight: 700,
+                            color: t.pnl >= 0 ? G : R,
+                          }}>
+                            {fmtPnl(t.pnl)}
+                          </div>
+                          {onNavigate && (
+                            <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.2)', lineHeight: 1 }}>›</span>
                           )}
                         </div>
-                        <div style={{
-                          fontFamily: "'Barlow Condensed', sans-serif",
-                          fontSize: 20, fontWeight: 700,
-                          color: t.pnl >= 0 ? G : R,
-                          flexShrink: 0, marginLeft: 12,
-                        }}>
-                          {fmtPnl(t.pnl)}
-                        </div>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
               </div>
 

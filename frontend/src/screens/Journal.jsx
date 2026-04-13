@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fmtPnl, todayStr } from '../hooks/useTrades';
 
@@ -15,6 +15,10 @@ const emptyForm = () => ({
   setup: 'ORB',
   account: '',
   pnl: '',
+  side: 'Long',
+  quantity: '',
+  entryPrice: '',
+  exitPrice: '',
   entryTime: '',
   exitTime: '',
   emotionBefore: 'Calm',
@@ -23,7 +27,7 @@ const emptyForm = () => ({
   notes: '',
 });
 
-export default function Journal({ trades, addTrade, deleteTrade, patchTrade }) {
+export default function Journal({ trades, addTrade, deleteTrade, patchTrade, focusTradeId, onFocusConsumed }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [filter, setFilter] = useState('all');
@@ -46,7 +50,13 @@ export default function Journal({ trades, addTrade, deleteTrade, patchTrade }) {
 
   const handleSubmit = () => {
     if (!form.symbol || form.pnl === '') return;
-    addTrade({ ...form, pnl: parseFloat(form.pnl) });
+    addTrade({
+      ...form,
+      pnl:        parseFloat(form.pnl),
+      quantity:   form.quantity   ? parseInt(form.quantity)     : null,
+      entryPrice: form.entryPrice ? parseFloat(form.entryPrice) : null,
+      exitPrice:  form.exitPrice  ? parseFloat(form.exitPrice)  : null,
+    });
     setShowForm(false);
     setForm(emptyForm());
   };
@@ -149,6 +159,8 @@ export default function Journal({ trades, addTrade, deleteTrade, patchTrade }) {
                     trade={trade}
                     onDelete={() => setDeleteConfirm(trade.id)}
                     onUpdate={patchTrade}
+                    isFocused={trade.id === focusTradeId}
+                    onFocusConsumed={onFocusConsumed}
                   />
                 </motion.div>
               ))}
@@ -280,6 +292,64 @@ export default function Journal({ trades, addTrade, deleteTrade, patchTrade }) {
 
               <div className="form-row">
                 <div className="form-field">
+                  <label className="form-label">Side</label>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {['Long', 'Short'].map(s => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => set('side', s)}
+                        style={{
+                          flex: 1, padding: '7px 0', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                          fontFamily: "'Barlow', sans-serif", cursor: 'pointer',
+                          background: form.side === s ? (s === 'Long' ? G : R) : 'rgba(255,255,255,0.05)',
+                          color: form.side === s ? '#000' : 'rgba(255,255,255,0.4)',
+                          border: form.side === s ? `1px solid ${s === 'Long' ? G : R}` : '1px solid rgba(255,255,255,0.1)',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Contracts</label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 2"
+                    min="1"
+                    value={form.quantity}
+                    onChange={e => set('quantity', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-field">
+                  <label className="form-label">Entry Price</label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 17842"
+                    step="0.01"
+                    value={form.entryPrice}
+                    onChange={e => set('entryPrice', e.target.value)}
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Exit Price</label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 17891"
+                    step="0.01"
+                    value={form.exitPrice}
+                    onChange={e => set('exitPrice', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-field">
                   <label className="form-label">Emotion Before</label>
                   <select value={form.emotionBefore} onChange={e => set('emotionBefore', e.target.value)}>
                     {EMOTIONS_BEFORE.map(e => <option key={e}>{e}</option>)}
@@ -340,11 +410,13 @@ export default function Journal({ trades, addTrade, deleteTrade, patchTrade }) {
 
 // ── TradeCard ──────────────────────────────────────────────────────────────
 
-function TradeCard({ trade, onDelete, onUpdate }) {
-  const [expanded, setExpanded] = useState(false);
-  const [editing,  setEditing]  = useState(false);
-  const [saving,   setSaving]   = useState(false);
-  const [saveErr,  setSaveErr]  = useState('');
+function TradeCard({ trade, onDelete, onUpdate, isFocused, onFocusConsumed }) {
+  const cardRef = useRef(null);
+  const [expanded,  setExpanded]  = useState(false);
+  const [editing,   setEditing]   = useState(false);
+  const [saving,    setSaving]    = useState(false);
+  const [saveErr,   setSaveErr]   = useState('');
+  const [highlight, setHighlight] = useState(false);
 
   // Editable copies — sync when trade object updates (e.g. after save)
   const [editNotes,        setEditNotes]        = useState(trade.notes         || '');
@@ -358,6 +430,21 @@ function TradeCard({ trade, onDelete, onUpdate }) {
     setEditEmoAfter(trade.emotionAfter   || '');
     setEditFollowedPlan(trade.followedPlan ?? true);
   }, [trade.notes, trade.emotionBefore, trade.emotionAfter, trade.followedPlan]);
+
+  // Focus/highlight from Calendar navigation
+  useEffect(() => {
+    if (!isFocused) return;
+    setExpanded(true);
+    setHighlight(true);
+    setTimeout(() => {
+      cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 80);
+    const t = setTimeout(() => {
+      setHighlight(false);
+      onFocusConsumed?.();
+    }, 2200);
+    return () => clearTimeout(t);
+  }, [isFocused]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isWin       = trade.pnl > 0;
   const accentColor = isWin ? G : R;
@@ -404,16 +491,19 @@ function TradeCard({ trade, onDelete, onUpdate }) {
 
   return (
     <motion.div
+      ref={cardRef}
       layout
       onClick={handleExpand}
       style={{
         background: '#111811',
         borderRadius: 10,
         marginBottom: 8,
-        border: `1px solid rgba(255,255,255,0.06)`,
+        border: highlight ? `1px solid ${G}` : `1px solid rgba(255,255,255,0.06)`,
         borderLeft: `3px solid ${accentColor}`,
         cursor: editing ? 'default' : 'pointer',
         overflow: 'hidden',
+        boxShadow: highlight ? `0 0 20px ${G}50, 0 0 6px ${G}30` : 'none',
+        transition: 'border 0.3s, box-shadow 0.3s',
       }}
       transition={{ layout: { duration: 0.25, ease: 'easeInOut' } }}
     >
@@ -422,20 +512,34 @@ function TradeCard({ trade, onDelete, onUpdate }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 16, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px', color: '#fff' }}>
-                {trade.symbol}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                <div style={{ fontWeight: 700, fontSize: 16, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px', color: '#fff' }}>
+                  {trade.symbol}
+                </div>
+                {trade.side && (
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                    background: trade.side === 'Long' ? `${G}20` : `${R}20`,
+                    color: trade.side === 'Long' ? G : R,
+                    border: `1px solid ${trade.side === 'Long' ? G : R}40`,
+                  }}>
+                    {trade.side.toUpperCase()}
+                  </span>
+                )}
+                {!trade.followedPlan && (
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                    background: `${R}20`, color: R, border: `1px solid ${R}40`,
+                    letterSpacing: '0.3px', textTransform: 'uppercase',
+                  }}>
+                    Broke Rules
+                  </span>
+                )}
               </div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{trade.setup}</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                {trade.setup}{trade.quantity != null ? ` · ${trade.quantity}ct` : ''}
+              </div>
             </div>
-            {!trade.followedPlan && (
-              <span style={{
-                fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 10,
-                background: `${R}20`, color: R, border: `1px solid ${R}40`,
-                letterSpacing: '0.3px', textTransform: 'uppercase',
-              }}>
-                Broke Rules
-              </span>
-            )}
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, color: accentColor }}>
@@ -463,23 +567,86 @@ function TradeCard({ trade, onDelete, onUpdate }) {
               {/* ── VIEW MODE ── */}
               {!editing && (
                 <div>
-                  {/* Time + account row */}
-                  {(trade.entryTime || trade.exitTime) && (
-                    <div style={{ display: 'flex', gap: 20, marginBottom: 10 }}>
-                      <Detail label="Entry" value={trade.entryTime || '—'} />
-                      <Detail label="Exit"  value={trade.exitTime  || '—'} />
+                  {/* Symbol header: large base + front-month format */}
+                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 14 }}>
+                    <div>
+                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 36, fontWeight: 900, color: '#fff', lineHeight: 1 }}>
+                        {symbolBase(trade.symbol)}
+                      </div>
+                      <div style={{ fontSize: 12, color: G, fontFamily: 'monospace', marginTop: 1, letterSpacing: '0.5px' }}>
+                        {fmtSymbol(trade.symbol)}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 28, fontWeight: 700, color: accentColor, lineHeight: 1 }}>
+                        {fmtPnl(trade.pnl)}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>{trade.date}</div>
+                    </div>
+                  </div>
+
+                  {/* Badges: side + contracts */}
+                  {(trade.side || trade.quantity != null) && (
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+                      {trade.side && (
+                        <span style={{
+                          fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 6,
+                          background: trade.side === 'Long' ? `${G}20` : `${R}20`,
+                          color: trade.side === 'Long' ? G : R,
+                          border: `1px solid ${trade.side === 'Long' ? G : R}40`,
+                        }}>
+                          {trade.side}
+                        </span>
+                      )}
+                      {trade.quantity != null && (
+                        <span style={{
+                          fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 6,
+                          background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                        }}>
+                          {trade.quantity} contract{trade.quantity !== 1 ? 's' : ''}
+                        </span>
+                      )}
                     </div>
                   )}
 
+                  {/* Entry → Exit prices */}
+                  {(trade.entryPrice != null || trade.exitPrice != null) && (
+                    <div style={{ background: '#0d1a0d', borderRadius: 8, padding: '10px 14px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 14 }}>
+                      {trade.entryPrice != null && (
+                        <div>
+                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>Entry</div>
+                          <div style={{ fontFamily: 'monospace', fontSize: 15, color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>
+                            {trade.entryPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        </div>
+                      )}
+                      {trade.entryPrice != null && trade.exitPrice != null && (
+                        <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: 18, lineHeight: 1 }}>→</div>
+                      )}
+                      {trade.exitPrice != null && (
+                        <div>
+                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>Exit</div>
+                          <div style={{ fontFamily: 'monospace', fontSize: 15, color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>
+                            {trade.exitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Setup + time row */}
+                  <div style={{ display: 'flex', gap: 20, marginBottom: 10, flexWrap: 'wrap' }}>
+                    <Detail label="Setup" value={trade.setup} />
+                    {(trade.entryTime || trade.exitTime) && (
+                      <Detail label="Time" value={`${trade.entryTime || '—'}${trade.exitTime ? ` → ${trade.exitTime}` : ''}`} />
+                    )}
+                  </div>
+
                   {/* Followed plan */}
                   <div style={{ marginBottom: 10 }}>
-                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Plan: {' '}
-                    </span>
-                    <span style={{
-                      fontSize: 12, fontWeight: 700,
-                      color: trade.followedPlan ? G : R,
-                    }}>
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Plan: </span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: trade.followedPlan ? G : R }}>
                       {trade.followedPlan ? 'Followed' : 'Broke rules'}
                     </span>
                   </div>
@@ -693,6 +860,23 @@ function EmotionPicker({ label, options, value, onChange }) {
       </div>
     </div>
   );
+}
+
+// ── Symbol helpers ─────────────────────────────────────────────────────────
+
+const FUTURES_ROOTS = new Set(['ES','MES','NQ','MNQ','YM','MYM','RTY','M2K','CL','GC','SI','ZB','ZN','ZF']);
+const CONTRACT_MONTH_RE = /[FGHJKMNQUVXZ]\d{1,2}$/;
+
+function symbolBase(raw) {
+  if (!raw) return '';
+  const s = raw.toUpperCase().replace(/^\//, '');
+  return s.replace(CONTRACT_MONTH_RE, '') || s;
+}
+
+function fmtSymbol(raw) {
+  if (!raw) return '';
+  const base = symbolBase(raw);
+  return FUTURES_ROOTS.has(base) ? `${base}1!` : base;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
