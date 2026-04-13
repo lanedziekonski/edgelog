@@ -207,10 +207,10 @@ function HeroSection({ stats, todayPnl, weekPnl, sectionId }) {
       <ParticleCanvas />
 
       {/* Ghost layer: slightly offset number behind */}
-      <GhostText style={{ top: '22%', left: '50%', transform: 'translateX(-48%)', fontSize: 'clamp(80px, 24vw, 180px)', opacity: 0.04 }}>
+      <GhostText style={{ top: '22%', left: '50%', transform: 'translateX(-50%)', fontSize: 'clamp(60px, 18vw, 130px)', opacity: 0.04 }}>
         {isPos ? '+' : '-'}${fmt$(stats.totalPnl, 0)}
       </GhostText>
-      <GhostText style={{ top: '14%', left: '-3%', fontSize: 'clamp(60px, 16vw, 120px)' }}>
+      <GhostText style={{ top: '14%', left: '4%', fontSize: 'clamp(60px, 16vw, 120px)' }}>
         {isPos ? 'PROFIT' : 'LOSS'}
       </GhostText>
 
@@ -288,7 +288,7 @@ function WinRateSection({ stats, sectionId }) {
         padding: '40px 28px 100px',
       }}
     >
-      <GhostText style={{ top: '-5%', right: '-8%' }}>WIN RATE</GhostText>
+      <GhostText style={{ top: '-2%', left: '50%', transform: 'translateX(-50%)', whiteSpace: 'pre', textAlign: 'center', lineHeight: 0.9 }}>{"WIN\nRATE"}</GhostText>
 
       <motion.div
         initial={{ opacity: 0, y: 40 }}
@@ -369,7 +369,7 @@ function RecentTradesSection({ trades, sectionId }) {
         padding: '40px 0 100px',
       }}
     >
-      <GhostText style={{ top: '5%', left: '-5%' }}>TRADES</GhostText>
+      <GhostText style={{ top: '5%', left: '4%' }}>TRADES</GhostText>
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -483,7 +483,7 @@ function EquitySection({ curve, stats, sectionId }) {
         padding: '40px 0 100px',
       }}
     >
-      <GhostText style={{ bottom: '10%', right: '-6%' }}>EQUITY</GhostText>
+      <GhostText style={{ bottom: '10%', right: '4%' }}>EQUITY</GhostText>
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -617,7 +617,7 @@ function PlaybookSection({ stats, sectionId }) {
         padding: '40px 20px 100px',
       }}
     >
-      <GhostText style={{ top: '5%', left: '-4%' }}>PLAYBOOK</GhostText>
+      <GhostText style={{ top: '5%', left: '50%', transform: 'translateX(-50%)', fontSize: 'clamp(56px, 18vw, 120px)' }}>PLAYBOOK</GhostText>
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}
