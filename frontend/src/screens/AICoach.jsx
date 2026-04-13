@@ -1,7 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { calcStats, fmtPnl, todayStr } from '../hooks/useTrades';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
+
+const G = '#00ff41';
+const R = '#ff2d2d';
 
 const PRE_SUGGESTIONS = [
   "What should I focus on today?",
@@ -89,60 +93,70 @@ export default function AICoach({ trades }) {
   const suggestions = mode === 'premarket' ? PRE_SUGGESTIONS : POST_SUGGESTIONS;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#080c08' }}>
       {/* Header */}
-      <div className="screen-header">
+      <div style={{ padding: '20px 16px 0', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+        <motion.div
+          animate={{ opacity: [0.04, 0.09, 0.04] }}
+          transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+          style={{
+            position: 'absolute', top: 4, right: 12,
+            fontFamily: "'Barlow Condensed', sans-serif",
+            fontSize: 44, fontWeight: 900, color: G,
+            letterSpacing: 3, userSelect: 'none', pointerEvents: 'none', lineHeight: 1,
+          }}
+        >
+          AI COACH
+        </motion.div>
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div className="screen-title">AI Coach</div>
-            <div className="screen-subtitle">Powered by Claude</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: 1, color: '#fff', lineHeight: 1 }}>
+              AI Coach
+            </div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>
+              Powered by Claude
+            </div>
           </div>
           {messages.length > 0 && (
-            <button
+            <motion.button
+              whileTap={{ scale: 0.93 }}
               onClick={clearChat}
               style={{
-                fontSize: 12,
-                color: 'var(--text-secondary)',
-                background: 'var(--card)',
-                border: '1px solid var(--border)',
-                borderRadius: 6,
-                padding: '5px 10px',
-                cursor: 'pointer',
-                fontFamily: 'Barlow',
+                fontSize: 12, color: 'rgba(255,255,255,0.5)',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 6, padding: '5px 10px',
+                cursor: 'pointer', fontFamily: 'Barlow',
               }}
             >
               Clear
-            </button>
+            </motion.button>
           )}
         </div>
 
         {/* Mode Toggle */}
         <div style={{
           display: 'flex',
-          background: 'var(--card)',
-          borderRadius: 10,
-          padding: 3,
-          marginTop: 12,
-          border: '1px solid var(--border)',
+          background: 'rgba(255,255,255,0.05)',
+          borderRadius: 10, padding: 3, marginTop: 12,
+          border: '1px solid rgba(255,255,255,0.08)',
+          marginBottom: 14,
         }}>
           {[['premarket', 'Pre-Market'], ['postmarket', 'Post-Market']].map(([val, label]) => (
             <button
               key={val}
               onClick={() => { setMode(val); clearChat(); }}
               style={{
-                flex: 1,
-                padding: '8px 0',
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 700,
+                flex: 1, padding: '8px 0', borderRadius: 8,
+                fontSize: 13, fontWeight: 700,
                 fontFamily: "'Barlow Condensed', sans-serif",
-                letterSpacing: '0.5px',
-                textTransform: 'uppercase',
-                background: mode === val ? 'var(--green)' : 'transparent',
-                color: mode === val ? '#000' : 'var(--text-secondary)',
-                border: 'none',
-                cursor: 'pointer',
+                letterSpacing: '0.5px', textTransform: 'uppercase',
+                background: mode === val ? G : 'transparent',
+                color: mode === val ? '#000' : 'rgba(255,255,255,0.4)',
+                border: 'none', cursor: 'pointer',
                 transition: 'background 0.15s, color 0.15s',
+                boxShadow: mode === val ? `0 0 12px ${G}50` : 'none',
               }}
             >
               {label}
@@ -152,16 +166,20 @@ export default function AICoach({ trades }) {
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 0', scrollbarWidth: 'none' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px', scrollbarWidth: 'none' }}>
         {messages.length === 0 && (
           <div>
             {/* Context card */}
-            <div className="card" style={{
-              marginBottom: 16,
-              background: 'var(--green-dim)',
-              border: '1px solid rgba(0,240,122,0.15)',
-            }}>
-              <div style={{ fontSize: 11, color: 'var(--green)', fontWeight: 700, letterSpacing: '0.5px', marginBottom: 8, textTransform: 'uppercase' }}>
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              style={{
+                background: `${G}0a`, border: `1px solid ${G}20`,
+                borderRadius: 12, padding: '12px 14px', marginBottom: 14,
+              }}
+            >
+              <div style={{ fontSize: 11, color: G, fontWeight: 700, letterSpacing: '0.5px', marginBottom: 8, textTransform: 'uppercase' }}>
                 Session Context
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}>
@@ -170,15 +188,21 @@ export default function AICoach({ trades }) {
                 <CtxItem label="Win rate" value={`${Math.round(allStats.winRate)}%`} positive={allStats.winRate >= 50} />
                 <CtxItem label="Rule score" value={`${Math.round(allStats.ruleScore)}%`} positive={allStats.ruleScore >= 80} />
               </div>
-            </div>
+            </motion.div>
 
-            {/* Intro text */}
-            <div style={{ textAlign: 'center', marginBottom: 20 }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>{mode === 'premarket' ? '🌅' : '📊'}</div>
-              <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>
+            {/* Intro */}
+            <div style={{ textAlign: 'center', marginBottom: 18 }}>
+              <motion.div
+                animate={{ opacity: [0.6, 1, 0.6] }}
+                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                style={{ fontSize: 32, marginBottom: 8 }}
+              >
+                ⚡
+              </motion.div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 16, marginBottom: 4, color: '#fff' }}>
                 {mode === 'premarket' ? 'Pre-Market Check-In' : 'Post-Market Review'}
               </div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
                 {mode === 'premarket'
                   ? "Let's prepare for today's session. I know your plan inside out."
                   : "Let's review how today went and what to take forward."}
@@ -186,68 +210,85 @@ export default function AICoach({ trades }) {
             </div>
 
             {/* Suggestion chips */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
               {suggestions.map((s, i) => (
-                <button
+                <motion.button
                   key={i}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.06, duration: 0.25 }}
+                  whileHover={{ borderColor: `${G}50`, background: `${G}08` }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => sendMessage(s)}
                   style={{
-                    textAlign: 'left',
-                    padding: '12px 14px',
-                    background: 'var(--card)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 10,
-                    color: 'var(--text)',
-                    fontSize: 13,
-                    cursor: 'pointer',
-                    fontFamily: 'Barlow',
+                    textAlign: 'left', padding: '11px 14px',
+                    background: '#111811',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: 10, color: 'rgba(255,255,255,0.75)',
+                    fontSize: 13, cursor: 'pointer', fontFamily: 'Barlow',
                     transition: 'border-color 0.15s, background 0.15s',
                     lineHeight: 1.4,
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--green)'; e.currentTarget.style.background = 'var(--green-dim)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--card)'; }}
                 >
                   {s}
-                </button>
+                </motion.button>
               ))}
             </div>
           </div>
         )}
 
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            style={{
-              display: 'flex',
-              justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-              marginBottom: 12,
-            }}
-          >
-            <div style={{
-              maxWidth: '85%',
-              padding: '10px 14px',
-              borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-              background: msg.role === 'user' ? 'var(--green)' : 'var(--card)',
-              color: msg.role === 'user' ? '#000' : 'var(--text)',
-              fontSize: 14,
-              lineHeight: 1.6,
-              border: msg.role === 'assistant' ? '1px solid var(--border)' : 'none',
-              fontWeight: msg.role === 'user' ? 600 : 400,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-            }}>
-              {msg.content}
-            </div>
-          </div>
-        ))}
+        <AnimatePresence>
+          {messages.map((msg, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              style={{
+                display: 'flex',
+                justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                marginBottom: 10,
+                alignItems: 'flex-end',
+                gap: 8,
+              }}
+            >
+              {msg.role === 'assistant' && (
+                <div style={{
+                  width: 28, height: 28, borderRadius: 8, background: `${G}18`,
+                  border: `1px solid ${G}30`, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', fontSize: 14, flexShrink: 0,
+                }}>
+                  ⚡
+                </div>
+              )}
+              <div style={{
+                maxWidth: '80%', padding: '10px 14px',
+                borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                background: msg.role === 'user' ? `${G}22` : '#111811',
+                color: msg.role === 'user' ? G : 'rgba(255,255,255,0.85)',
+                fontSize: 14, lineHeight: 1.6,
+                border: msg.role === 'user' ? `1px solid ${G}40` : '1px solid rgba(255,255,255,0.08)',
+                fontWeight: msg.role === 'user' ? 600 : 400,
+                whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+              }}>
+                {msg.content}
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
 
         {loading && (
-          <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 10, alignItems: 'flex-end', gap: 8 }}>
             <div style={{
-              padding: '12px 16px',
-              borderRadius: '16px 16px 16px 4px',
-              background: 'var(--card)',
-              border: '1px solid var(--border)',
+              width: 28, height: 28, borderRadius: 8, background: `${G}18`,
+              border: `1px solid ${G}30`, display: 'flex', alignItems: 'center',
+              justifyContent: 'center', fontSize: 14, flexShrink: 0,
+            }}>
+              ⚡
+            </div>
+            <div style={{
+              padding: '12px 16px', borderRadius: '16px 16px 16px 4px',
+              background: '#111811', border: '1px solid rgba(255,255,255,0.08)',
             }}>
               <TypingDots />
             </div>
@@ -256,13 +297,9 @@ export default function AICoach({ trades }) {
 
         {error && (
           <div style={{
-            margin: '8px 0',
-            padding: '10px 14px',
-            background: 'var(--red-dim)',
-            border: '1px solid var(--red)',
-            borderRadius: 10,
-            fontSize: 13,
-            color: 'var(--red)',
+            margin: '8px 0', padding: '10px 14px',
+            background: `${R}15`, border: `1px solid ${R}40`,
+            borderRadius: 10, fontSize: 13, color: R,
           }}>
             Error: {error}
           </div>
@@ -274,11 +311,10 @@ export default function AICoach({ trades }) {
       {/* Input */}
       <div style={{
         padding: '10px 16px',
-        borderTop: '1px solid var(--border)',
-        background: 'var(--surface)',
-        display: 'flex',
-        gap: 8,
-        alignItems: 'flex-end',
+        borderTop: '1px solid rgba(255,255,255,0.07)',
+        background: '#0a120a',
+        display: 'flex', gap: 8, alignItems: 'flex-end',
+        flexShrink: 0,
       }}>
         <textarea
           ref={inputRef}
@@ -292,42 +328,33 @@ export default function AICoach({ trades }) {
           placeholder="Ask your coach…"
           rows={1}
           style={{
-            flex: 1,
-            resize: 'none',
-            minHeight: 42,
-            maxHeight: 120,
-            background: 'var(--card)',
-            border: '1px solid var(--border)',
-            borderRadius: 10,
-            padding: '10px 12px',
-            fontSize: 14,
-            color: 'var(--text)',
-            fontFamily: 'Barlow',
-            outline: 'none',
-            overflowY: 'auto',
-            lineHeight: 1.5,
+            flex: 1, resize: 'none', minHeight: 42, maxHeight: 120,
+            background: '#111811',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 10, padding: '10px 12px',
+            fontSize: 14, color: '#fff', fontFamily: 'Barlow',
+            outline: 'none', overflowY: 'auto', lineHeight: 1.5,
           }}
         />
-        <button
+        <motion.button
+          whileTap={{ scale: 0.9 }}
           onClick={() => sendMessage()}
           disabled={!input.trim() || loading}
           style={{
-            width: 42,
-            height: 42,
-            borderRadius: 10,
-            background: input.trim() && !loading ? 'var(--green)' : 'var(--border)',
-            color: input.trim() && !loading ? '#000' : 'var(--text-muted)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            transition: 'background 0.15s',
+            width: 42, height: 42, borderRadius: 10,
+            background: input.trim() && !loading ? G : 'rgba(255,255,255,0.07)',
+            color: input.trim() && !loading ? '#000' : 'rgba(255,255,255,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, transition: 'background 0.15s',
             cursor: input.trim() && !loading ? 'pointer' : 'default',
-            fontFamily: 'Barlow',
+            border: 'none',
+            boxShadow: input.trim() && !loading ? `0 0 16px ${G}50` : 'none',
           }}
         >
-          <SendIcon />
-        </button>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+          </svg>
+        </motion.button>
       </div>
     </div>
   );
@@ -336,11 +363,10 @@ export default function AICoach({ trades }) {
 function CtxItem({ label, value, positive }) {
   return (
     <div>
-      <span style={{ fontSize: 11, color: 'rgba(0,240,122,0.6)' }}>{label}: </span>
+      <span style={{ fontSize: 11, color: `${G}80` }}>{label}: </span>
       <span style={{
-        fontSize: 12,
-        fontWeight: 700,
-        color: positive === undefined ? 'var(--text)' : positive ? 'var(--green)' : 'var(--red)',
+        fontSize: 12, fontWeight: 700,
+        color: positive === undefined ? 'rgba(255,255,255,0.85)' : positive ? G : R,
       }}>
         {value}
       </span>
@@ -355,28 +381,18 @@ function TypingDots() {
         <div
           key={i}
           style={{
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            background: 'var(--text-secondary)',
-            animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite`,
+            width: 6, height: 6, borderRadius: '50%',
+            background: G,
+            animation: `coachBounce 1.2s ease-in-out ${i * 0.2}s infinite`,
           }}
         />
       ))}
       <style>{`
-        @keyframes bounce {
-          0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+        @keyframes coachBounce {
+          0%, 80%, 100% { transform: scale(0.7); opacity: 0.3; }
           40% { transform: scale(1); opacity: 1; }
         }
       `}</style>
     </div>
-  );
-}
-
-function SendIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-    </svg>
   );
 }
