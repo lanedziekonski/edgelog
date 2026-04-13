@@ -2,7 +2,19 @@ require('dotenv').config();
 const express = require('express');
 const cors    = require('cors');
 const bcrypt  = require('bcryptjs');
+const path    = require('path');
+const multer  = require('multer');
 const Anthropic = require('@anthropic-ai/sdk');
+
+// Multer: store screenshots in uploads/ with unique names
+const storage = multer.diskStorage({
+  destination: path.join(__dirname, 'uploads'),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.jpg';
+    cb(null, `screenshot-${req.userId || 'u'}-${Date.now()}${ext}`);
+  },
+});
+const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 const { pool, initDb, rowToTrade, rowToAccount } = require('./database');
 const { signToken, requireAuth, requirePlan } = require('./middleware/auth');
@@ -23,6 +35,9 @@ app.use(cors({
   },
   credentials: true,
 }));
+
+// Serve uploaded screenshots as static files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Raw body for Stripe webhooks — must come before express.json()
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
@@ -184,8 +199,8 @@ app.post('/api/trades', requireAuth, async (req, res) => {
     await pool.query(
       `INSERT INTO trades (id, user_id, date, symbol, setup, account, pnl, entry_time, exit_time,
         emotion_before, emotion_after, followed_plan, notes, source,
-        entry_price, exit_price, quantity, side)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+        entry_price, exit_price, quantity, side, stop_price)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
       [
         id, req.userId,
         t.date || new Date().toISOString().split('T')[0],
@@ -197,6 +212,7 @@ app.post('/api/trades', requireAuth, async (req, res) => {
         t.exitPrice  != null ? Number(t.exitPrice)  : null,
         t.quantity   != null ? parseInt(t.quantity) : null,
         t.side       || null,
+        t.stopPrice  != null ? Number(t.stopPrice)  : null,
       ]
     );
     const { rows } = await pool.query(`SELECT * FROM trades WHERE id = $1`, [id]);
@@ -214,8 +230,8 @@ app.put('/api/trades/:id', requireAuth, async (req, res) => {
       `UPDATE trades SET date=$1, symbol=$2, setup=$3, account=$4, pnl=$5,
         entry_time=$6, exit_time=$7, emotion_before=$8, emotion_after=$9,
         followed_plan=$10, notes=$11,
-        entry_price=$12, exit_price=$13, quantity=$14, side=$15
-       WHERE id=$16 AND user_id=$17`,
+        entry_price=$12, exit_price=$13, quantity=$14, side=$15, stop_price=$16
+       WHERE id=$17 AND user_id=$18`,
       [
         t.date, t.symbol, t.setup, t.account, Number(t.pnl),
         t.entryTime || '', t.exitTime || '',
@@ -225,6 +241,7 @@ app.put('/api/trades/:id', requireAuth, async (req, res) => {
         t.exitPrice  != null ? Number(t.exitPrice)  : null,
         t.quantity   != null ? parseInt(t.quantity) : null,
         t.side       || null,
+        t.stopPrice  != null ? Number(t.stopPrice)  : null,
         req.params.id, req.userId,
       ]
     );
@@ -687,6 +704,102 @@ app.post('/api/trades/import-csv', requireAuth, requirePlan('trader'), async (re
     client.release();
   }
 });
+
+// ─── SCREENSHOT UPLOAD ────────────────────────────────────────────────────
+
+app.post('/api/trades/:id/screenshot', requireAuth, (req, res, next) => {
+  upload.single('screenshot')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    next();
+  });
+}, async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  const url = `/uploads/${req.file.filename}`;
+  try {
+    const result = await pool.query(
+      `UPDATE trades SET screenshot_url = $1 WHERE id = $2 AND user_id = $3`,
+      [url, req.params.id, req.userId]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Trade not found' });
+    res.json({ screenshotUrl: url });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save screenshot' });
+  }
+});
+
+// ─── DAILY JOURNAL ────────────────────────────────────────────────────────
+
+app.get('/api/journal/daily/:date', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM daily_journal WHERE user_id = $1 AND date = $2`,
+      [req.userId, req.params.date]
+    );
+    res.json(rows[0] ? rowToDailyJournal(rows[0]) : null);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch journal entry' });
+  }
+});
+
+app.post('/api/journal/daily', requireAuth, async (req, res) => {
+  const { date, preMarket, postMarket, mood } = req.body;
+  if (!date) return res.status(400).json({ error: 'date required' });
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO daily_journal (user_id, date, pre_market, post_market, mood)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (user_id, date) DO UPDATE
+         SET pre_market = $3, post_market = $4, mood = $5, updated_at = NOW()
+       RETURNING *`,
+      [req.userId, date, preMarket || '', postMarket || '', mood || '']
+    );
+    res.json(rowToDailyJournal(rows[0]));
+  } catch (err) {
+    console.error('Daily journal error:', err);
+    res.status(500).json({ error: 'Failed to save journal entry' });
+  }
+});
+
+app.put('/api/journal/daily/:date', requireAuth, async (req, res) => {
+  const { preMarket, postMarket, mood } = req.body;
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO daily_journal (user_id, date, pre_market, post_market, mood)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (user_id, date) DO UPDATE
+         SET pre_market = $3, post_market = $4, mood = $5, updated_at = NOW()
+       RETURNING *`,
+      [req.userId, req.params.date, preMarket || '', postMarket || '', mood || '']
+    );
+    res.json(rowToDailyJournal(rows[0]));
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update journal entry' });
+  }
+});
+
+// Fetch all dates that have journal entries (for calendar indicators)
+app.get('/api/journal/daily', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT date, mood FROM daily_journal WHERE user_id = $1 ORDER BY date DESC`,
+      [req.userId]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch journal dates' });
+  }
+});
+
+function rowToDailyJournal(row) {
+  return {
+    id: row.id, date: row.date,
+    preMarket: row.pre_market || '',
+    postMarket: row.post_market || '',
+    mood: row.mood || '',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
 
 // ─── MISC ─────────────────────────────────────────────────────────────────
 

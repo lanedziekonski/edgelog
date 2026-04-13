@@ -84,6 +84,21 @@ async function initDb() {
     await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS exit_price NUMERIC`);
     await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS quantity INTEGER`);
     await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS side TEXT`);
+    await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS stop_price NUMERIC`);
+    await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS screenshot_url TEXT`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS daily_journal (
+        id          SERIAL PRIMARY KEY,
+        user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        date        TEXT NOT NULL,
+        pre_market  TEXT DEFAULT '',
+        post_market TEXT DEFAULT '',
+        mood        TEXT DEFAULT '',
+        created_at  TIMESTAMPTZ DEFAULT NOW(),
+        updated_at  TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(user_id, date)
+      )
+    `);
     console.log('Database schema ready');
   } catch (err) {
     console.error('Schema creation failed:', err.message);
@@ -108,10 +123,12 @@ function rowToTrade(row) {
     followedPlan:  row.followed_plan === true,
     notes:         row.notes,
     source:        row.source || 'manual',
-    entryPrice:    row.entry_price != null ? parseFloat(row.entry_price) : null,
-    exitPrice:     row.exit_price  != null ? parseFloat(row.exit_price)  : null,
-    quantity:      row.quantity    != null ? parseInt(row.quantity)      : null,
-    side:          row.side        || null,
+    entryPrice:    row.entry_price  != null ? parseFloat(row.entry_price)  : null,
+    exitPrice:     row.exit_price   != null ? parseFloat(row.exit_price)   : null,
+    quantity:      row.quantity     != null ? parseInt(row.quantity)       : null,
+    side:          row.side         || null,
+    stopPrice:     row.stop_price   != null ? parseFloat(row.stop_price)   : null,
+    screenshotUrl: row.screenshot_url || null,
   };
 }
 

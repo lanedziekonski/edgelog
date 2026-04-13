@@ -1,13 +1,17 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { motion, useInView } from 'framer-motion';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
+  BarChart, Bar, Cell,
 } from 'recharts';
 import { calcDetailedStats, buildEquityCurve, fmtPnl, todayStr } from '../hooks/useTrades';
+import { useAccountFilter } from '../context/AccountFilterContext';
+import AccountSelector from '../components/AccountSelector';
 
 // ── Design tokens ─────────────────────────────────────────────────────────
 const G    = '#00ff41';
 const R    = '#ff2d2d';
+const GOLD = '#f0a500';
 const BG   = '#080c08';
 const BG2  = '#0d1a0d';
 const BG3  = '#0a120a';
@@ -94,7 +98,7 @@ function ParticleCanvas() {
 }
 
 // ── Section dot nav ───────────────────────────────────────────────────────
-const NAV_ITEMS = ['Overview', 'Win Rate', 'Trades', 'Equity', 'Playbook'];
+const NAV_ITEMS = ['Overview', 'Win Rate', 'Trades', 'Equity', 'Playbook', 'Monthly'];
 
 function SectionDots({ active, sectionIds }) {
   const scrollTo = (id) => {
@@ -794,6 +798,130 @@ function PlaybookSection({ stats, sectionId }) {
   );
 }
 
+// ── Section 6: Monthly P&L ────────────────────────────────────────────────
+function MonthlyPnLSection({ trades, sectionId }) {
+  const ref = useRef(null);
+  const inV = useInView(ref, { once: true, amount: 0.2 });
+
+  const monthlyData = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 12 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      const mTrades = trades.filter(t => t.date.startsWith(key));
+      const pnl = mTrades.reduce((s, t) => s + t.pnl, 0);
+      const days = new Set(mTrades.map(t => t.date)).size;
+      const wins = mTrades.filter(t => t.pnl > 0).length;
+      const winRate = mTrades.length > 0 ? Math.round((wins / mTrades.length) * 100) : null;
+      return { key, label, pnl, days, trades: mTrades.length, winRate, isPos: pnl >= 0 };
+    });
+  }, [trades]);
+
+  const maxAbs = Math.max(...monthlyData.map(m => Math.abs(m.pnl)), 1);
+
+  return (
+    <section
+      id={sectionId} ref={ref}
+      style={{
+        minHeight: '100svh', position: 'relative', overflow: 'hidden',
+        background: 'radial-gradient(ellipse at 50% 50%, #0f1a0f 0%, #080c08 68%)',
+        display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        padding: '40px 20px 100px',
+      }}
+    >
+      {/* Blends */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 140, background: 'linear-gradient(to bottom, #0d1a0d 0%, transparent 100%)', pointerEvents: 'none', zIndex: 3 }} />
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 160, background: 'linear-gradient(to bottom, transparent 0%, #080c08 100%)', pointerEvents: 'none', zIndex: 3 }} />
+      <GhostText style={{ top: '8%', left: '50%', transform: 'translateX(-50%)' }}>MONTHLY</GhostText>
+
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={inV ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 0.7 }}
+        style={{ position: 'relative', zIndex: 1, marginBottom: 24 }}
+      >
+        <SectionLabel>Monthly P&L</SectionLabel>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 32, fontWeight: 900, letterSpacing: '-1px', color: '#fff' }}>
+          Last 12 Months
+        </div>
+      </motion.div>
+
+      {/* Bar chart */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={inV ? { opacity: 1 } : {}}
+        transition={{ delay: 0.2, duration: 0.8 }}
+        style={{ position: 'relative', zIndex: 1, marginBottom: 28 }}
+      >
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={monthlyData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap="20%">
+            <XAxis dataKey="label" tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 9, fontFamily: 'Barlow' }} axisLine={false} tickLine={false} />
+            <YAxis hide />
+            <ReferenceLine y={0} stroke="rgba(255,255,255,0.08)" />
+            <Tooltip
+              cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+              contentStyle={{ background: '#111', border: '1px solid rgba(0,255,65,0.2)', borderRadius: 8, fontFamily: 'Barlow', fontSize: 12 }}
+              labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}
+              formatter={(v) => [fmtPnl(v), 'P&L']}
+            />
+            <Bar dataKey="pnl" radius={[3, 3, 0, 0]} isAnimationActive={inV} animationDuration={1200}>
+              {monthlyData.map((m) => (
+                <Cell key={m.key} fill={m.isPos ? G : R} opacity={m.trades === 0 ? 0.15 : 0.85} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </motion.div>
+
+      {/* Summary table */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={inV ? { opacity: 1, y: 0 } : {}}
+        transition={{ delay: 0.4, duration: 0.6 }}
+        style={{ position: 'relative', zIndex: 1 }}
+      >
+        {/* Header */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '56px 1fr 56px 52px 60px',
+          padding: '6px 4px', borderBottom: '1px solid rgba(255,255,255,0.08)', gap: 4, marginBottom: 2,
+        }}>
+          {['Month', 'P&L', 'Days', 'Trades', 'Win%'].map(h => (
+            <div key={h} style={{ fontSize: 9, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', fontWeight: 700, textAlign: h === 'P&L' || h === 'Win%' ? 'right' : 'left' }}>
+              {h}
+            </div>
+          ))}
+        </div>
+
+        {/* Rows — show only months with trades */}
+        {monthlyData.filter(m => m.trades > 0).reverse().map((m, i) => (
+          <motion.div
+            key={m.key}
+            initial={{ opacity: 0, x: -10 }}
+            animate={inV ? { opacity: 1, x: 0 } : {}}
+            transition={{ delay: 0.5 + i * 0.04, duration: 0.3 }}
+            style={{
+              display: 'grid', gridTemplateColumns: '56px 1fr 56px 52px 60px',
+              padding: '9px 4px', gap: 4,
+              borderBottom: '1px solid rgba(255,255,255,0.04)',
+            }}
+          >
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontFamily: 'Barlow', alignSelf: 'center' }}>{m.label}</div>
+            <div style={{ textAlign: 'right', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 700, color: m.isPos ? G : R, alignSelf: 'center' }}>
+              {m.pnl >= 0 ? '+' : ''}{fmtPnl(m.pnl)}
+            </div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', alignSelf: 'center' }}>{m.days}d</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', alignSelf: 'center' }}>{m.trades}</div>
+            <div style={{ textAlign: 'right', fontSize: 12, fontWeight: 600, color: m.winRate >= 50 ? G : R, alignSelf: 'center' }}>
+              {m.winRate != null ? `${m.winRate}%` : '—'}
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
+    </section>
+  );
+}
+
 // ── Empty state ───────────────────────────────────────────────────────────
 function EmptyState() {
   return (
@@ -825,19 +953,59 @@ function EmptyState() {
 }
 
 // ── Main Dashboard ────────────────────────────────────────────────────────
-const SECTION_IDS = ['dash-overview', 'dash-winrate', 'dash-trades', 'dash-equity', 'dash-playbook'];
+const SECTION_IDS = ['dash-overview', 'dash-winrate', 'dash-trades', 'dash-equity', 'dash-playbook', 'dash-monthly'];
 
-export default function Dashboard({ trades, tradesLoading }) {
+export default function Dashboard({ trades, tradesLoading, accounts = [] }) {
   const today    = todayStr();
-  const stats    = useMemo(() => calcDetailedStats(trades), [trades]);
-  const curve    = useMemo(() => buildEquityCurve(trades), [trades]);
+  const { selectedAccountId } = useAccountFilter();
 
-  const todayPnl = useMemo(() => trades.filter(t => t.date === today).reduce((s, t) => s + t.pnl, 0), [trades, today]);
+  // Filter trades by selected account
+  const filteredTrades = useMemo(() => {
+    if (!selectedAccountId) return trades;
+    return trades.filter(t => t.accountId === selectedAccountId || (!t.accountId && accounts.find(a => a.id === selectedAccountId)?.name === t.account));
+  }, [trades, selectedAccountId, accounts]);
+
+  const stats    = useMemo(() => calcDetailedStats(filteredTrades), [filteredTrades]);
+  const curve    = useMemo(() => buildEquityCurve(filteredTrades), [filteredTrades]);
+
+  const todayPnl = useMemo(() => filteredTrades.filter(t => t.date === today).reduce((s, t) => s + t.pnl, 0), [filteredTrades, today]);
 
   const weekPnl = useMemo(() => {
     const ago = new Date(Date.now() - 7 * 864e5).toISOString().split('T')[0];
-    return trades.filter(t => t.date >= ago).reduce((s, t) => s + t.pnl, 0);
-  }, [trades]);
+    return filteredTrades.filter(t => t.date >= ago).reduce((s, t) => s + t.pnl, 0);
+  }, [filteredTrades]);
+
+  // Violation alerts across all accounts (or selected account only)
+  const violations = useMemo(() => {
+    const alerts = [];
+    const checkAccounts = selectedAccountId
+      ? accounts.filter(a => a.id === selectedAccountId)
+      : accounts;
+    checkAccounts.forEach(account => {
+      if (!account.dailyLossLimit && !account.maxDrawdown) return;
+      const acctTrades = filteredTrades.filter(t => t.accountId === account.id || (!t.accountId && t.account === account.name));
+      const dailyPnl = acctTrades.filter(t => t.date === today).reduce((s, t) => s + t.pnl, 0);
+      const totalPnl = acctTrades.reduce((s, t) => s + t.pnl, 0);
+      if (account.dailyLossLimit > 0) {
+        const used = -Math.min(dailyPnl, 0);
+        const pct  = used / account.dailyLossLimit;
+        const rem  = account.dailyLossLimit - used;
+        if (pct >= 0.9) alerts.push({ level: 'critical', msg: `🚨 ${account.name}: Near daily loss limit — $${rem.toFixed(0)} remaining. Stop trading.` });
+        else if (pct >= 0.7) alerts.push({ level: 'warning',  msg: `⚠ ${account.name}: Approaching daily loss limit — $${rem.toFixed(0)} remaining` });
+      }
+      if (account.maxDrawdown > 0) {
+        const used = Math.max(0, -totalPnl);
+        const pct  = used / account.maxDrawdown;
+        const rem  = account.maxDrawdown - used;
+        if (pct >= 0.9) alerts.push({ level: 'critical', msg: `🚨 ${account.name}: Near max drawdown — $${rem.toFixed(0)} remaining. Stop trading.` });
+        else if (pct >= 0.7) alerts.push({ level: 'warning',  msg: `⚠ ${account.name}: Approaching max drawdown — $${rem.toFixed(0)} remaining` });
+      }
+    });
+    return alerts.sort((a, b) => (a.level === 'critical' ? -1 : 1) - (b.level === 'critical' ? -1 : 1));
+  }, [accounts, filteredTrades, today, selectedAccountId]);
+
+  const isEmpty = filteredTrades.length === 0 && trades.length === 0;
+  const todayTrades = filteredTrades.filter(t => t.date === today);
 
   // Active section for dot nav
   const [activeSection, setActiveSection] = useState(0);
@@ -853,13 +1021,10 @@ export default function Dashboard({ trades, tradesLoading }) {
       return obs;
     });
     return () => observers.forEach(o => o?.disconnect());
-  }, [trades]);
-
-  const isEmpty = trades.length === 0;
+  }, [filteredTrades]);
 
   const now      = new Date();
   const greeting = now.getHours() < 12 ? 'Pre-Market' : now.getHours() < 17 ? 'Market Hours' : 'Post-Market';
-  const todayTrades = trades.filter(t => t.date === today);
 
   return (
     <div style={{ background: BG, color: '#fff', position: 'relative', fontFamily: "'Barlow', sans-serif" }}>
@@ -867,29 +1032,54 @@ export default function Dashboard({ trades, tradesLoading }) {
       {/* Floating header — minimal, non-intrusive */}
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 150,
-        background: 'rgba(8,12,8,0.85)', backdropFilter: 'blur(12px)',
+        background: 'rgba(8,12,8,0.88)', backdropFilter: 'blur(12px)',
         borderBottom: '1px solid rgba(0,255,65,0.08)',
-        padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
-        <div>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 900, letterSpacing: '1px', color: G }}>
-            EDGELOG
+        <div style={{ padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 900, letterSpacing: '1px', color: G }}>
+              EDGELOG
+            </div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '1px' }}>
+              {now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · {greeting}
+            </div>
           </div>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '1px' }}>
-            {now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · {greeting}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <AccountSelector accounts={accounts} />
+            {tradesLoading && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>syncing…</span>}
+            <div style={{
+              fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20,
+              border: `1px solid ${todayTrades.length >= 3 ? R : 'rgba(0,255,65,0.3)'}`,
+              color: todayTrades.length >= 3 ? R : G,
+              background: todayTrades.length >= 3 ? 'rgba(255,45,45,0.06)' : 'rgba(0,255,65,0.06)',
+            }}>
+              {todayTrades.length}/3 today
+            </div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {tradesLoading && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>syncing…</span>}
-          <div style={{
-            fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20,
-            border: `1px solid ${todayTrades.length >= 3 ? R : 'rgba(0,255,65,0.3)'}`,
-            color: todayTrades.length >= 3 ? R : G,
-            background: todayTrades.length >= 3 ? 'rgba(255,45,45,0.06)' : 'rgba(0,255,65,0.06)',
-          }}>
-            {todayTrades.length}/3 today
-          </div>
-        </div>
+
+        {/* Violation alert banner */}
+        <AnimatePresence>
+          {violations.length > 0 && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div style={{
+                padding: '8px 20px',
+                background: violations[0].level === 'critical' ? 'rgba(255,45,45,0.12)' : 'rgba(240,165,0,0.1)',
+                borderTop: `1px solid ${violations[0].level === 'critical' ? 'rgba(255,45,45,0.3)' : 'rgba(240,165,0,0.3)'}`,
+                fontSize: 12, fontWeight: 600,
+                color: violations[0].level === 'critical' ? R : GOLD,
+              }}>
+                {violations[0].msg}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {isEmpty ? (
@@ -898,7 +1088,7 @@ export default function Dashboard({ trades, tradesLoading }) {
         <>
           <SectionDots active={activeSection} sectionIds={SECTION_IDS} />
 
-          <div style={{ paddingTop: 44 }}>
+          <div style={{ paddingTop: violations.length > 0 ? 80 : 44 }}>
             <HeroSection
               stats={stats} todayPnl={todayPnl} weekPnl={weekPnl}
               sectionId={SECTION_IDS[0]}
@@ -908,7 +1098,7 @@ export default function Dashboard({ trades, tradesLoading }) {
               sectionId={SECTION_IDS[1]}
             />
             <RecentTradesSection
-              trades={trades}
+              trades={filteredTrades}
               sectionId={SECTION_IDS[2]}
             />
             {curve.length > 1 && (
@@ -923,6 +1113,10 @@ export default function Dashboard({ trades, tradesLoading }) {
                 sectionId={SECTION_IDS[4]}
               />
             )}
+            <MonthlyPnLSection
+              trades={filteredTrades}
+              sectionId={SECTION_IDS[5]}
+            />
           </div>
         </>
       )}

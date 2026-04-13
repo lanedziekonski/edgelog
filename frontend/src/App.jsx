@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth, hasAccess } from './context/AuthContext';
+import { AccountFilterProvider, useAccountFilter } from './context/AccountFilterContext';
 import BottomNav from './components/BottomNav';
 import FeatureGate from './components/FeatureGate';
 import Auth from './screens/Auth';
@@ -32,6 +33,7 @@ function AppInner() {
   const [focusTradeId, setFocusTradeId] = useState(null);
   const tradeContext   = useTrades();
   const accountContext = useAccounts();
+  const { selectedAccountId } = useAccountFilter();
 
   // Handle Stripe payment-success redirect
   useEffect(() => {
@@ -113,9 +115,9 @@ function AppInner() {
     }
 
     switch (activeTab) {
-      case 'dashboard': return <Dashboard {...tradeContext} />;
-      case 'journal':   return <Journal {...tradeContext} focusTradeId={focusTradeId} onFocusConsumed={() => setFocusTradeId(null)} />;
-      case 'calendar':  return <Calendar {...tradeContext} onNavigate={handleNavigate} />;
+      case 'dashboard': return <Dashboard {...tradeContext} accounts={accountContext.accounts} />;
+      case 'journal':   return <Journal {...tradeContext} accounts={accountContext.accounts} focusTradeId={focusTradeId} onFocusConsumed={() => setFocusTradeId(null)} />;
+      case 'calendar':  return <Calendar {...tradeContext} accounts={accountContext.accounts} onNavigate={handleNavigate} />;
       case 'accounts':  return <Accounts {...tradeContext} {...accountContext} />;
       case 'plan':      return <TradingPlan />;
       case 'coach':     return <AICoach {...tradeContext} />;
@@ -137,7 +139,9 @@ function AppInner() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppInner />
+      <AccountFilterProvider>
+        <AppInner />
+      </AccountFilterProvider>
     </AuthProvider>
   );
 }

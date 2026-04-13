@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fmtPnl, todayStr } from '../hooks/useTrades';
 import BrokerageSync from '../components/BrokerageSync';
+
+const GOLD = '#f0a500';
 
 const G = '#00ff41';
 const R = '#ff2d2d';
@@ -373,6 +375,48 @@ function AccountCard({ account, trades, today, importing, onStartImport, onCance
 
   const typeLabel = { prop: 'Prop Firm', live: 'Live', paper: 'Paper' }[account.type] || account.type;
 
+  // ── Payout tracker (prop accounts with profit target)
+  const profitTarget  = account.profitTarget || 0;
+  const payoutPct     = profitTarget > 0 ? Math.min(100, (totalPnl / profitTarget) * 100) : 0;
+  const payoutEligible = profitTarget > 0 && totalPnl >= profitTarget;
+  const nearTarget     = payoutPct >= 90 && !payoutEligible;
+
+  // ── Days to payout estimate
+  const tradingDays = useMemo(() => {
+    const byDate = {};
+    acctTrades.forEach(t => { byDate[t.date] = (byDate[t.date] || 0) + t.pnl; });
+    return Object.values(byDate);
+  }, [acctTrades]);
+  const avgDailyPnl = tradingDays.length > 0
+    ? tradingDays.reduce((s, v) => s + v, 0) / tradingDays.length
+    : 0;
+  const remaining = profitTarget - totalPnl;
+  const daysEstimate = avgDailyPnl > 0 && remaining > 0
+    ? Math.ceil(remaining / avgDailyPnl)
+    : null;
+
+  // ── Violation alerts
+  const dailyLossUsed  = -Math.min(dailyPnl, 0);
+  const drawdownUsed   = Math.max(0, -totalPnl);  // simplified: loss from starting
+  const dailyPct  = account.dailyLossLimit > 0 ? dailyLossUsed / account.dailyLossLimit : 0;
+  const ddPct     = account.maxDrawdown    > 0 ? drawdownUsed  / account.maxDrawdown    : 0;
+
+  const violations = [];
+  if (account.dailyLossLimit > 0) {
+    const rem = account.dailyLossLimit - dailyLossUsed;
+    if (dailyPct >= 0.9)
+      violations.push({ level: 'critical', msg: `🚨 Near daily loss limit — $${rem.toFixed(0)} remaining. Stop trading.` });
+    else if (dailyPct >= 0.7)
+      violations.push({ level: 'warning', msg: `⚠ Approaching daily loss limit — $${rem.toFixed(0)} remaining` });
+  }
+  if (account.maxDrawdown > 0) {
+    const rem = account.maxDrawdown - drawdownUsed;
+    if (ddPct >= 0.9)
+      violations.push({ level: 'critical', msg: `🚨 Near max drawdown limit — $${rem.toFixed(0)} remaining. Stop trading.` });
+    else if (ddPct >= 0.7)
+      violations.push({ level: 'warning', msg: `⚠ Approaching max drawdown — $${rem.toFixed(0)} remaining` });
+  }
+
   return (
     <div style={{
       background: '#111811', border: '1px solid rgba(255,255,255,0.07)',
@@ -415,6 +459,29 @@ function AccountCard({ account, trades, today, importing, onStartImport, onCance
           <StatCell label="Win Rate"     value={`${winRate}%`}      positive={winRate >= 50} />
         </div>
 
+        {/* Violation alerts */}
+        <AnimatePresence>
+          {violations.map((v, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.25 }}
+              style={{
+                background: v.level === 'critical' ? 'rgba(255,45,45,0.1)' : 'rgba(240,165,0,0.1)',
+                border: `1px solid ${v.level === 'critical' ? 'rgba(255,45,45,0.4)' : 'rgba(240,165,0,0.4)'}`,
+                borderRadius: 8, padding: '8px 12px', marginBottom: 10,
+                fontSize: 12, fontWeight: 600,
+                color: v.level === 'critical' ? R : GOLD,
+                lineHeight: 1.4,
+              }}
+            >
+              {v.msg}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+
         {/* Balance row if starting balance set */}
         {account.startingBalance > 0 && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -427,11 +494,73 @@ function AccountCard({ account, trades, today, importing, onStartImport, onCance
             {account.dailyLossLimit && (
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>Daily Limit</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: dailyPnl <= -account.dailyLossLimit ? R : 'rgba(255,255,255,0.6)' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: dailyPct >= 0.9 ? R : dailyPct >= 0.7 ? GOLD : 'rgba(255,255,255,0.6)' }}>
                   ${account.dailyLossLimit.toLocaleString()}
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Payout tracker — prop accounts with profit target */}
+        {account.type === 'prop' && profitTarget > 0 && (
+          <div style={{
+            background: '#0d1a0d', borderRadius: 10, padding: '12px 14px', marginBottom: 12,
+            border: payoutEligible ? `1px solid ${G}50` : '1px solid rgba(255,255,255,0.06)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                Payout Progress
+              </div>
+              {payoutEligible && (
+                <span style={{
+                  fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
+                  background: `${G}20`, color: G, border: `1px solid ${G}50`,
+                  letterSpacing: '0.3px',
+                }}>
+                  Payout Eligible ✓
+                </span>
+              )}
+            </div>
+
+            {/* Progress bar */}
+            <div style={{ height: 6, background: 'rgba(255,255,255,0.07)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(payoutPct, 100)}%` }}
+                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                style={{
+                  height: '100%', borderRadius: 3,
+                  background: payoutEligible ? G : nearTarget ? GOLD : G,
+                  boxShadow: `0 0 8px ${payoutEligible ? G : nearTarget ? GOLD : G}60`,
+                }}
+              />
+            </div>
+
+            {/* Amount + percentage */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                <span style={{ fontWeight: 700, color: totalPnl >= 0 ? G : R }}>
+                  ${Math.max(0, totalPnl).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                </span>
+                {' '}of ${profitTarget.toLocaleString()}
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: nearTarget ? GOLD : payoutEligible ? G : 'rgba(255,255,255,0.5)' }}>
+                {Math.round(Math.max(0, payoutPct))}%
+              </div>
+            </div>
+
+            {/* Days estimate */}
+            <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(255,255,255,0.35)', lineHeight: 1.4 }}>
+              {payoutEligible
+                ? <span style={{ color: G, fontWeight: 600 }}>Ready for payout 🎉</span>
+                : daysEstimate !== null
+                  ? <>At your current pace — <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>{daysEstimate} trading day{daysEstimate !== 1 ? 's' : ''}</span> to payout</>
+                  : avgDailyPnl <= 0
+                    ? 'Increase daily performance to estimate payout'
+                    : null
+              }
+            </div>
           </div>
         )}
 

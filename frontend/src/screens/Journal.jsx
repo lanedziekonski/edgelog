@@ -1,6 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fmtPnl, todayStr } from '../hooks/useTrades';
+import { useAuth } from '../context/AuthContext';
+import { useAccountFilter } from '../context/AccountFilterContext';
+import AccountSelector from '../components/AccountSelector';
+import { api } from '../services/api';
 
 const G = '#00ff41';
 const R = '#ff2d2d';
@@ -19,6 +23,7 @@ const emptyForm = () => ({
   quantity: '',
   entryPrice: '',
   exitPrice: '',
+  stopPrice: '',
   entryTime: '',
   exitTime: '',
   emotionBefore: 'Calm',
@@ -27,13 +32,18 @@ const emptyForm = () => ({
   notes: '',
 });
 
-export default function Journal({ trades, addTrade, deleteTrade, patchTrade, focusTradeId, onFocusConsumed }) {
+export default function Journal({ trades, addTrade, deleteTrade, patchTrade, accounts = [], focusTradeId, onFocusConsumed }) {
+  const { selectedAccountId } = useAccountFilter();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [filter, setFilter] = useState('all');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  const filtered = trades.filter(t => {
+  const accountFilteredTrades = selectedAccountId
+    ? trades.filter(t => t.accountId === selectedAccountId || (!t.accountId && accounts.find(a => a.id === selectedAccountId)?.name === t.account))
+    : trades;
+
+  const filtered = accountFilteredTrades.filter(t => {
     if (filter === 'wins') return t.pnl > 0;
     if (filter === 'losses') return t.pnl < 0;
     if (filter === 'broke-rules') return !t.followedPlan;
@@ -56,6 +66,7 @@ export default function Journal({ trades, addTrade, deleteTrade, patchTrade, foc
       quantity:   form.quantity   ? parseInt(form.quantity)     : null,
       entryPrice: form.entryPrice ? parseFloat(form.entryPrice) : null,
       exitPrice:  form.exitPrice  ? parseFloat(form.exitPrice)  : null,
+      stopPrice:  form.stopPrice  ? parseFloat(form.stopPrice)  : null,
     });
     setShowForm(false);
     setForm(emptyForm());
@@ -84,8 +95,11 @@ export default function Journal({ trades, addTrade, deleteTrade, patchTrade, foc
         <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: 1, color: '#fff', lineHeight: 1 }}>
           Journal
         </div>
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 3, marginBottom: 14 }}>
-          {trades.length} trades logged
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 3, marginBottom: 14 }}>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+            {accountFilteredTrades.length} trades
+          </div>
+          <AccountSelector accounts={accounts} />
         </div>
 
         {/* Filter pills */}
@@ -348,6 +362,17 @@ export default function Journal({ trades, addTrade, deleteTrade, patchTrade, foc
                 </div>
               </div>
 
+              <div className="form-field">
+                <label className="form-label">Stop Price <span style={{ opacity: 0.4, fontWeight: 400 }}>(optional, for R:R)</span></label>
+                <input
+                  type="number"
+                  placeholder="e.g. 17800"
+                  step="0.01"
+                  value={form.stopPrice}
+                  onChange={e => set('stopPrice', e.target.value)}
+                />
+              </div>
+
               <div className="form-row">
                 <div className="form-field">
                   <label className="form-label">Emotion Before</label>
@@ -411,12 +436,54 @@ export default function Journal({ trades, addTrade, deleteTrade, patchTrade, foc
 // ── TradeCard ──────────────────────────────────────────────────────────────
 
 function TradeCard({ trade, onDelete, onUpdate, isFocused, onFocusConsumed }) {
-  const cardRef = useRef(null);
+  const { token } = useAuth();
+  const cardRef    = useRef(null);
+  const screenshotRef = useRef(null);
   const [expanded,  setExpanded]  = useState(false);
   const [editing,   setEditing]   = useState(false);
   const [saving,    setSaving]    = useState(false);
   const [saveErr,   setSaveErr]   = useState('');
   const [highlight, setHighlight] = useState(false);
+  const [screenshotUploading, setScreenshotUploading] = useState(false);
+  const [screenshotUrl, setScreenshotUrl] = useState(trade.screenshotUrl || null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  // R:R calculation
+  const rr = useMemo(() => {
+    if (trade.entryPrice == null || trade.exitPrice == null) return null;
+    if (trade.stopPrice != null) {
+      // Proper R:R using stop price
+      const reward = trade.side === 'Short'
+        ? trade.entryPrice - trade.exitPrice
+        : trade.exitPrice - trade.entryPrice;
+      const risk = trade.side === 'Short'
+        ? trade.stopPrice - trade.entryPrice
+        : trade.entryPrice - trade.stopPrice;
+      if (risk <= 0) return null;
+      return reward / risk;
+    }
+    return null;
+  }, [trade.entryPrice, trade.exitPrice, trade.stopPrice, trade.side]);
+
+  const handleScreenshotUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !token) return;
+    setScreenshotUploading(true);
+    try {
+      const data = await api.uploadScreenshot(token, trade.id, file);
+      setScreenshotUrl(data.screenshotUrl);
+    } catch (err) {
+      console.error('Screenshot upload failed:', err);
+    } finally {
+      setScreenshotUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  // screenshot URL base (dev vs prod)
+  const screenshotFullUrl = screenshotUrl
+    ? (import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}${screenshotUrl}` : `https://edgelog.onrender.com${screenshotUrl}`)
+    : null;
 
   // Editable copies — sync when trade object updates (e.g. after save)
   const [editNotes,        setEditNotes]        = useState(trade.notes         || '');
@@ -541,9 +608,17 @@ function TradeCard({ trade, onDelete, onUpdate, isFocused, onFocusConsumed }) {
               </div>
             </div>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, color: accentColor }}>
-              {fmtPnl(trade.pnl)}
+          <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {screenshotUrl && (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
+              )}
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, color: accentColor }}>
+                {fmtPnl(trade.pnl)}
+              </div>
             </div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{trade.account}</div>
           </div>
@@ -680,6 +755,108 @@ function TradeCard({ trade, onDelete, onUpdate, isFocused, onFocusConsumed }) {
                       </div>
                     )}
                   </div>
+
+                  {/* R:R ratio */}
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 3 }}>Actual R:R</div>
+                    {rr !== null ? (
+                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, color: rr >= 1 ? G : 'rgba(255,255,255,0.5)' }}>
+                        {rr.toFixed(2)}R
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.2)', fontStyle: 'italic' }}>
+                        {trade.stopPrice != null ? 'Invalid stop' : 'N/A — no stop price'}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Screenshot */}
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Screenshot</div>
+                    {screenshotUrl && (
+                      <div
+                        onClick={() => setLightboxOpen(true)}
+                        style={{ marginBottom: 8, cursor: 'zoom-in', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', display: 'inline-block' }}
+                      >
+                        <img
+                          src={screenshotFullUrl}
+                          alt="Trade screenshot"
+                          style={{ display: 'block', maxWidth: '100%', maxHeight: 160, objectFit: 'cover' }}
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <input
+                        ref={screenshotRef}
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={handleScreenshotUpload}
+                      />
+                      <motion.button
+                        whileTap={{ scale: 0.94 }}
+                        onClick={() => screenshotRef.current?.click()}
+                        disabled={screenshotUploading}
+                        style={{
+                          fontSize: 12, fontWeight: 700,
+                          color: 'rgba(255,255,255,0.55)',
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(255,255,255,0.12)',
+                          borderRadius: 7, padding: '5px 12px',
+                          cursor: screenshotUploading ? 'default' : 'pointer',
+                          fontFamily: "'Barlow', sans-serif",
+                          opacity: screenshotUploading ? 0.5 : 1,
+                          display: 'flex', alignItems: 'center', gap: 5,
+                        }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                          <circle cx="12" cy="13" r="4"/>
+                        </svg>
+                        {screenshotUploading ? 'Uploading…' : screenshotUrl ? 'Replace Screenshot' : 'Add Screenshot'}
+                      </motion.button>
+                    </div>
+                  </div>
+
+                  {/* Lightbox */}
+                  <AnimatePresence>
+                    {lightboxOpen && screenshotFullUrl && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setLightboxOpen(false)}
+                        style={{
+                          position: 'fixed', inset: 0, zIndex: 9999,
+                          background: 'rgba(0,0,0,0.92)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          padding: 16,
+                        }}
+                      >
+                        <motion.img
+                          initial={{ scale: 0.85, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.85, opacity: 0 }}
+                          src={screenshotFullUrl}
+                          alt="Trade screenshot"
+                          style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: 8, objectFit: 'contain' }}
+                          onClick={e => e.stopPropagation()}
+                        />
+                        <button
+                          onClick={() => setLightboxOpen(false)}
+                          style={{
+                            position: 'absolute', top: 20, right: 20,
+                            background: 'rgba(255,255,255,0.12)', border: 'none',
+                            borderRadius: '50%', width: 36, height: 36,
+                            color: '#fff', fontSize: 18, cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}
+                        >
+                          ×
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   {/* Action row */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

@@ -57,6 +57,29 @@ export const api = {
   createAccount: (token, data) => call('/accounts', { method: 'POST', body: JSON.stringify(data) }, token),
   deleteAccount: (token, id)   => call(`/accounts/${id}`, { method: 'DELETE' }, token),
 
+  // Daily journal
+  getDailyJournalDates: (token) => call('/journal/daily', {}, token),
+  getDailyJournal: (token, date) => call(`/journal/daily/${date}`, {}, token),
+  saveDailyJournal: (token, data) =>
+    call('/journal/daily', { method: 'POST', body: JSON.stringify(data) }, token),
+
+  // Screenshot upload (uses FormData, not JSON)
+  uploadScreenshot: async (token, tradeId, file) => {
+    const BASE_URL = import.meta.env.VITE_API_URL
+      ? `${import.meta.env.VITE_API_URL}/api`
+      : 'https://edgelog.onrender.com/api';
+    const fd = new FormData();
+    fd.append('screenshot', file);
+    const res = await fetch(`${BASE_URL}/trades/${tradeId}/screenshot`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+  },
+
   // Plaid / linked accounts
   getLinkedAccounts: (token) => call('/plaid/accounts', {}, token),
   createLinkToken: (token) =>

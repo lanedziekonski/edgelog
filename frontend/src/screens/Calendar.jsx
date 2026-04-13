@@ -1,6 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fmtPnl } from '../hooks/useTrades';
+import { useAuth } from '../context/AuthContext';
+import { useAccountFilter } from '../context/AccountFilterContext';
+import AccountSelector from '../components/AccountSelector';
+import { api } from '../services/api';
+
+const MOODS = ['Focused', 'Calm', 'Confident', 'Anxious', 'Frustrated', 'Distracted'];
 
 const G = '#00ff41';
 const R = '#ff2d2d';
@@ -16,17 +22,66 @@ function fmtSymbol(raw) {
   return FUTURES_ROOTS.has(base) ? `${base}1!` : base;
 }
 
-export default function Calendar({ trades, onNavigate }) {
+export default function Calendar({ trades, accounts = [], onNavigate }) {
+  const { token } = useAuth();
+  const { selectedAccountId } = useAccountFilter();
   const now = new Date();
   const [viewDate, setViewDate]     = useState({ year: now.getFullYear(), month: now.getMonth() });
   const [selectedDate, setSelectedDate] = useState(null);
+
+  // Filter trades by selected account
+  const filteredTrades = selectedAccountId
+    ? trades.filter(t => t.accountId === selectedAccountId || (!t.accountId && accounts.find(a => a.id === selectedAccountId)?.name === t.account))
+    : trades;
+
+  // Daily journal state
+  const [journalDates, setJournalDates]     = useState({}); // date → { mood }
+  const [journalEntry, setJournalEntry]     = useState(null);
+  const [journalEditing, setJournalEditing] = useState(false);
+  const [journalDraft, setJournalDraft]     = useState({ preMarket: '', postMarket: '', mood: '' });
+  const [journalSaving, setJournalSaving]   = useState(false);
+
+  // Load all journal dates on mount
+  useEffect(() => {
+    if (!token) return;
+    api.getDailyJournalDates(token).then(rows => {
+      const map = {};
+      (rows || []).forEach(r => { map[r.date] = r; });
+      setJournalDates(map);
+    }).catch(() => {});
+  }, [token]);
+
+  // Load journal entry for selected date
+  useEffect(() => {
+    if (!selectedDate || !token) { setJournalEntry(null); setJournalEditing(false); return; }
+    api.getDailyJournal(token, selectedDate).then(entry => {
+      setJournalEntry(entry);
+      setJournalDraft(entry ? { preMarket: entry.preMarket, postMarket: entry.postMarket, mood: entry.mood } : { preMarket: '', postMarket: '', mood: '' });
+      setJournalEditing(!entry); // auto-enter edit if no entry yet
+    }).catch(() => {});
+  }, [selectedDate, token]);
+
+  const saveJournal = useCallback(async () => {
+    if (!selectedDate || !token) return;
+    setJournalSaving(true);
+    try {
+      const saved = await api.saveDailyJournal(token, { date: selectedDate, ...journalDraft });
+      setJournalEntry(saved);
+      setJournalDates(prev => ({ ...prev, [selectedDate]: saved }));
+      setJournalEditing(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setJournalSaving(false);
+    }
+  }, [selectedDate, token, journalDraft]);
 
   const { year, month } = viewDate;
   const firstDay    = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const dailyMap = {};
-  trades.forEach(t => {
+  filteredTrades.forEach(t => {
     if (!dailyMap[t.date]) dailyMap[t.date] = { pnl: 0, count: 0, trades: [] };
     dailyMap[t.date].pnl += t.pnl;
     dailyMap[t.date].count += 1;
@@ -37,7 +92,7 @@ export default function Calendar({ trades, onNavigate }) {
   const prevMonth = () => setViewDate(v => v.month === 0 ? { year: v.year - 1, month: 11 } : { year: v.year, month: v.month - 1 });
   const nextMonth = () => setViewDate(v => v.month === 11 ? { year: v.year + 1, month: 0 } : { year: v.year, month: v.month + 1 });
 
-  const monthTrades = trades.filter(t => {
+  const monthTrades = filteredTrades.filter(t => {
     const [ty, tm] = t.date.split('-').map(Number);
     return ty === year && tm - 1 === month;
   });
@@ -72,11 +127,16 @@ export default function Calendar({ trades, onNavigate }) {
         >
           CALENDAR
         </motion.div>
-        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: 1, color: '#fff', lineHeight: 1 }}>
-          Calendar
-        </div>
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 3, marginBottom: 16 }}>
-          Trading performance by day
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: 1, color: '#fff', lineHeight: 1 }}>
+              Calendar
+            </div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 3, marginBottom: 16 }}>
+              Trading performance by day
+            </div>
+          </div>
+          <AccountSelector accounts={accounts} />
         </div>
       </div>
 
@@ -186,6 +246,9 @@ export default function Calendar({ trades, onNavigate }) {
                   <div style={{ fontSize: 8, color: isWin ? G : R, fontWeight: 600, lineHeight: 1 }}>
                     {fmtPnl(Math.round(dayData.pnl)).replace('+', '')}
                   </div>
+                )}
+                {journalDates[dateKey] && (
+                  <div style={{ width: 4, height: 4, borderRadius: '50%', background: G, opacity: 0.8, marginTop: 1 }} />
                 )}
               </motion.div>
             );
@@ -320,6 +383,152 @@ export default function Calendar({ trades, onNavigate }) {
                       </div>
                     </motion.div>
                   ))}
+              </div>
+
+              {/* Daily Journal Section */}
+              <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                      Daily Journal
+                    </div>
+                    {journalDates[selectedDate] && !journalEditing && (
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: G }} />
+                    )}
+                  </div>
+                  {!journalEditing ? (
+                    <button
+                      onClick={() => setJournalEditing(true)}
+                      style={{
+                        fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6,
+                        background: `${G}14`, color: G, border: `1px solid ${G}40`,
+                        cursor: 'pointer', fontFamily: 'Barlow',
+                      }}
+                    >
+                      {journalEntry ? 'Edit' : '+ Add'}
+                    </button>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        onClick={saveJournal}
+                        disabled={journalSaving}
+                        style={{
+                          fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6,
+                          background: G, color: '#000', border: 'none',
+                          cursor: journalSaving ? 'default' : 'pointer', fontFamily: 'Barlow',
+                          opacity: journalSaving ? 0.6 : 1,
+                        }}
+                      >
+                        {journalSaving ? 'Saving…' : 'Save'}
+                      </button>
+                      <button
+                        onClick={() => { setJournalEditing(false); if (journalEntry) setJournalDraft({ preMarket: journalEntry.preMarket, postMarket: journalEntry.postMarket, mood: journalEntry.mood }); }}
+                        style={{
+                          fontSize: 11, padding: '3px 10px', borderRadius: 6,
+                          background: 'transparent', color: 'rgba(255,255,255,0.4)',
+                          border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer', fontFamily: 'Barlow',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {journalEditing ? (
+                  <div>
+                    {/* Mood selector */}
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Mood</div>
+                      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                        {MOODS.map(m => (
+                          <button
+                            key={m}
+                            onClick={() => setJournalDraft(d => ({ ...d, mood: d.mood === m ? '' : m }))}
+                            style={{
+                              padding: '3px 10px', borderRadius: 20, fontSize: 11,
+                              fontFamily: 'Barlow', fontWeight: journalDraft.mood === m ? 700 : 500,
+                              cursor: 'pointer',
+                              background: journalDraft.mood === m ? G : 'rgba(255,255,255,0.05)',
+                              color: journalDraft.mood === m ? '#000' : 'rgba(255,255,255,0.55)',
+                              border: journalDraft.mood === m ? `1px solid ${G}` : '1px solid rgba(255,255,255,0.1)',
+                              transition: 'all 0.12s',
+                            }}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Pre-market */}
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 5 }}>Pre-Market Thoughts</div>
+                      <textarea
+                        value={journalDraft.preMarket}
+                        onChange={e => setJournalDraft(d => ({ ...d, preMarket: e.target.value }))}
+                        placeholder="What's your plan for today? Key levels, bias, focus..."
+                        rows={3}
+                        style={{
+                          width: '100%', boxSizing: 'border-box',
+                          background: '#111811', border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: 8, padding: '9px 11px', fontSize: 12,
+                          color: '#fff', fontFamily: 'Barlow', lineHeight: 1.5,
+                          resize: 'vertical', outline: 'none',
+                        }}
+                        onFocus={e => { e.target.style.borderColor = `${G}60`; }}
+                        onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                      />
+                    </div>
+                    {/* Post-market */}
+                    <div>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 5 }}>Post-Market Reflection</div>
+                      <textarea
+                        value={journalDraft.postMarket}
+                        onChange={e => setJournalDraft(d => ({ ...d, postMarket: e.target.value }))}
+                        placeholder="How did the session go? What worked, what didn't?"
+                        rows={3}
+                        style={{
+                          width: '100%', boxSizing: 'border-box',
+                          background: '#111811', border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: 8, padding: '9px 11px', fontSize: 12,
+                          color: '#fff', fontFamily: 'Barlow', lineHeight: 1.5,
+                          resize: 'vertical', outline: 'none',
+                        }}
+                        onFocus={e => { e.target.style.borderColor = `${G}60`; }}
+                        onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                      />
+                    </div>
+                  </div>
+                ) : journalEntry ? (
+                  <div>
+                    {journalEntry.mood && (
+                      <div style={{ marginBottom: 8 }}>
+                        <span style={{
+                          fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 20,
+                          background: `${G}14`, color: G, border: `1px solid ${G}30`,
+                        }}>
+                          {journalEntry.mood}
+                        </span>
+                      </div>
+                    )}
+                    {journalEntry.preMarket && (
+                      <div style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 3 }}>Pre-Market</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>{journalEntry.preMarket}</div>
+                      </div>
+                    )}
+                    {journalEntry.postMarket && (
+                      <div>
+                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 3 }}>Post-Market</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>{journalEntry.postMarket}</div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
+                    No journal entry for this day yet.
+                  </div>
+                )}
               </div>
 
               <button
