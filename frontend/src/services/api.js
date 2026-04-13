@@ -49,8 +49,13 @@ export const api = {
     call('/stripe/create-portal-session', { method: 'POST' }, token),
 
   // CSV import
-  importCsv: (token, rows) =>
-    call('/trades/import-csv', { method: 'POST', body: JSON.stringify({ rows }) }, token),
+  importCsv: (token, rows, accountId) =>
+    call('/trades/import-csv', { method: 'POST', body: JSON.stringify({ rows, accountId }) }, token),
+
+  // User accounts
+  getAccounts:   (token)       => call('/accounts', {}, token),
+  createAccount: (token, data) => call('/accounts', { method: 'POST', body: JSON.stringify(data) }, token),
+  deleteAccount: (token, id)   => call(`/accounts/${id}`, { method: 'DELETE' }, token),
 
   // Plaid / linked accounts
   getLinkedAccounts: (token) => call('/plaid/accounts', {}, token),

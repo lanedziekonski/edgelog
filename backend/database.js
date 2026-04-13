@@ -53,6 +53,18 @@ async function initDb() {
       created_at     TIMESTAMPTZ DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS user_accounts (
+      id                TEXT PRIMARY KEY,
+      user_id           INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name              TEXT NOT NULL,
+      type              TEXT DEFAULT 'prop',
+      starting_balance  NUMERIC DEFAULT 0,
+      daily_loss_limit  NUMERIC,
+      max_drawdown      NUMERIC,
+      profit_target     NUMERIC,
+      created_at        TIMESTAMPTZ DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS linked_accounts (
       id                 SERIAL PRIMARY KEY,
       user_id            INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -66,6 +78,8 @@ async function initDb() {
       created_at         TIMESTAMPTZ DEFAULT NOW()
     );
   `);
+    // Migrations — safe to run on every boot
+    await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS account_id TEXT`);
     console.log('Database schema ready');
   } catch (err) {
     console.error('Schema creation failed:', err.message);
@@ -81,6 +95,7 @@ function rowToTrade(row) {
     symbol:        row.symbol,
     setup:         row.setup,
     account:       row.account,
+    accountId:     row.account_id || null,
     pnl:           parseFloat(row.pnl),
     entryTime:     row.entry_time,
     exitTime:      row.exit_time,
@@ -92,4 +107,17 @@ function rowToTrade(row) {
   };
 }
 
-module.exports = { pool, initDb, rowToTrade };
+function rowToAccount(row) {
+  return {
+    id:              row.id,
+    name:            row.name,
+    type:            row.type || 'prop',
+    startingBalance: parseFloat(row.starting_balance || 0),
+    dailyLossLimit:  row.daily_loss_limit != null ? parseFloat(row.daily_loss_limit) : null,
+    maxDrawdown:     row.max_drawdown     != null ? parseFloat(row.max_drawdown)     : null,
+    profitTarget:    row.profit_target    != null ? parseFloat(row.profit_target)    : null,
+    createdAt:       row.created_at,
+  };
+}
+
+module.exports = { pool, initDb, rowToTrade, rowToAccount };

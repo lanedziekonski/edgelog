@@ -4,7 +4,7 @@ const cors    = require('cors');
 const bcrypt  = require('bcryptjs');
 const Anthropic = require('@anthropic-ai/sdk');
 
-const { pool, initDb, rowToTrade } = require('./database');
+const { pool, initDb, rowToTrade, rowToAccount } = require('./database');
 const { signToken, requireAuth, requirePlan } = require('./middleware/auth');
 
 const app = express();
@@ -261,6 +261,53 @@ app.delete('/api/trades/:id', requireAuth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete trade' });
+  }
+});
+
+// ─── USER ACCOUNTS ────────────────────────────────────────────────────────
+
+app.get('/api/accounts', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT * FROM user_accounts WHERE user_id = $1 ORDER BY created_at ASC',
+      [req.userId]
+    );
+    res.json(rows.map(rowToAccount));
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch accounts' });
+  }
+});
+
+app.post('/api/accounts', requireAuth, async (req, res) => {
+  const { name, type, startingBalance, dailyLossLimit, maxDrawdown, profitTarget } = req.body;
+  if (!name?.trim()) return res.status(400).json({ error: 'Account name is required' });
+  const id = `acct-${req.userId}-${Date.now()}`;
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO user_accounts (id, user_id, name, type, starting_balance, daily_loss_limit, max_drawdown, profit_target)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [id, req.userId, name.trim(), type || 'prop',
+       startingBalance || 0,
+       dailyLossLimit  || null,
+       maxDrawdown     || null,
+       profitTarget    || null]
+    );
+    res.json(rowToAccount(rows[0]));
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create account' });
+  }
+});
+
+app.delete('/api/accounts/:id', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM user_accounts WHERE id = $1 AND user_id = $2',
+      [req.params.id, req.userId]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Account not found' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete account' });
   }
 });
 
@@ -564,8 +611,17 @@ async function doPlaidSync(linked) {
 // ─── CSV IMPORT ───────────────────────────────────────────────────────────
 
 app.post('/api/trades/import-csv', requireAuth, requirePlan('trader'), async (req, res) => {
-  const { rows } = req.body;
+  const { rows, accountId } = req.body;
   if (!Array.isArray(rows) || !rows.length) return res.status(400).json({ error: 'rows array required' });
+  if (!accountId) return res.status(400).json({ error: 'accountId required' });
+
+  // Resolve account name from DB
+  const { rows: acctRows } = await pool.query(
+    'SELECT name FROM user_accounts WHERE id = $1 AND user_id = $2',
+    [accountId, req.userId]
+  );
+  if (!acctRows.length) return res.status(404).json({ error: 'Account not found' });
+  const accountName = acctRows[0].name;
 
   let imported = 0, skipped = 0;
   const client = await pool.connect();
@@ -573,25 +629,35 @@ app.post('/api/trades/import-csv', requireAuth, requirePlan('trader'), async (re
     await client.query('BEGIN');
     for (const t of rows) {
       if (!t.symbol || t.pnl === undefined || t.pnl === null || isNaN(Number(t.pnl))) { skipped++; continue; }
+
+      const sym       = String(t.symbol).toUpperCase().trim();
+      const entryTime = t.entryTime || t.entry_time || '';
+      const exitTime  = t.exitTime  || t.exit_time  || '';
+      const pnlNum    = Number(t.pnl);
+      const date      = t.date || new Date().toISOString().split('T')[0];
+
+      // Duplicate detection: same account + date + symbol + times + pnl (within $0.01)
+      const { rows: dupes } = await client.query(
+        `SELECT id FROM trades
+         WHERE user_id=$1 AND account_id=$2 AND date=$3 AND symbol=$4
+           AND entry_time=$5 AND exit_time=$6 AND ABS(pnl - $7) < 0.01`,
+        [req.userId, accountId, date, sym, entryTime, exitTime, pnlNum]
+      );
+      if (dupes.length > 0) { skipped++; continue; }
+
       const id = `csv-${req.userId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       await client.query(
-        `INSERT INTO trades (id, user_id, date, symbol, setup, account, pnl, entry_time, exit_time,
-          emotion_before, emotion_after, followed_plan, notes, source)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+        `INSERT INTO trades (id, user_id, date, symbol, setup, account, account_id, pnl,
+          entry_time, exit_time, emotion_before, emotion_after, followed_plan, notes, source)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
         [
-          id, req.userId,
-          t.date || new Date().toISOString().split('T')[0],
-          String(t.symbol).toUpperCase().trim(),
+          id, req.userId, date, sym,
           t.setup || 'ORB',
-          t.account || '',
-          Number(t.pnl),
-          t.entryTime || t.entry_time || '',
-          t.exitTime  || t.exit_time  || '',
-          '',
-          '',
-          true,
-          '',
-          'csv',
+          accountName,
+          accountId,
+          pnlNum,
+          entryTime, exitTime,
+          '', '', true, '', 'csv',
         ]
       );
       imported++;

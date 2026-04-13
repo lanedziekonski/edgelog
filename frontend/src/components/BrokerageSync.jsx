@@ -582,7 +582,7 @@ function PlaidLinkButton({ onSuccess, onError }) {
 
 // ── Main component ────────────────────────────────────────────────────────
 
-export default function BrokerageSync({ onTradesImported }) {
+export default function BrokerageSync({ onTradesImported, preselectedAccountId = null, preselectedAccountName = '' }) {
   const { token } = useAuth();
   const fileRef   = useRef(null);
 
@@ -595,7 +595,7 @@ export default function BrokerageSync({ onTradesImported }) {
   const [importResult, setImportResult] = useState(null);
   const [error, setError]               = useState('');
   const [showAllTrades, setShowAllTrades] = useState(false);
-  const [importAccount, setImportAccount] = useState('');
+  const [importAccount, setImportAccount] = useState(preselectedAccountId || '');
   // Store raw text so we can re-parse when account changes
   const [rawCsvText, setRawCsvText] = useState('');
 
@@ -639,10 +639,11 @@ export default function BrokerageSync({ onTradesImported }) {
 
   const confirmImport = async () => {
     if (!csvRows?.length) return;
+    if (!importAccount) { setError('Select an account before importing.'); return; }
     setImporting(true);
     setError('');
     try {
-      const data = await api.importCsv(token, csvRows);
+      const data = await api.importCsv(token, csvRows, importAccount);
       setImportResult(data);
       setCsvRows(null);
       setRawCsvText('');
@@ -697,7 +698,7 @@ export default function BrokerageSync({ onTradesImported }) {
       {importResult && (
         <div style={{ background: 'var(--green-dim)', border: '1px solid rgba(0,240,122,0.25)', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: 'var(--green)', marginBottom: 12 }}>
           ✓ {importResult.imported} trade{importResult.imported !== 1 ? 's' : ''} imported
-          {importResult.skipped > 0 ? ` (${importResult.skipped} skipped)` : ''}
+          {importResult.skipped > 0 ? `, ${importResult.skipped} duplicate${importResult.skipped !== 1 ? 's' : ''} skipped` : ''}
         </div>
       )}
 
@@ -752,17 +753,24 @@ export default function BrokerageSync({ onTradesImported }) {
             </span>
           </div>
 
-          {/* Account selector — always shown so user can reassign */}
+          {/* Account display */}
           <div style={{ marginBottom: 12 }}>
             <label style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: 5 }}>
-              Assign to account
+              Importing into
             </label>
-            <input
-              placeholder="e.g. Tradeify, My Apex Account…"
-              value={importAccount}
-              onChange={e => handleAccountChange(e.target.value)}
-              style={{ width: '100%', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 7, padding: '8px 10px', fontSize: 13, color: 'var(--text)', fontFamily: 'Barlow', boxSizing: 'border-box' }}
-            />
+            {preselectedAccountId ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 7 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', flexShrink: 0 }} />
+                <span style={{ fontSize: 13, color: 'var(--text)', fontFamily: 'Barlow', fontWeight: 600 }}>{preselectedAccountName}</span>
+              </div>
+            ) : (
+              <input
+                placeholder="e.g. Tradeify, My Apex Account…"
+                value={importAccount}
+                onChange={e => handleAccountChange(e.target.value)}
+                style={{ width: '100%', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 7, padding: '8px 10px', fontSize: 13, color: 'var(--text)', fontFamily: 'Barlow', boxSizing: 'border-box' }}
+              />
+            )}
           </div>
 
           {/* Errors / warnings */}

@@ -12,6 +12,7 @@ import AICoach from './screens/AICoach';
 import Profile from './screens/Profile';
 import Pricing from './screens/Pricing';
 import { useTrades } from './hooks/useTrades';
+import { useAccounts } from './hooks/useAccounts';
 
 // Tab → minimum plan required to access
 const TAB_PLANS = {
@@ -28,7 +29,8 @@ const TAB_PLANS = {
 function AppInner() {
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const tradeContext = useTrades();
+  const tradeContext   = useTrades();
+  const accountContext = useAccounts();
 
   // Handle Stripe payment-success redirect
   useEffect(() => {
@@ -112,7 +114,7 @@ function AppInner() {
       case 'dashboard': return <Dashboard {...tradeContext} />;
       case 'journal':   return <Journal {...tradeContext} />;
       case 'calendar':  return <Calendar {...tradeContext} />;
-      case 'accounts':  return <Accounts {...tradeContext} />;
+      case 'accounts':  return <Accounts {...tradeContext} {...accountContext} />;
       case 'plan':      return <TradingPlan />;
       case 'coach':     return <AICoach {...tradeContext} />;
       case 'profile':   return <Profile onNavigate={handleNavigate} />;
