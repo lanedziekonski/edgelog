@@ -31,6 +31,8 @@ export const api = {
     call('/trades', { method: 'POST', body: JSON.stringify(trade) }, token),
   updateTrade: (token, id, trade) =>
     call(`/trades/${id}`, { method: 'PUT', body: JSON.stringify(trade) }, token),
+  patchTrade: (token, id, fields) =>
+    call(`/trades/${id}`, { method: 'PATCH', body: JSON.stringify(fields) }, token),
   deleteTrade: (token, id) =>
     call(`/trades/${id}`, { method: 'DELETE' }, token),
 

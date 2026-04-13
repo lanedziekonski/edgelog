@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fmtPnl, todayStr } from '../hooks/useTrades';
 
@@ -6,8 +6,8 @@ const G = '#00ff41';
 const R = '#ff2d2d';
 
 const SETUPS = ['ORB', 'VWAP Reclaim', 'Bull Flag', 'Gap Fill', 'Fade High'];
-const EMOTIONS_BEFORE = ['Calm', 'Confident', 'Anxious', 'FOMO', 'Frustrated'];
-const EMOTIONS_AFTER = ['Satisfied', 'Neutral', 'Frustrated', 'Regret', 'Excited'];
+const EMOTIONS_BEFORE = ['Calm', 'Focused', 'Confident', 'Anxious', 'Frustrated', 'Overconfident', 'Fear', 'FOMO', 'Revenge', 'Neutral'];
+const EMOTIONS_AFTER  = ['Calm', 'Focused', 'Confident', 'Anxious', 'Frustrated', 'Overconfident', 'Fear', 'FOMO', 'Revenge', 'Neutral', 'Satisfied', 'Regret', 'Excited'];
 
 const emptyForm = () => ({
   date: todayStr(),
@@ -23,7 +23,7 @@ const emptyForm = () => ({
   notes: '',
 });
 
-export default function Journal({ trades, addTrade, deleteTrade }) {
+export default function Journal({ trades, addTrade, deleteTrade, patchTrade }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [filter, setFilter] = useState('all');
@@ -57,7 +57,6 @@ export default function Journal({ trades, addTrade, deleteTrade }) {
     <div style={{ background: '#080c08', minHeight: '100%' }}>
       {/* Header */}
       <div style={{ padding: '20px 16px 0', position: 'relative', overflow: 'hidden' }}>
-        {/* Ghost text */}
         <motion.div
           animate={{ opacity: [0.04, 0.09, 0.04] }}
           transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
@@ -135,11 +134,7 @@ export default function Journal({ trades, addTrade, deleteTrade }) {
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '1px', textTransform: 'uppercase' }}>
                   {label}
                 </div>
-                <div style={{
-                  fontFamily: "'Barlow Condensed', sans-serif",
-                  fontSize: 16, fontWeight: 700,
-                  color: dayPnl >= 0 ? G : R,
-                }}>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, color: dayPnl >= 0 ? G : R }}>
                   {fmtPnl(dayPnl)}
                 </div>
               </div>
@@ -150,7 +145,11 @@ export default function Journal({ trades, addTrade, deleteTrade }) {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: groupIdx * 0.05 + tradeIdx * 0.04, duration: 0.25 }}
                 >
-                  <TradeCard trade={trade} onDelete={() => setDeleteConfirm(trade.id)} />
+                  <TradeCard
+                    trade={trade}
+                    onDelete={() => setDeleteConfirm(trade.id)}
+                    onUpdate={patchTrade}
+                  />
                 </motion.div>
               ))}
             </motion.div>
@@ -339,27 +338,86 @@ export default function Journal({ trades, addTrade, deleteTrade }) {
   );
 }
 
-function TradeCard({ trade, onDelete }) {
+// ── TradeCard ──────────────────────────────────────────────────────────────
+
+function TradeCard({ trade, onDelete, onUpdate }) {
   const [expanded, setExpanded] = useState(false);
-  const isWin = trade.pnl > 0;
+  const [editing,  setEditing]  = useState(false);
+  const [saving,   setSaving]   = useState(false);
+  const [saveErr,  setSaveErr]  = useState('');
+
+  // Editable copies — sync when trade object updates (e.g. after save)
+  const [editNotes,        setEditNotes]        = useState(trade.notes         || '');
+  const [editEmoBefore,    setEditEmoBefore]    = useState(trade.emotionBefore || '');
+  const [editEmoAfter,     setEditEmoAfter]     = useState(trade.emotionAfter  || '');
+  const [editFollowedPlan, setEditFollowedPlan] = useState(trade.followedPlan  ?? true);
+
+  useEffect(() => {
+    setEditNotes(trade.notes         || '');
+    setEditEmoBefore(trade.emotionBefore || '');
+    setEditEmoAfter(trade.emotionAfter   || '');
+    setEditFollowedPlan(trade.followedPlan ?? true);
+  }, [trade.notes, trade.emotionBefore, trade.emotionAfter, trade.followedPlan]);
+
+  const isWin       = trade.pnl > 0;
   const accentColor = isWin ? G : R;
+
+  const handleExpand = () => {
+    if (editing) return;
+    setExpanded(v => !v);
+  };
+
+  const startEdit = (e) => {
+    e.stopPropagation();
+    setEditing(true);
+    setSaveErr('');
+  };
+
+  const cancelEdit = (e) => {
+    e.stopPropagation();
+    setEditNotes(trade.notes         || '');
+    setEditEmoBefore(trade.emotionBefore || '');
+    setEditEmoAfter(trade.emotionAfter   || '');
+    setEditFollowedPlan(trade.followedPlan ?? true);
+    setEditing(false);
+    setSaveErr('');
+  };
+
+  const saveEdit = async (e) => {
+    e.stopPropagation();
+    setSaving(true);
+    setSaveErr('');
+    try {
+      await onUpdate(trade.id, {
+        emotionBefore: editEmoBefore,
+        emotionAfter:  editEmoAfter,
+        notes:         editNotes,
+        followedPlan:  editFollowedPlan,
+      });
+      setEditing(false);
+    } catch (err) {
+      setSaveErr(err.message || 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <motion.div
       layout
-      onClick={() => setExpanded(e => !e)}
+      onClick={handleExpand}
       style={{
         background: '#111811',
         borderRadius: 10,
         marginBottom: 8,
         border: `1px solid rgba(255,255,255,0.06)`,
         borderLeft: `3px solid ${accentColor}`,
-        cursor: 'pointer',
+        cursor: editing ? 'default' : 'pointer',
         overflow: 'hidden',
       }}
-      whileHover={{ borderColor: `${accentColor}50` }}
       transition={{ layout: { duration: 0.25, ease: 'easeInOut' } }}
     >
+      {/* Summary row — always visible */}
       <div style={{ padding: '12px 14px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -386,45 +444,258 @@ function TradeCard({ trade, onDelete }) {
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{trade.account}</div>
           </div>
         </div>
-
-        <AnimatePresence>
-          {expanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.22, ease: 'easeInOut' }}
-              style={{ overflow: 'hidden' }}
-            >
-              <div style={{ marginTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 12 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 20px', marginBottom: 10 }}>
-                  <Detail label="Entry" value={trade.entryTime || '—'} />
-                  <Detail label="Exit" value={trade.exitTime || '—'} />
-                  <Detail label="Before" value={trade.emotionBefore} />
-                  <Detail label="After" value={trade.emotionAfter} />
-                </div>
-                {trade.notes && (
-                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', marginBottom: 10, lineHeight: 1.5 }}>
-                    "{trade.notes}"
-                  </div>
-                )}
-                <button
-                  onClick={e => { e.stopPropagation(); onDelete(); }}
-                  style={{
-                    fontSize: 12, color: R, background: 'none', border: 'none',
-                    padding: 0, cursor: 'pointer', fontFamily: "'Barlow', sans-serif",
-                  }}
-                >
-                  Delete trade
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
+
+      {/* Expanded panel */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: 'easeInOut' }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div
+              style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '12px 14px 14px' }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* ── VIEW MODE ── */}
+              {!editing && (
+                <div>
+                  {/* Time + account row */}
+                  {(trade.entryTime || trade.exitTime) && (
+                    <div style={{ display: 'flex', gap: 20, marginBottom: 10 }}>
+                      <Detail label="Entry" value={trade.entryTime || '—'} />
+                      <Detail label="Exit"  value={trade.exitTime  || '—'} />
+                    </div>
+                  )}
+
+                  {/* Followed plan */}
+                  <div style={{ marginBottom: 10 }}>
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Plan: {' '}
+                    </span>
+                    <span style={{
+                      fontSize: 12, fontWeight: 700,
+                      color: trade.followedPlan ? G : R,
+                    }}>
+                      {trade.followedPlan ? 'Followed' : 'Broke rules'}
+                    </span>
+                  </div>
+
+                  {/* Emotions */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', marginBottom: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>Before</div>
+                      <div style={{ fontSize: 13, color: trade.emotionBefore ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.2)', fontStyle: trade.emotionBefore ? 'normal' : 'italic' }}>
+                        {trade.emotionBefore || 'Not set'}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>After</div>
+                      <div style={{ fontSize: 13, color: trade.emotionAfter ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.2)', fontStyle: trade.emotionAfter ? 'normal' : 'italic' }}>
+                        {trade.emotionAfter || 'Not set'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>Notes</div>
+                    {trade.notes ? (
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', lineHeight: 1.5 }}>
+                        "{trade.notes}"
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.2)', fontStyle: 'italic' }}>
+                        No notes yet
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <motion.button
+                      whileTap={{ scale: 0.94 }}
+                      onClick={startEdit}
+                      style={{
+                        fontSize: 12, fontWeight: 700,
+                        color: G, background: `${G}14`,
+                        border: `1px solid ${G}40`,
+                        borderRadius: 7, padding: '5px 14px',
+                        cursor: 'pointer', fontFamily: "'Barlow', sans-serif",
+                        letterSpacing: '0.3px',
+                      }}
+                    >
+                      Edit
+                    </motion.button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                      style={{
+                        fontSize: 12, color: R, background: 'none',
+                        border: 'none', padding: 0, cursor: 'pointer',
+                        fontFamily: "'Barlow', sans-serif",
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── EDIT MODE ── */}
+              {editing && (
+                <div onClick={e => e.stopPropagation()}>
+                  {/* Followed plan toggle */}
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 7 }}>
+                      Followed Plan?
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {[true, false].map(val => (
+                        <button
+                          key={String(val)}
+                          onClick={() => setEditFollowedPlan(val)}
+                          style={{
+                            flex: 1, padding: '7px 0', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                            fontFamily: "'Barlow', sans-serif", cursor: 'pointer',
+                            background: editFollowedPlan === val ? (val ? G : R) : 'rgba(255,255,255,0.05)',
+                            color: editFollowedPlan === val ? '#000' : 'rgba(255,255,255,0.4)',
+                            border: editFollowedPlan === val
+                              ? `1px solid ${val ? G : R}`
+                              : '1px solid rgba(255,255,255,0.1)',
+                            transition: 'all 0.15s',
+                          }}
+                        >
+                          {val ? 'Yes' : 'No'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Emotion before */}
+                  <EmotionPicker
+                    label="Emotion Before"
+                    options={EMOTIONS_BEFORE}
+                    value={editEmoBefore}
+                    onChange={setEditEmoBefore}
+                  />
+
+                  {/* Emotion after */}
+                  <EmotionPicker
+                    label="Emotion After"
+                    options={EMOTIONS_AFTER}
+                    value={editEmoAfter}
+                    onChange={setEditEmoAfter}
+                  />
+
+                  {/* Notes textarea */}
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 7 }}>
+                      Notes
+                    </div>
+                    <textarea
+                      value={editNotes}
+                      onChange={e => setEditNotes(e.target.value)}
+                      placeholder="What happened? Any lessons learned?"
+                      rows={3}
+                      style={{
+                        width: '100%', boxSizing: 'border-box',
+                        background: '#111811', border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: 8, padding: '10px 12px',
+                        fontSize: 13, color: '#fff', fontFamily: "'Barlow', sans-serif",
+                        lineHeight: 1.5, resize: 'vertical', outline: 'none',
+                        transition: 'border-color 0.15s',
+                      }}
+                      onFocus={e => { e.target.style.borderColor = `${G}70`; }}
+                      onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                    />
+                  </div>
+
+                  {/* Error */}
+                  {saveErr && (
+                    <div style={{ fontSize: 12, color: R, marginBottom: 10 }}>{saveErr}</div>
+                  )}
+
+                  {/* Save / Cancel */}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <motion.button
+                      whileTap={{ scale: 0.96 }}
+                      onClick={saveEdit}
+                      disabled={saving}
+                      style={{
+                        flex: 1, padding: '9px 0', borderRadius: 8,
+                        background: G, color: '#000', border: 'none',
+                        fontWeight: 700, fontSize: 14, fontFamily: "'Barlow', sans-serif",
+                        cursor: saving ? 'default' : 'pointer',
+                        opacity: saving ? 0.6 : 1,
+                        boxShadow: `0 0 16px ${G}40`,
+                      }}
+                    >
+                      {saving ? 'Saving…' : 'Save'}
+                    </motion.button>
+                    <motion.button
+                      whileTap={{ scale: 0.96 }}
+                      onClick={cancelEdit}
+                      disabled={saving}
+                      style={{
+                        flex: 1, padding: '9px 0', borderRadius: 8,
+                        background: 'transparent',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        color: 'rgba(255,255,255,0.6)',
+                        fontWeight: 600, fontSize: 14, fontFamily: "'Barlow', sans-serif",
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
+
+// ── Emotion pill picker ────────────────────────────────────────────────────
+
+function EmotionPicker({ label, options, value, onChange }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 7 }}>
+        {label}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {options.map(opt => {
+          const active = value === opt;
+          return (
+            <button
+              key={opt}
+              onClick={() => onChange(active ? '' : opt)}
+              style={{
+                padding: '4px 11px', borderRadius: 20, fontSize: 12,
+                fontFamily: "'Barlow', sans-serif", fontWeight: active ? 700 : 500,
+                cursor: 'pointer',
+                background: active ? G : 'rgba(255,255,255,0.05)',
+                color: active ? '#000' : 'rgba(255,255,255,0.55)',
+                border: active ? `1px solid ${G}` : '1px solid rgba(255,255,255,0.1)',
+                transition: 'all 0.12s',
+              }}
+            >
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
 
 function Detail({ label, value }) {
   return (

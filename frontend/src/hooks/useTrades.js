@@ -33,7 +33,13 @@ export function useTrades() {
     return updated;
   }, [token]);
 
-  return { trades, tradesLoading, addTrade, deleteTrade, updateTrade };
+  const patchTrade = useCallback(async (id, fields) => {
+    const updated = await api.patchTrade(token, id, fields);
+    setTrades(prev => prev.map(t => t.id === id ? updated : t));
+    return updated;
+  }, [token]);
+
+  return { trades, tradesLoading, addTrade, deleteTrade, updateTrade, patchTrade };
 }
 
 export function calcStats(trades) {

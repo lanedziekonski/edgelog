@@ -227,6 +227,30 @@ app.put('/api/trades/:id', requireAuth, async (req, res) => {
   }
 });
 
+// Patch only the reflective fields (emotions / notes / followed_plan)
+app.patch('/api/trades/:id', requireAuth, async (req, res) => {
+  const { emotionBefore, emotionAfter, notes, followedPlan } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE trades SET emotion_before=$1, emotion_after=$2, notes=$3, followed_plan=$4
+       WHERE id=$5 AND user_id=$6`,
+      [
+        emotionBefore ?? '',
+        emotionAfter  ?? '',
+        notes         ?? '',
+        followedPlan  ?? true,
+        req.params.id, req.userId,
+      ]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Trade not found' });
+    const { rows } = await pool.query(`SELECT * FROM trades WHERE id = $1`, [req.params.id]);
+    res.json(rowToTrade(rows[0]));
+  } catch (err) {
+    console.error('Patch trade error:', err);
+    res.status(500).json({ error: 'Failed to update trade' });
+  }
+});
+
 app.delete('/api/trades/:id', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
@@ -563,10 +587,10 @@ app.post('/api/trades/import-csv', requireAuth, requirePlan('trader'), async (re
           Number(t.pnl),
           t.entryTime || t.entry_time || '',
           t.exitTime  || t.exit_time  || '',
-          t.emotionBefore || t.emotion_before || 'Calm',
-          t.emotionAfter  || t.emotion_after  || 'Neutral',
-          t.followedPlan  ?? t.followed_plan  ?? true,
-          t.notes || '',
+          '',
+          '',
+          true,
+          '',
           'csv',
         ]
       );
