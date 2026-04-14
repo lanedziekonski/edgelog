@@ -30,7 +30,8 @@ const TAB_PLANS = {
 function AppInner() {
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [focusTradeId, setFocusTradeId] = useState(null);
+  const [focusTradeId, setFocusTradeId]       = useState(null);
+  const [pendingTradeDate, setPendingTradeDate] = useState(null);
   const tradeContext   = useTrades();
   const accountContext = useAccounts();
   const { selectedAccountId } = useAccountFilter();
@@ -116,8 +117,8 @@ function AppInner() {
 
     switch (activeTab) {
       case 'dashboard': return <Dashboard {...tradeContext} accounts={accountContext.accounts} />;
-      case 'journal':   return <Journal {...tradeContext} accounts={accountContext.accounts} focusTradeId={focusTradeId} onFocusConsumed={() => setFocusTradeId(null)} />;
-      case 'calendar':  return <Calendar {...tradeContext} accounts={accountContext.accounts} onNavigate={handleNavigate} />;
+      case 'journal':   return <Journal {...tradeContext} accounts={accountContext.accounts} focusTradeId={focusTradeId} onFocusConsumed={() => setFocusTradeId(null)} pendingTradeDate={pendingTradeDate} onPendingTradeDateConsumed={() => setPendingTradeDate(null)} />;
+      case 'calendar':  return <Calendar {...tradeContext} accounts={accountContext.accounts} onNavigate={handleNavigate} onLogTrade={(date) => { setPendingTradeDate(date); setActiveTab('journal'); }} />;
       case 'accounts':  return <Accounts {...tradeContext} {...accountContext} />;
       case 'plan':      return <TradingPlan />;
       case 'coach':     return <AICoach {...tradeContext} />;

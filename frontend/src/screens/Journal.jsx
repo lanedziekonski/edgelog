@@ -32,12 +32,20 @@ const emptyForm = () => ({
   notes: '',
 });
 
-export default function Journal({ trades, addTrade, deleteTrade, patchTrade, accounts = [], focusTradeId, onFocusConsumed }) {
+export default function Journal({ trades, addTrade, deleteTrade, patchTrade, accounts = [], focusTradeId, onFocusConsumed, pendingTradeDate, onPendingTradeDateConsumed }) {
   const { selectedAccountId } = useAccountFilter();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [filter, setFilter] = useState('all');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  // Auto-open log form when Calendar sends a date
+  useEffect(() => {
+    if (!pendingTradeDate) return;
+    setForm({ ...emptyForm(), date: pendingTradeDate });
+    setShowForm(true);
+    onPendingTradeDateConsumed?.();
+  }, [pendingTradeDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const accountFilteredTrades = selectedAccountId
     ? trades.filter(t => t.accountId === selectedAccountId || (!t.accountId && accounts.find(a => a.id === selectedAccountId)?.name === t.account))

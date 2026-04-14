@@ -22,11 +22,24 @@ function fmtSymbol(raw) {
   return FUTURES_ROOTS.has(base) ? `${base}1!` : base;
 }
 
-export default function Calendar({ trades, accounts = [], onNavigate }) {
+// Small pen SVG for journal indicator
+function PenIcon({ size = 6, color = G, opacity = 0.75 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+      style={{ opacity, flexShrink: 0 }}
+    >
+      <path d="M12 20h9"/>
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+    </svg>
+  );
+}
+
+export default function Calendar({ trades, accounts = [], onNavigate, onLogTrade }) {
   const { token } = useAuth();
   const { selectedAccountId } = useAccountFilter();
   const now = new Date();
-  const [viewDate, setViewDate]     = useState({ year: now.getFullYear(), month: now.getMonth() });
+  const [viewDate, setViewDate]       = useState({ year: now.getFullYear(), month: now.getMonth() });
   const [selectedDate, setSelectedDate] = useState(null);
 
   // Filter trades by selected account
@@ -35,7 +48,7 @@ export default function Calendar({ trades, accounts = [], onNavigate }) {
     : trades;
 
   // Daily journal state
-  const [journalDates, setJournalDates]     = useState({}); // date → { mood }
+  const [journalDates, setJournalDates]     = useState({}); // date → entry summary
   const [journalEntry, setJournalEntry]     = useState(null);
   const [journalEditing, setJournalEditing] = useState(false);
   const [journalDraft, setJournalDraft]     = useState({ preMarket: '', postMarket: '', mood: '' });
@@ -56,8 +69,11 @@ export default function Calendar({ trades, accounts = [], onNavigate }) {
     if (!selectedDate || !token) { setJournalEntry(null); setJournalEditing(false); return; }
     api.getDailyJournal(token, selectedDate).then(entry => {
       setJournalEntry(entry);
-      setJournalDraft(entry ? { preMarket: entry.preMarket, postMarket: entry.postMarket, mood: entry.mood } : { preMarket: '', postMarket: '', mood: '' });
-      setJournalEditing(!entry); // auto-enter edit if no entry yet
+      setJournalDraft(entry
+        ? { preMarket: entry.preMarket, postMarket: entry.postMarket, mood: entry.mood }
+        : { preMarket: '', postMarket: '', mood: '' }
+      );
+      setJournalEditing(false);
     }).catch(() => {});
   }, [selectedDate, token]);
 
@@ -83,25 +99,19 @@ export default function Calendar({ trades, accounts = [], onNavigate }) {
   const dailyMap = {};
   filteredTrades.forEach(t => {
     if (!dailyMap[t.date]) dailyMap[t.date] = { pnl: 0, count: 0, trades: [] };
-    dailyMap[t.date].pnl += t.pnl;
-    dailyMap[t.date].count += 1;
+    dailyMap[t.date].pnl    += t.pnl;
+    dailyMap[t.date].count  += 1;
     dailyMap[t.date].trades.push(t);
   });
 
-  const monthStr = new Date(year, month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  const prevMonth = () => setViewDate(v => v.month === 0 ? { year: v.year - 1, month: 11 } : { year: v.year, month: v.month - 1 });
-  const nextMonth = () => setViewDate(v => v.month === 11 ? { year: v.year + 1, month: 0 } : { year: v.year, month: v.month + 1 });
+  const monthStr  = new Date(year, month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const prevMonth = () => setViewDate(v => v.month === 0  ? { year: v.year - 1, month: 11 } : { year: v.year, month: v.month - 1 });
+  const nextMonth = () => setViewDate(v => v.month === 11 ? { year: v.year + 1, month: 0  } : { year: v.year, month: v.month + 1 });
 
-  const monthTrades = filteredTrades.filter(t => {
-    const [ty, tm] = t.date.split('-').map(Number);
-    return ty === year && tm - 1 === month;
-  });
-  const monthPnl   = monthTrades.reduce((s, t) => s + t.pnl, 0);
-  const tradingDays = new Set(monthTrades.map(t => t.date)).size;
-  const winDays     = Object.entries(dailyMap).filter(([date, v]) => {
-    const [ty, tm] = date.split('-').map(Number);
-    return ty === year && tm - 1 === month && v.pnl > 0;
-  }).length;
+  const monthTrades  = filteredTrades.filter(t => { const [ty, tm] = t.date.split('-').map(Number); return ty === year && tm - 1 === month; });
+  const monthPnl     = monthTrades.reduce((s, t) => s + t.pnl, 0);
+  const tradingDays  = new Set(monthTrades.map(t => t.date)).size;
+  const winDays      = Object.entries(dailyMap).filter(([d, v]) => { const [ty, tm] = d.split('-').map(Number); return ty === year && tm - 1 === month && v.pnl > 0; }).length;
 
   const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
@@ -110,6 +120,16 @@ export default function Calendar({ trades, accounts = [], onNavigate }) {
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
   const selectedData = selectedDate ? dailyMap[selectedDate] : null;
+
+  const handleDayTap = (dateKey) => {
+    setSelectedDate(prev => prev === dateKey ? null : dateKey);
+  };
+
+  const handleLogTrade = () => {
+    const date = selectedDate;
+    setSelectedDate(null);
+    if (onLogTrade) onLogTrade(date);
+  };
 
   return (
     <div style={{ background: '#080c08', minHeight: '100%' }}>
@@ -143,49 +163,20 @@ export default function Calendar({ trades, accounts = [], onNavigate }) {
       <div style={{ padding: '0 16px 80px' }}>
         {/* Month nav */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={prevMonth}
-            style={{
-              background: '#111811', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 8, padding: '6px 14px', color: 'rgba(255,255,255,0.7)',
-              cursor: 'pointer', fontFamily: 'Barlow', fontSize: 16,
-            }}
-          >
-            ‹
-          </motion.button>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px', color: '#fff' }}>
-            {monthStr}
-          </div>
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={nextMonth}
-            style={{
-              background: '#111811', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 8, padding: '6px 14px', color: 'rgba(255,255,255,0.7)',
-              cursor: 'pointer', fontFamily: 'Barlow', fontSize: 16,
-            }}
-          >
-            ›
-          </motion.button>
+          <motion.button whileTap={{ scale: 0.9 }} onClick={prevMonth} style={{ background: '#111811', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '6px 14px', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontFamily: 'Barlow', fontSize: 16 }}>‹</motion.button>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px', color: '#fff' }}>{monthStr}</div>
+          <motion.button whileTap={{ scale: 0.9 }} onClick={nextMonth} style={{ background: '#111811', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '6px 14px', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontFamily: 'Barlow', fontSize: 16 }}>›</motion.button>
         </div>
 
-        {/* Month summary row */}
+        {/* Month summary */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
           {[
-            { label: 'Month P&L',    value: fmtPnl(monthPnl),             color: monthPnl >= 0 ? G : R },
-            { label: 'Trading Days', value: String(tradingDays),           color: 'rgba(255,255,255,0.85)' },
-            { label: 'Win Days',     value: `${winDays}/${tradingDays}`,   color: G },
+            { label: 'Month P&L',    value: fmtPnl(monthPnl),           color: monthPnl >= 0 ? G : R },
+            { label: 'Trading Days', value: String(tradingDays),         color: 'rgba(255,255,255,0.85)' },
+            { label: 'Win Days',     value: `${winDays}/${tradingDays}`, color: G },
           ].map((s, i) => (
-            <motion.div
-              key={s.label}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06, duration: 0.25 }}
-              style={{
-                background: '#111811', border: '1px solid rgba(255,255,255,0.07)',
-                borderRadius: 10, textAlign: 'center', padding: '10px 6px',
-              }}
+            <motion.div key={s.label} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06, duration: 0.25 }}
+              style={{ background: '#111811', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, textAlign: 'center', padding: '10px 6px' }}
             >
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.label}</div>
               <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 17, fontWeight: 700, color: s.color }}>{s.value}</div>
@@ -193,29 +184,33 @@ export default function Calendar({ trades, accounts = [], onNavigate }) {
           ))}
         </div>
 
-        {/* Day of week headers */}
+        {/* Day headers */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
-          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+          {['S','M','T','W','T','F','S'].map((d, i) => (
             <div key={i} style={{ textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.25)', fontWeight: 600, padding: '4px 0' }}>{d}</div>
           ))}
         </div>
 
-        {/* Calendar grid */}
+        {/* Calendar grid — every cell is tappable */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
           {cells.map((day, i) => {
             if (day === null) return <div key={`e-${i}`} />;
-            const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const dayData  = dailyMap[dateKey];
-            const isToday  = dateKey === todayKey;
-            const isWin    = dayData && dayData.pnl > 0;
-            const isLoss   = dayData && dayData.pnl < 0;
+
+            const col        = i % 7; // 0 = Sun, 6 = Sat
+            const isWeekend  = col === 0 || col === 6;
+            const dateKey    = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const dayData    = dailyMap[dateKey];
+            const hasJournal = !!journalDates[dateKey];
+            const isToday    = dateKey === todayKey;
+            const isWin      = dayData && dayData.pnl > 0;
+            const isLoss     = dayData && dayData.pnl < 0;
             const isSelected = selectedDate === dateKey;
 
             return (
               <motion.div
                 key={day}
-                whileTap={dayData ? { scale: 0.92 } : {}}
-                onClick={() => dayData ? setSelectedDate(isSelected ? null : dateKey) : null}
+                whileTap={{ scale: 0.88 }}
+                onClick={() => handleDayTap(dateKey)}
                 style={{
                   aspectRatio: '1',
                   borderRadius: 8,
@@ -226,29 +221,45 @@ export default function Calendar({ trades, accounts = [], onNavigate }) {
                     : '#111811',
                   border: isSelected
                     ? `1.5px solid ${isWin ? G : isLoss ? R : 'rgba(255,255,255,0.3)'}`
-                    : isToday  ? `1.5px solid ${G}`
-                    : `1px solid ${dayData ? 'transparent' : 'rgba(255,255,255,0.06)'}`,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  justifyContent: 'center', gap: 1, padding: '4px 2px',
-                  cursor: dayData ? 'pointer' : 'default',
+                    : isToday
+                    ? `2px solid ${G}80`
+                    : '1px solid rgba(255,255,255,0.06)',
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center',
+                  gap: 1, padding: '4px 2px',
+                  cursor: 'pointer',
+                  opacity: isWeekend && !dayData && !hasJournal ? 0.5 : 1,
                   transition: 'background 0.15s, border 0.15s',
                 }}
               >
+                {/* Day number */}
                 <div style={{
-                  fontSize: 13,
-                  fontWeight: isToday ? 700 : 500,
-                  color: isToday ? G : isWin ? G : isLoss ? R : 'rgba(255,255,255,0.4)',
-                  lineHeight: 1,
+                  fontSize: 13, lineHeight: 1,
+                  fontWeight: isToday ? 800 : 500,
+                  color: isToday ? G
+                    : isWin  ? G
+                    : isLoss ? R
+                    : isWeekend ? 'rgba(255,255,255,0.3)'
+                    : 'rgba(255,255,255,0.5)',
                 }}>
                   {day}
                 </div>
+
+                {/* P&L text */}
                 {dayData && (
                   <div style={{ fontSize: 8, color: isWin ? G : R, fontWeight: 600, lineHeight: 1 }}>
                     {fmtPnl(Math.round(dayData.pnl)).replace('+', '')}
                   </div>
                 )}
-                {journalDates[dateKey] && (
-                  <div style={{ width: 4, height: 4, borderRadius: '50%', background: G, opacity: 0.8, marginTop: 1 }} />
+
+                {/* Indicators: trade dot and/or journal pen */}
+                {(dayData || hasJournal) && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 1 }}>
+                    {dayData && hasJournal && (
+                      <div style={{ width: 3, height: 3, borderRadius: '50%', background: isWin ? G : R, opacity: 0.9 }} />
+                    )}
+                    {hasJournal && <PenIcon size={6} color={G} opacity={0.75} />}
+                  </div>
                 )}
               </motion.div>
             );
@@ -256,16 +267,20 @@ export default function Calendar({ trades, accounts = [], onNavigate }) {
         </div>
 
         {/* Legend */}
-        <div style={{ display: 'flex', gap: 16, marginTop: 14, justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: 12, marginTop: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
           <LegendItem color={`${G}14`} border="transparent" label="Profit day" />
           <LegendItem color={`${R}12`} border="transparent" label="Loss day" />
           <LegendItem color="#111811" border="rgba(255,255,255,0.08)" label="No trades" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <PenIcon size={9} color={G} opacity={0.7} />
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>Journal</span>
+          </div>
         </div>
       </div>
 
-      {/* Day detail panel */}
+      {/* Day detail panel — opens for every tapped day */}
       <AnimatePresence>
-        {selectedDate && selectedData && (
+        {selectedDate && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="modal-overlay" onClick={() => setSelectedDate(null)}
@@ -277,267 +292,225 @@ export default function Calendar({ trades, accounts = [], onNavigate }) {
               style={{ background: '#0d1a0d', border: '1px solid rgba(0,255,65,0.12)' }}
             >
               <div className="modal-handle" />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-                <div>
-                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, letterSpacing: '0.5px', color: '#fff' }}>
-                    {formatDayLabel(selectedDate)}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
-                    {selectedData.count} trade{selectedData.count !== 1 ? 's' : ''}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{
-                    fontFamily: "'Barlow Condensed', sans-serif",
-                    fontSize: 28, fontWeight: 700,
-                    color: selectedData.pnl >= 0 ? G : R,
-                    lineHeight: 1,
-                  }}>
-                    {fmtPnl(selectedData.pnl)}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>daily P&L</div>
-                </div>
-              </div>
 
-              <div style={{ maxHeight: 400, overflowY: 'auto', scrollbarWidth: 'none' }}>
-                {selectedData.trades
-                  .slice()
-                  .sort((a, b) => (a.entryTime || '').localeCompare(b.entryTime || ''))
-                  .map((t, i) => (
-                    <motion.div
-                      key={t.id}
-                      whileTap={onNavigate ? { scale: 0.98 } : {}}
-                      onClick={() => {
-                        if (onNavigate) {
-                          setSelectedDate(null);
-                          onNavigate('journal', t.id);
-                        }
-                      }}
-                      style={{
-                        padding: '12px 0',
-                        borderBottom: i < selectedData.trades.length - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none',
-                        cursor: onNavigate ? 'pointer' : 'default',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        {/* Left: symbol + badges + detail */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          {/* Symbol + side badge row */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: '0.5px', color: '#fff' }}>
-                              {fmtSymbol(t.symbol)}
-                            </span>
-                            {t.side && (
-                              <span style={{
-                                fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-                                background: t.side === 'Long' ? `${G}20` : `${R}20`,
-                                color: t.side === 'Long' ? G : R,
-                                border: `1px solid ${t.side === 'Long' ? G : R}40`,
-                              }}>
-                                {t.side.toUpperCase()}
-                              </span>
-                            )}
-                            {!t.followedPlan && (
-                              <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: `${R}20`, color: R, border: `1px solid ${R}40` }}>
-                                RULES
-                              </span>
-                            )}
-                          </div>
-                          {/* Detail row: contracts · entry→exit · setup */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                            {t.quantity != null && (
-                              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
-                                {t.quantity}ct
-                              </span>
-                            )}
-                            {t.entryPrice != null && t.exitPrice != null && (
-                              <>
-                                {t.quantity != null && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>·</span>}
-                                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
-                                  {Math.round(t.entryPrice).toLocaleString()} → {Math.round(t.exitPrice).toLocaleString()}
-                                </span>
-                              </>
-                            )}
-                            {t.setup && (
-                              <>
-                                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>·</span>
-                                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{t.setup}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Right: P&L + chevron */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 12 }}>
-                          <div style={{
-                            fontFamily: "'Barlow Condensed', sans-serif",
-                            fontSize: 20, fontWeight: 700,
-                            color: t.pnl >= 0 ? G : R,
-                          }}>
-                            {fmtPnl(t.pnl)}
-                          </div>
-                          {onNavigate && (
-                            <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.2)', lineHeight: 1 }}>›</span>
-                          )}
-                        </div>
+              {/* Inner content animates when switching days */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={selectedDate}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.16, ease: 'easeOut' }}
+                >
+                  {/* Header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                    <div>
+                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, letterSpacing: '0.5px', color: '#fff' }}>
+                        {formatDayLabel(selectedDate)}
                       </div>
-                    </motion.div>
-                  ))}
-              </div>
-
-              {/* Daily Journal Section */}
-              <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                      Daily Journal
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                        {selectedData
+                          ? `${selectedData.count} trade${selectedData.count !== 1 ? 's' : ''}`
+                          : 'No trades taken'}
+                      </div>
                     </div>
-                    {journalDates[selectedDate] && !journalEditing && (
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: G }} />
+                    {selectedData && (
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 28, fontWeight: 700, color: selectedData.pnl >= 0 ? G : R, lineHeight: 1 }}>
+                          {fmtPnl(selectedData.pnl)}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>daily P&L</div>
+                      </div>
                     )}
                   </div>
-                  {!journalEditing ? (
-                    <button
-                      onClick={() => setJournalEditing(true)}
-                      style={{
-                        fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6,
-                        background: `${G}14`, color: G, border: `1px solid ${G}40`,
-                        cursor: 'pointer', fontFamily: 'Barlow',
-                      }}
-                    >
-                      {journalEntry ? 'Edit' : '+ Add'}
-                    </button>
-                  ) : (
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button
-                        onClick={saveJournal}
-                        disabled={journalSaving}
-                        style={{
-                          fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6,
-                          background: G, color: '#000', border: 'none',
-                          cursor: journalSaving ? 'default' : 'pointer', fontFamily: 'Barlow',
-                          opacity: journalSaving ? 0.6 : 1,
-                        }}
-                      >
-                        {journalSaving ? 'Saving…' : 'Save'}
-                      </button>
-                      <button
-                        onClick={() => { setJournalEditing(false); if (journalEntry) setJournalDraft({ preMarket: journalEntry.preMarket, postMarket: journalEntry.postMarket, mood: journalEntry.mood }); }}
-                        style={{
-                          fontSize: 11, padding: '3px 10px', borderRadius: 6,
-                          background: 'transparent', color: 'rgba(255,255,255,0.4)',
-                          border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer', fontFamily: 'Barlow',
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  )}
-                </div>
 
-                {journalEditing ? (
-                  <div>
-                    {/* Mood selector */}
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Mood</div>
-                      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                        {MOODS.map(m => (
-                          <button
-                            key={m}
-                            onClick={() => setJournalDraft(d => ({ ...d, mood: d.mood === m ? '' : m }))}
+                  {/* Trade list (only if trades exist) */}
+                  {selectedData ? (
+                    <div style={{ maxHeight: 220, overflowY: 'auto', scrollbarWidth: 'none', marginBottom: 12 }}>
+                      {selectedData.trades
+                        .slice()
+                        .sort((a, b) => (a.entryTime || '').localeCompare(b.entryTime || ''))
+                        .map((t, i) => (
+                          <motion.div
+                            key={t.id}
+                            whileTap={onNavigate ? { scale: 0.98 } : {}}
+                            onClick={() => { if (onNavigate) { setSelectedDate(null); onNavigate('journal', t.id); } }}
                             style={{
-                              padding: '3px 10px', borderRadius: 20, fontSize: 11,
-                              fontFamily: 'Barlow', fontWeight: journalDraft.mood === m ? 700 : 500,
-                              cursor: 'pointer',
-                              background: journalDraft.mood === m ? G : 'rgba(255,255,255,0.05)',
-                              color: journalDraft.mood === m ? '#000' : 'rgba(255,255,255,0.55)',
-                              border: journalDraft.mood === m ? `1px solid ${G}` : '1px solid rgba(255,255,255,0.1)',
-                              transition: 'all 0.12s',
+                              padding: '11px 0',
+                              borderBottom: i < selectedData.trades.length - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none',
+                              cursor: onNavigate ? 'pointer' : 'default',
                             }}
                           >
-                            {m}
-                          </button>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                                  <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: '0.5px', color: '#fff' }}>
+                                    {fmtSymbol(t.symbol)}
+                                  </span>
+                                  {t.side && (
+                                    <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: t.side === 'Long' ? `${G}20` : `${R}20`, color: t.side === 'Long' ? G : R, border: `1px solid ${t.side === 'Long' ? G : R}40` }}>
+                                      {t.side.toUpperCase()}
+                                    </span>
+                                  )}
+                                  {!t.followedPlan && (
+                                    <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: `${R}20`, color: R, border: `1px solid ${R}40` }}>RULES</span>
+                                  )}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                  {t.quantity != null && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{t.quantity}ct</span>}
+                                  {t.entryPrice != null && t.exitPrice != null && (
+                                    <>
+                                      {t.quantity != null && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>·</span>}
+                                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
+                                        {Math.round(t.entryPrice).toLocaleString()} → {Math.round(t.exitPrice).toLocaleString()}
+                                      </span>
+                                    </>
+                                  )}
+                                  {t.setup && (
+                                    <>
+                                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>·</span>
+                                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{t.setup}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 12 }}>
+                                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, color: t.pnl >= 0 ? G : R }}>
+                                  {fmtPnl(t.pnl)}
+                                </div>
+                                {onNavigate && <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.2)', lineHeight: 1 }}>›</span>}
+                              </div>
+                            </div>
+                          </motion.div>
                         ))}
+                    </div>
+                  ) : (
+                    /* No trades state */
+                    <div style={{ textAlign: 'center', padding: '14px 0 16px' }}>
+                      <div style={{ fontSize: 28, opacity: 0.25, marginBottom: 6 }}>📋</div>
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
+                        No trades taken this day
                       </div>
                     </div>
-                    {/* Pre-market */}
-                    <div style={{ marginBottom: 10 }}>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 5 }}>Pre-Market Thoughts</div>
-                      <textarea
-                        value={journalDraft.preMarket}
-                        onChange={e => setJournalDraft(d => ({ ...d, preMarket: e.target.value }))}
-                        placeholder="What's your plan for today? Key levels, bias, focus..."
-                        rows={3}
-                        style={{
-                          width: '100%', boxSizing: 'border-box',
-                          background: '#111811', border: '1px solid rgba(255,255,255,0.1)',
-                          borderRadius: 8, padding: '9px 11px', fontSize: 12,
-                          color: '#fff', fontFamily: 'Barlow', lineHeight: 1.5,
-                          resize: 'vertical', outline: 'none',
-                        }}
-                        onFocus={e => { e.target.style.borderColor = `${G}60`; }}
-                        onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }}
-                      />
-                    </div>
-                    {/* Post-market */}
-                    <div>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 5 }}>Post-Market Reflection</div>
-                      <textarea
-                        value={journalDraft.postMarket}
-                        onChange={e => setJournalDraft(d => ({ ...d, postMarket: e.target.value }))}
-                        placeholder="How did the session go? What worked, what didn't?"
-                        rows={3}
-                        style={{
-                          width: '100%', boxSizing: 'border-box',
-                          background: '#111811', border: '1px solid rgba(255,255,255,0.1)',
-                          borderRadius: 8, padding: '9px 11px', fontSize: 12,
-                          color: '#fff', fontFamily: 'Barlow', lineHeight: 1.5,
-                          resize: 'vertical', outline: 'none',
-                        }}
-                        onFocus={e => { e.target.style.borderColor = `${G}60`; }}
-                        onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }}
-                      />
-                    </div>
-                  </div>
-                ) : journalEntry ? (
-                  <div>
-                    {journalEntry.mood && (
-                      <div style={{ marginBottom: 8 }}>
-                        <span style={{
-                          fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 20,
-                          background: `${G}14`, color: G, border: `1px solid ${G}30`,
-                        }}>
-                          {journalEntry.mood}
-                        </span>
-                      </div>
-                    )}
-                    {journalEntry.preMarket && (
-                      <div style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 3 }}>Pre-Market</div>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>{journalEntry.preMarket}</div>
-                      </div>
-                    )}
-                    {journalEntry.postMarket && (
-                      <div>
-                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 3 }}>Post-Market</div>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>{journalEntry.postMarket}</div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
-                    No journal entry for this day yet.
-                  </div>
-                )}
-              </div>
+                  )}
 
-              <button
-                onClick={() => setSelectedDate(null)}
-                className="btn-ghost"
-                style={{ width: '100%', textAlign: 'center', marginTop: 16 }}
-              >
-                Close
-              </button>
+                  {/* + Log Trade */}
+                  <motion.button
+                    whileTap={{ scale: 0.96 }}
+                    onClick={handleLogTrade}
+                    style={{
+                      width: '100%', padding: '11px 0', borderRadius: 10,
+                      background: `${G}18`, border: `1px solid ${G}50`,
+                      color: G, fontFamily: "'Barlow', sans-serif",
+                      fontWeight: 700, fontSize: 14, cursor: 'pointer',
+                      marginBottom: 12, letterSpacing: '0.3px',
+                    }}
+                  >
+                    + Log Trade
+                  </motion.button>
+
+                  {/* Daily Journal Section */}
+                  <div style={{ paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                          Daily Journal
+                        </div>
+                        {journalDates[selectedDate] && !journalEditing && (
+                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: G }} />
+                        )}
+                      </div>
+                      {!journalEditing ? (
+                        <button
+                          onClick={() => setJournalEditing(true)}
+                          style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6, background: `${G}14`, color: G, border: `1px solid ${G}40`, cursor: 'pointer', fontFamily: 'Barlow' }}
+                        >
+                          {journalEntry ? 'Edit' : '+ Add'}
+                        </button>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            onClick={saveJournal} disabled={journalSaving}
+                            style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6, background: G, color: '#000', border: 'none', cursor: journalSaving ? 'default' : 'pointer', fontFamily: 'Barlow', opacity: journalSaving ? 0.6 : 1 }}
+                          >
+                            {journalSaving ? 'Saving…' : 'Save'}
+                          </button>
+                          <button
+                            onClick={() => { setJournalEditing(false); if (journalEntry) setJournalDraft({ preMarket: journalEntry.preMarket, postMarket: journalEntry.postMarket, mood: journalEntry.mood }); }}
+                            style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, background: 'transparent', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer', fontFamily: 'Barlow' }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {journalEditing ? (
+                      <div>
+                        {/* Mood */}
+                        <div style={{ marginBottom: 12 }}>
+                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Mood</div>
+                          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                            {MOODS.map(m => (
+                              <button key={m} onClick={() => setJournalDraft(d => ({ ...d, mood: d.mood === m ? '' : m }))}
+                                style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontFamily: 'Barlow', fontWeight: journalDraft.mood === m ? 700 : 500, cursor: 'pointer', background: journalDraft.mood === m ? G : 'rgba(255,255,255,0.05)', color: journalDraft.mood === m ? '#000' : 'rgba(255,255,255,0.55)', border: journalDraft.mood === m ? `1px solid ${G}` : '1px solid rgba(255,255,255,0.1)', transition: 'all 0.12s' }}
+                              >{m}</button>
+                            ))}
+                          </div>
+                        </div>
+                        {/* Pre-market */}
+                        <div style={{ marginBottom: 10 }}>
+                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 5 }}>Pre-Market Thoughts</div>
+                          <textarea value={journalDraft.preMarket} onChange={e => setJournalDraft(d => ({ ...d, preMarket: e.target.value }))} placeholder="What's your plan for today? Key levels, bias, focus..." rows={3}
+                            style={{ width: '100%', boxSizing: 'border-box', background: '#111811', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '9px 11px', fontSize: 12, color: '#fff', fontFamily: 'Barlow', lineHeight: 1.5, resize: 'vertical', outline: 'none' }}
+                            onFocus={e => { e.target.style.borderColor = `${G}60`; }}
+                            onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                          />
+                        </div>
+                        {/* Post-market */}
+                        <div>
+                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 5 }}>Post-Market Reflection</div>
+                          <textarea value={journalDraft.postMarket} onChange={e => setJournalDraft(d => ({ ...d, postMarket: e.target.value }))} placeholder="How did the session go? What worked, what didn't?" rows={3}
+                            style={{ width: '100%', boxSizing: 'border-box', background: '#111811', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '9px 11px', fontSize: 12, color: '#fff', fontFamily: 'Barlow', lineHeight: 1.5, resize: 'vertical', outline: 'none' }}
+                            onFocus={e => { e.target.style.borderColor = `${G}60`; }}
+                            onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                          />
+                        </div>
+                      </div>
+                    ) : journalEntry ? (
+                      <div>
+                        {journalEntry.mood && (
+                          <div style={{ marginBottom: 8 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 20, background: `${G}14`, color: G, border: `1px solid ${G}30` }}>
+                              {journalEntry.mood}
+                            </span>
+                          </div>
+                        )}
+                        {journalEntry.preMarket && (
+                          <div style={{ marginBottom: 8 }}>
+                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 3 }}>Pre-Market</div>
+                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>{journalEntry.preMarket}</div>
+                          </div>
+                        )}
+                        {journalEntry.postMarket && (
+                          <div>
+                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 3 }}>Post-Market</div>
+                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>{journalEntry.postMarket}</div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
+                        No journal entry for this day yet.
+                      </div>
+                    )}
+                  </div>
+
+                  <button onClick={() => setSelectedDate(null)} className="btn-ghost" style={{ width: '100%', textAlign: 'center', marginTop: 16 }}>
+                    Close
+                  </button>
+                </motion.div>
+              </AnimatePresence>
             </motion.div>
           </motion.div>
         )}
@@ -545,6 +518,8 @@ export default function Calendar({ trades, accounts = [], onNavigate }) {
     </div>
   );
 }
+
+// ── Helpers ────────────────────────────────────────────────────────────────
 
 function LegendItem({ color, border, label }) {
   return (
