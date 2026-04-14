@@ -6,7 +6,9 @@ import { useAccountFilter } from '../context/AccountFilterContext';
 import AccountSelector from '../components/AccountSelector';
 import { api } from '../services/api';
 
-const MOODS = ['Focused', 'Calm', 'Confident', 'Anxious', 'Frustrated', 'Distracted'];
+const MOODS  = ['Focused', 'Calm', 'Confident', 'Anxious', 'Frustrated', 'Distracted'];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const YEARS  = Array.from({ length: 11 }, (_, i) => 2020 + i); // 2020–2030
 
 const G = '#00ff41';
 const R = '#ff2d2d';
@@ -41,6 +43,9 @@ export default function Calendar({ trades, accounts = [], onNavigate, onLogTrade
   const now = new Date();
   const [viewDate, setViewDate]       = useState({ year: now.getFullYear(), month: now.getMonth() });
   const [selectedDate, setSelectedDate] = useState(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [pickerMonth, setPickerMonth]   = useState(now.getMonth());
+  const [pickerYear,  setPickerYear]    = useState(now.getFullYear());
 
   // Filter trades by selected account
   const filteredTrades = selectedAccountId
@@ -107,6 +112,18 @@ export default function Calendar({ trades, accounts = [], onNavigate, onLogTrade
   const monthStr  = new Date(year, month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const prevMonth = () => setViewDate(v => v.month === 0  ? { year: v.year - 1, month: 11 } : { year: v.year, month: v.month - 1 });
   const nextMonth = () => setViewDate(v => v.month === 11 ? { year: v.year + 1, month: 0  } : { year: v.year, month: v.month + 1 });
+  const prevYear  = () => setViewDate(v => ({ ...v, year: v.year - 1 }));
+  const nextYear  = () => setViewDate(v => ({ ...v, year: v.year + 1 }));
+
+  const openDropdown = () => {
+    setPickerMonth(month);
+    setPickerYear(year);
+    setShowDropdown(true);
+  };
+  const applyDropdown = () => {
+    setViewDate({ year: pickerYear, month: pickerMonth });
+    setShowDropdown(false);
+  };
 
   const monthTrades  = filteredTrades.filter(t => { const [ty, tm] = t.date.split('-').map(Number); return ty === year && tm - 1 === month; });
   const monthPnl     = monthTrades.reduce((s, t) => s + t.pnl, 0);
@@ -161,11 +178,111 @@ export default function Calendar({ trades, accounts = [], onNavigate, onLogTrade
       </div>
 
       <div style={{ padding: '0 16px 80px' }}>
-        {/* Month nav */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <motion.button whileTap={{ scale: 0.9 }} onClick={prevMonth} style={{ background: '#111811', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '6px 14px', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontFamily: 'Barlow', fontSize: 16 }}>‹</motion.button>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px', color: '#fff' }}>{monthStr}</div>
-          <motion.button whileTap={{ scale: 0.9 }} onClick={nextMonth} style={{ background: '#111811', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '6px 14px', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontFamily: 'Barlow', fontSize: 16 }}>›</motion.button>
+        {/* Month/Year nav — « ‹ April 2026 ⌄ › » */}
+        <div style={{ position: 'relative', marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+            <NavBtn onClick={prevYear}  label="«" />
+            <NavBtn onClick={prevMonth} label="‹" />
+
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              onClick={openDropdown}
+              style={{
+                background: showDropdown ? 'rgba(0,255,65,0.08)' : '#111811',
+                border: showDropdown ? `1px solid ${G}50` : '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 8, padding: '6px 14px',
+                color: '#fff', cursor: 'pointer',
+                fontFamily: "'Barlow Condensed', sans-serif",
+                fontSize: 17, fontWeight: 700,
+                letterSpacing: '1.5px', textTransform: 'uppercase',
+                display: 'flex', alignItems: 'center', gap: 6,
+                transition: 'border-color 0.15s, background 0.15s',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {monthStr}
+              <span style={{ fontSize: 10, color: showDropdown ? G : 'rgba(255,255,255,0.4)', transition: 'transform 0.15s, color 0.15s', display: 'inline-block', transform: showDropdown ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+            </motion.button>
+
+            <NavBtn onClick={nextMonth} label="›" />
+            <NavBtn onClick={nextYear}  label="»" />
+          </div>
+
+          {/* Dropdown picker */}
+          <AnimatePresence>
+            {showDropdown && (
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setShowDropdown(false)} />
+                <motion.div
+                  initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
+                  onClick={e => e.stopPropagation()}
+                  style={{
+                    position: 'absolute', top: 'calc(100% + 8px)', left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 200, width: 272,
+                    background: '#0a0f0a',
+                    border: `1px solid ${G}25`,
+                    borderRadius: 14, padding: '14px 14px 12px',
+                    boxShadow: '0 12px 40px rgba(0,0,0,0.8)',
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    {/* Month grid */}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, fontFamily: "'Barlow Condensed', sans-serif" }}>Month</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3 }}>
+                        {MONTHS.map((m, i) => (
+                          <button key={m} onClick={() => setPickerMonth(i)} style={{
+                            padding: '5px 2px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                            background: pickerMonth === i ? G : 'rgba(255,255,255,0.05)',
+                            color: pickerMonth === i ? '#000' : 'rgba(255,255,255,0.6)',
+                            fontSize: 11, fontWeight: 700,
+                            fontFamily: "'Barlow Condensed', sans-serif",
+                            transition: 'background 0.1s',
+                          }}>{m}</button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Year column */}
+                    <div style={{ width: 58 }}>
+                      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, fontFamily: "'Barlow Condensed', sans-serif" }}>Year</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 168, overflowY: 'auto', scrollbarWidth: 'none' }}>
+                        {YEARS.map(y => (
+                          <button key={y} onClick={() => setPickerYear(y)} style={{
+                            padding: '5px 0', borderRadius: 6, border: 'none', cursor: 'pointer',
+                            background: pickerYear === y ? G : 'rgba(255,255,255,0.05)',
+                            color: pickerYear === y ? '#000' : 'rgba(255,255,255,0.6)',
+                            fontSize: 12, fontWeight: 700,
+                            fontFamily: "'Barlow Condensed', sans-serif",
+                            textAlign: 'center', transition: 'background 0.1s',
+                          }}>{y}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <motion.button
+                    whileTap={{ scale: 0.96 }}
+                    onClick={applyDropdown}
+                    style={{
+                      width: '100%', padding: '9px 0', marginTop: 10,
+                      background: G, color: '#000', border: 'none', borderRadius: 8,
+                      fontSize: 13, fontWeight: 800,
+                      fontFamily: "'Barlow Condensed', sans-serif",
+                      letterSpacing: '1.5px', cursor: 'pointer',
+                      boxShadow: `0 0 14px ${G}40`,
+                    }}
+                  >
+                    GO
+                  </motion.button>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Month summary */}
@@ -520,6 +637,25 @@ export default function Calendar({ trades, accounts = [], onNavigate, onLogTrade
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+
+function NavBtn({ onClick, label }) {
+  return (
+    <motion.button
+      whileTap={{ scale: 0.85 }}
+      whileHover={{ color: G, borderColor: `${G}60` }}
+      onClick={onClick}
+      style={{
+        background: '#111811', border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: 8, padding: '6px 10px',
+        color: 'rgba(255,255,255,0.6)', cursor: 'pointer',
+        fontFamily: 'Barlow', fontSize: 16, lineHeight: 1,
+        flexShrink: 0,
+      }}
+    >
+      {label}
+    </motion.button>
+  );
+}
 
 function LegendItem({ color, border, label }) {
   return (
