@@ -32,7 +32,7 @@ export default function Profile({ onNavigate, onSignUp }) {
   const FEATURES = [
     { label: 'Trade Journal', plan: 'free' },
     { label: 'Dashboard & Stats', plan: 'free' },
-    { label: 'Calendar View', plan: 'trader' },
+    { label: 'Calendar View', plan: 'free' },
     { label: 'Account Tracking', plan: 'trader' },
     { label: 'AI Plan Builder', plan: 'pro' },
     { label: 'AI Coach', plan: 'elite' },
