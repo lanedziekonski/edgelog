@@ -93,19 +93,29 @@ Guidelines:
 
 const PLAN_BUILDER_SYSTEM_PROMPT = `You are a trading plan coach. Your job is to interview the trader and help them build a fully custom, rules-based trading plan from scratch — based entirely on what they tell you. You make no assumptions.
 
-You are meeting this trader for the first time. Start by asking them to describe their trading strategy in their own words.
+Interview the trader with these questions one at a time (only move to the next after they answer):
+1. Describe their trading strategy in their own words
+2. What markets or instruments do they trade?
+3. What does their entry criteria look like — what has to be true before they take a trade?
+4. What are their exit criteria — where do they take profit and where do they stop out?
+5. What are their risk management rules — how much do they risk per trade, per day?
+6. When should they NOT trade — what conditions or states mean they should stay out?
+7. What are their emotional rules — how do they handle losses, winning streaks, FOMO?
 
-Then ask follow-up questions one at a time in this order (only move to the next after they answer):
-1. What markets or instruments do they trade?
-2. What does their entry criteria look like — what has to be true before they take a trade?
-3. What are their exit criteria — where do they take profit and where do they stop out?
-4. What are their risk management rules — how much do they risk per trade, per day?
-5. When should they NOT trade — what conditions or states mean they should stay out?
-6. What are their emotional rules — how do they handle losses, winning streaks, FOMO?
+After gathering all of this information, write the complete trading plan. You MUST format it exactly like this, starting with the exact marker line:
 
-After you have gathered all of this information, write out a complete, structured trading plan using only what they told you. Format it clearly with sections and numbered rules. Do not invent rules or suggest strategies they didn't mention.
+=== YOUR TRADING PLAN ===
 
-If the trader has already shared some of their plan, pick up where they left off and ask about what's missing.`;
+Then write the plan in clearly labeled sections using this format:
+**SECTION NAME**
+1. Rule one
+2. Rule two
+
+Sections to include: Overview, Markets & Instruments, Entry Criteria, Exit Criteria, Risk Management, When NOT to Trade, Emotional Rules.
+
+Only use what the trader told you — do not invent rules or suggest strategies they didn't mention. After writing the plan, tell the trader it's saved and they can tap "Edit Rules" any time to update it.
+
+If the trader wants to edit an existing plan, ask what they'd like to change, gather the updates, then rewrite and output the full updated plan with the === YOUR TRADING PLAN === marker again.`;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -324,6 +334,78 @@ app.delete('/api/accounts/:id', requireAuth, async (req, res) => {
   }
 });
 
+// ─── TRADING PLAN ─────────────────────────────────────────────────────────
+
+app.get('/api/trading-plan/messages', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT role, content, created_at FROM trading_plan_messages WHERE user_id = $1 ORDER BY created_at ASC`,
+      [req.userId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Get plan messages error:', err.message);
+    res.status(500).json({ error: 'Failed to load messages' });
+  }
+});
+
+app.post('/api/trading-plan/messages', requireAuth, async (req, res) => {
+  const { role, content } = req.body;
+  if (!role || !content) return res.status(400).json({ error: 'role and content required' });
+  try {
+    await pool.query(
+      `INSERT INTO trading_plan_messages (user_id, role, content) VALUES ($1, $2, $3)`,
+      [req.userId, role, content]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Save plan message error:', err.message);
+    res.status(500).json({ error: 'Failed to save message' });
+  }
+});
+
+app.get('/api/trading-plan/plan', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT plan_content, updated_at FROM trading_plans WHERE user_id = $1`,
+      [req.userId]
+    );
+    res.json(rows[0] || null);
+  } catch (err) {
+    console.error('Get plan error:', err.message);
+    res.status(500).json({ error: 'Failed to load plan' });
+  }
+});
+
+app.post('/api/trading-plan/plan', requireAuth, async (req, res) => {
+  const { planContent } = req.body;
+  if (!planContent) return res.status(400).json({ error: 'planContent required' });
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO trading_plans (user_id, plan_content)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id) DO UPDATE SET plan_content = $2, updated_at = NOW()
+       RETURNING updated_at`,
+      [req.userId, planContent]
+    );
+    res.json({ ok: true, updatedAt: rows[0].updated_at });
+  } catch (err) {
+    console.error('Save plan error:', err.message);
+    res.status(500).json({ error: 'Failed to save plan' });
+  }
+});
+
+app.delete('/api/trading-plan', requireAuth, async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM trading_plans WHERE user_id = $1`, [req.userId]);
+    await pool.query(`DELETE FROM trading_plan_messages WHERE user_id = $1`, [req.userId]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Reset plan error:', err.message);
+    res.status(500).json({ error: 'Failed to reset plan' });
+  }
+});
+
 // ─── AI COACH (Elite only) ────────────────────────────────────────────────
 
 app.post('/api/chat', requireAuth, requirePlan('elite'), async (req, res) => {
@@ -332,7 +414,15 @@ app.post('/api/chat', requireAuth, requirePlan('elite'), async (req, res) => {
     return res.status(400).json({ error: 'messages array required' });
   }
   const modeLabel = mode === 'premarket' ? 'PRE-MARKET SESSION' : 'POST-MARKET REVIEW';
-  const system = `${COACH_SYSTEM_PROMPT}\n\n--- CURRENT MODE: ${modeLabel} ---${context ? `\n\nTrader context: ${context}` : ''}`;
+  // Inject the user's saved trading plan if one exists
+  const { rows: planRows } = await pool.query(
+    'SELECT plan_content FROM trading_plans WHERE user_id = $1', [req.userId]
+  );
+  const savedPlan = planRows[0]?.plan_content || null;
+  const planSection = savedPlan
+    ? `\n\nTHIS TRADER'S TRADING PLAN (reference these specific rules when coaching):\n${savedPlan}`
+    : '\n\nNote: This trader has not yet built a trading plan. Encourage them to use the Trading Plan tab to create one.';
+  const system = `${COACH_SYSTEM_PROMPT}${planSection}\n\n--- CURRENT MODE: ${modeLabel} ---${context ? `\n\nSession context: ${context}` : ''}`;
   try {
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
@@ -358,7 +448,7 @@ app.post('/api/plan-chat', requireAuth, requirePlan('pro'), async (req, res) => 
   try {
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: PLAN_BUILDER_SYSTEM_PROMPT,
       messages,
     });

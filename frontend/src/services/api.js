@@ -70,6 +70,8 @@ export const api = {
   getTradingPlan: (token) => call('/trading-plan/plan', {}, token),
   saveTradingPlan: (token, planContent) =>
     call('/trading-plan/plan', { method: 'POST', body: JSON.stringify({ planContent }) }, token),
+  resetTradingPlan: (token) =>
+    call('/trading-plan', { method: 'DELETE' }, token),
 
   // Screenshot upload (uses FormData, not JSON)
   uploadScreenshot: async (token, tradeId, file) => {

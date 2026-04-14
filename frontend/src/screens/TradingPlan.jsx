@@ -3,9 +3,37 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 
-const G = '#00ff41';
-const GOLD = '#f0a500';
+const G  = '#00ff41';
+const R  = '#ff2d2d';
+const BG = '#080c08';
+
 const PLAN_MARKER = '=== YOUR TRADING PLAN ===';
+
+// Detects a completed plan in an AI response
+function detectPlan(text) {
+  if (text.includes(PLAN_MARKER)) return true;
+  const lower = text.toLowerCase();
+  const hasKeyword = lower.includes('your trading plan') ||
+    lower.includes('here are your rules') ||
+    lower.includes('trading plan summary') ||
+    lower.includes('here is your trading plan') ||
+    lower.includes("here's your trading plan");
+  if (hasKeyword && text.length > 300) return true;
+  if (text.length > 500) {
+    const numberedRules = (text.match(/^\d+\./gm) || []).length >= 3;
+    const bulletRules   = (text.match(/^[-•›]/gm) || []).length >= 3;
+    if (numberedRules || bulletRules) return true;
+  }
+  return false;
+}
+
+// Extract plan content (strip marker prefix if present)
+function extractPlan(text) {
+  if (text.includes(PLAN_MARKER)) {
+    return text.split(PLAN_MARKER).slice(1).join(PLAN_MARKER).trim();
+  }
+  return text.trim();
+}
 
 // ── Plan renderer ──────────────────────────────────────────────────────────────
 function PlanRenderer({ content }) {
@@ -15,17 +43,19 @@ function PlanRenderer({ content }) {
 
   for (const raw of lines) {
     const line = raw.trim();
-    if (!line) { elements.push(<div key={key++} style={{ height: 10 }} />); continue; }
+    if (!line) { elements.push(<div key={key++} style={{ height: 8 }} />); continue; }
 
-    // Section header: **SECTION NAME**
-    const headerMatch = line.match(/^\*\*(.+)\*\*$/);
+    // Section header: **SECTION NAME** or ALL CAPS header line
+    const headerMatch = line.match(/^\*\*(.+)\*\*$/) || line.match(/^#{1,3}\s+(.+)$/);
     if (headerMatch) {
       elements.push(
         <div key={key++} style={{
-          fontSize: 13, fontWeight: 800, color: GOLD,
-          letterSpacing: '1px', textTransform: 'uppercase',
-          marginTop: 18, marginBottom: 6,
+          fontSize: 12, fontWeight: 800, color: G,
+          letterSpacing: '1.5px', textTransform: 'uppercase',
+          marginTop: 20, marginBottom: 8,
           fontFamily: "'Barlow Condensed', sans-serif",
+          borderBottom: `1px solid ${G}20`,
+          paddingBottom: 5,
         }}>
           {headerMatch[1]}
         </div>
@@ -37,16 +67,16 @@ function PlanRenderer({ content }) {
     const numMatch = line.match(/^(\d+)\.\s+(.+)$/);
     if (numMatch) {
       elements.push(
-        <div key={key++} style={{ display: 'flex', gap: 10, marginBottom: 6, alignItems: 'flex-start' }}>
+        <div key={key++} style={{ display: 'flex', gap: 10, marginBottom: 8, alignItems: 'flex-start' }}>
           <span style={{
             minWidth: 22, height: 22, borderRadius: 6,
-            background: `${GOLD}20`, border: `1px solid ${GOLD}40`,
+            background: `${G}18`, border: `1px solid ${G}35`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 11, fontWeight: 800, color: GOLD, flexShrink: 0, marginTop: 1,
+            fontSize: 11, fontWeight: 800, color: G, flexShrink: 0, marginTop: 2,
           }}>
             {numMatch[1]}
           </span>
-          <span style={{ fontSize: 14, color: '#ddd', lineHeight: 1.6, fontFamily: 'Barlow' }}>
+          <span style={{ fontSize: 15, color: '#e8e8e8', lineHeight: 1.8, fontFamily: "'Barlow', sans-serif" }}>
             {numMatch[2]}
           </span>
         </div>
@@ -54,13 +84,13 @@ function PlanRenderer({ content }) {
       continue;
     }
 
-    // Bullet: - text
-    const bulletMatch = line.match(/^[-•]\s+(.+)$/);
+    // Bullet: - • › text
+    const bulletMatch = line.match(/^[-•›]\s+(.+)$/);
     if (bulletMatch) {
       elements.push(
-        <div key={key++} style={{ display: 'flex', gap: 8, marginBottom: 5, alignItems: 'flex-start', paddingLeft: 4 }}>
-          <span style={{ color: `${GOLD}80`, fontSize: 12, marginTop: 3, flexShrink: 0 }}>▸</span>
-          <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, fontFamily: 'Barlow' }}>
+        <div key={key++} style={{ display: 'flex', gap: 8, marginBottom: 7, alignItems: 'flex-start', paddingLeft: 4 }}>
+          <span style={{ color: G, fontSize: 14, marginTop: 2, flexShrink: 0, fontWeight: 700 }}>›</span>
+          <span style={{ fontSize: 15, color: '#e8e8e8', lineHeight: 1.8, fontFamily: "'Barlow', sans-serif" }}>
             {bulletMatch[1]}
           </span>
         </div>
@@ -68,9 +98,10 @@ function PlanRenderer({ content }) {
       continue;
     }
 
-    // Plain text
+    // Plain text — skip the marker line itself
+    if (line === PLAN_MARKER.trim()) continue;
     elements.push(
-      <div key={key++} style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, fontFamily: 'Barlow', marginBottom: 4 }}>
+      <div key={key++} style={{ fontSize: 15, color: 'rgba(255,255,255,0.65)', lineHeight: 1.8, fontFamily: "'Barlow', sans-serif", marginBottom: 4 }}>
         {line}
       </div>
     );
@@ -85,22 +116,90 @@ function PlanTypingDots() {
     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
       {[0, 1, 2].map(i => (
         <div key={i} style={{
-          width: 6, height: 6, borderRadius: '50%', background: GOLD,
+          width: 6, height: 6, borderRadius: '50%', background: G,
           animation: `planBounce 1.2s ease-in-out ${i * 0.2}s infinite`,
         }} />
       ))}
-      <style>{`@keyframes planBounce { 0%,80%,100%{transform:scale(0.7);opacity:.35} 40%{transform:scale(1);opacity:1} }`}</style>
+      <style>{`@keyframes planBounce{0%,80%,100%{transform:scale(0.7);opacity:.35}40%{transform:scale(1);opacity:1}}`}</style>
     </div>
   );
 }
 
-// ── Pencil icon ────────────────────────────────────────────────────────────────
-function PencilIcon({ size = 16, color = G }) {
+// ── Reset confirmation modal ───────────────────────────────────────────────────
+function ResetModal({ onCancel, onConfirm }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-    </svg>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 999,
+        background: 'rgba(0,0,0,0.85)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '0 24px',
+      }}
+      onClick={onCancel}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.92, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.92, y: 16 }}
+        transition={{ duration: 0.2 }}
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#0d1a0d',
+          border: `1px solid ${R}40`,
+          borderRadius: 16,
+          padding: '24px 20px',
+          maxWidth: 320, width: '100%',
+        }}
+      >
+        <div style={{ fontSize: 24, textAlign: 'center', marginBottom: 12 }}>⚠️</div>
+        <div style={{
+          fontFamily: "'Barlow Condensed', sans-serif",
+          fontSize: 18, fontWeight: 800, color: '#fff',
+          textAlign: 'center', marginBottom: 10,
+        }}>
+          Reset Trading Plan?
+        </div>
+        <div style={{
+          fontSize: 14, color: 'rgba(255,255,255,0.55)',
+          lineHeight: 1.6, textAlign: 'center', marginBottom: 24,
+          fontFamily: "'Barlow', sans-serif",
+        }}>
+          This will permanently delete your current rules and conversation history. You will need to build a new plan from scratch.
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={onCancel}
+            style={{
+              flex: 1, padding: '11px 0', borderRadius: 10,
+              background: 'transparent', border: `1px solid ${G}60`,
+              color: G, fontSize: 14, fontWeight: 700,
+              fontFamily: "'Barlow Condensed', sans-serif",
+              letterSpacing: '0.5px', cursor: 'pointer',
+            }}
+          >
+            CANCEL
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={onConfirm}
+            style={{
+              flex: 1, padding: '11px 0', borderRadius: 10,
+              background: R, border: 'none',
+              color: '#fff', fontSize: 14, fontWeight: 700,
+              fontFamily: "'Barlow Condensed', sans-serif",
+              letterSpacing: '0.5px', cursor: 'pointer',
+              boxShadow: `0 0 16px ${R}40`,
+            }}
+          >
+            YES, RESET
+          </motion.button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -109,15 +208,16 @@ export default function TradingPlan() {
   const { token } = useAuth();
 
   // view: 'loading' | 'empty' | 'chat' | 'plan'
-  const [view, setView] = useState('loading');
+  const [view, setView]         = useState('loading');
   const [messages, setMessages] = useState([]);
   const [savedPlan, setSavedPlan] = useState(null);
-  const [input, setInput] = useState('');
+  const [input, setInput]       = useState('');
   const [aiLoading, setAiLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]       = useState('');
+  const [showReset, setShowReset] = useState(false);
   const bottomRef = useRef(null);
 
-  // Load history + saved plan on mount
+  // Load saved plan + message history on mount
   useEffect(() => {
     if (!token) return;
     (async () => {
@@ -145,20 +245,22 @@ export default function TradingPlan() {
     })();
   }, [token]);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
+  // ── Start building (empty state CTA) ──
   const startBuilding = async () => {
-    setView('chat');
     const greeting = {
       role: 'assistant',
-      content: "Hey, I'm your trading plan coach. I'm going to help you build a complete, custom trading plan based entirely on your own strategy — no templates.\n\nLet's start from the beginning: describe your trading strategy in your own words. What does a typical trade look like for you?",
+      content: "Let's build your personalized trading plan. Start by telling me — what markets or instruments do you trade?",
     };
     setMessages([greeting]);
-    try {
-      await api.saveTradingPlanMessage(token, greeting.role, greeting.content);
-    } catch { /* non-fatal */ }
+    setView('chat');
+    try { await api.saveTradingPlanMessage(token, greeting.role, greeting.content); } catch { /* non-fatal */ }
   };
 
+  // ── Send a message ──
   const sendMessage = async (text) => {
     const userText = (text || input).trim();
     if (!userText || aiLoading) return;
@@ -170,27 +272,22 @@ export default function TradingPlan() {
     setMessages(next);
     setAiLoading(true);
 
-    try {
-      await api.saveTradingPlanMessage(token, 'user', userText);
-    } catch { /* non-fatal */ }
+    try { await api.saveTradingPlanMessage(token, 'user', userText); } catch { /* non-fatal */ }
 
     try {
       const data = await api.planChat(token, next);
       const assistantMsg = { role: 'assistant', content: data.content };
       setMessages(prev => [...prev, assistantMsg]);
 
-      try {
-        await api.saveTradingPlanMessage(token, 'assistant', data.content);
-      } catch { /* non-fatal */ }
+      try { await api.saveTradingPlanMessage(token, 'assistant', data.content); } catch { /* non-fatal */ }
 
       // Detect completed plan
-      if (data.content.includes(PLAN_MARKER)) {
-        const planContent = data.content.split(PLAN_MARKER).slice(1).join(PLAN_MARKER).trim();
+      if (detectPlan(data.content)) {
+        const planContent = extractPlan(data.content);
         try {
           await api.saveTradingPlan(token, planContent);
           setSavedPlan(planContent);
-          // Brief delay so user sees the final message before switching views
-          setTimeout(() => setView('plan'), 1800);
+          setTimeout(() => setView('plan'), 1600);
         } catch { /* non-fatal */ }
       }
     } catch (err) {
@@ -201,29 +298,48 @@ export default function TradingPlan() {
     }
   };
 
+  // ── Edit rules ──
   const handleEditRules = async () => {
+    // Load full history if we don't have it yet
+    if (messages.length === 0) {
+      try {
+        const msgsData = await api.getTradingPlanMessages(token);
+        if (Array.isArray(msgsData)) setMessages(msgsData);
+      } catch { /* non-fatal */ }
+    }
     setView('chat');
     const editMsg = {
       role: 'assistant',
-      content: "Let's update your plan. What would you like to change? You can tell me to add rules, remove rules, adjust your risk parameters, or update any section of your plan.",
+      content: savedPlan
+        ? `The user wants to update their trading plan. Here is their current plan:\n\n${savedPlan}\n\nWhat would you like to change? You can add rules, remove rules, adjust risk parameters, or update any section.`
+        : "Let's update your plan. What would you like to change?",
     };
     setMessages(prev => [...prev, editMsg]);
-    try {
-      await api.saveTradingPlanMessage(token, editMsg.role, editMsg.content);
-    } catch { /* non-fatal */ }
+    try { await api.saveTradingPlanMessage(token, editMsg.role, editMsg.content); } catch { /* non-fatal */ }
   };
 
-  // ── Render: loading ──────────────────────────────────────────────────────────
+  // ── Reset plan ──
+  const handleReset = async () => {
+    setShowReset(false);
+    try {
+      await api.resetTradingPlan(token);
+    } catch { /* non-fatal */ }
+    setSavedPlan(null);
+    setMessages([]);
+    setView('empty');
+  };
+
+  // ── Loading ──
   if (view === 'loading') {
     return (
-      <div style={{ background: '#080c08', minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: BG, minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <PlanTypingDots />
       </div>
     );
   }
 
   return (
-    <div style={{ background: '#080c08', minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: BG, minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ padding: '20px 16px 16px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
         <motion.div
@@ -232,12 +348,13 @@ export default function TradingPlan() {
           style={{
             position: 'absolute', top: 4, right: 12,
             fontFamily: "'Barlow Condensed', sans-serif",
-            fontSize: 40, fontWeight: 900, color: GOLD,
+            fontSize: 40, fontWeight: 900, color: G,
             letterSpacing: 3, userSelect: 'none', pointerEvents: 'none', lineHeight: 1,
           }}
         >
           TRADING PLAN
         </motion.div>
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: 1, color: '#fff', lineHeight: 1 }}>
@@ -247,29 +364,63 @@ export default function TradingPlan() {
               Your rules. Your edge.
             </div>
           </div>
+
           {view === 'plan' && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <motion.button
+                whileTap={{ scale: 0.93 }}
+                onClick={handleEditRules}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '6px 12px', borderRadius: 8,
+                  background: 'transparent', border: `1px solid ${G}60`,
+                  color: G, fontSize: 12, fontWeight: 700,
+                  fontFamily: "'Barlow Condensed', sans-serif",
+                  letterSpacing: '0.5px', cursor: 'pointer',
+                }}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={G} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                EDIT
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.93 }}
+                onClick={() => setShowReset(true)}
+                style={{
+                  padding: '6px 12px', borderRadius: 8,
+                  background: 'transparent', border: `1px solid ${R}60`,
+                  color: R, fontSize: 12, fontWeight: 700,
+                  fontFamily: "'Barlow Condensed', sans-serif",
+                  letterSpacing: '0.5px', cursor: 'pointer',
+                }}
+              >
+                RESET
+              </motion.button>
+            </div>
+          )}
+
+          {view === 'chat' && savedPlan && (
             <motion.button
-              whileTap={{ scale: 0.92 }}
-              onClick={handleEditRules}
+              whileTap={{ scale: 0.93 }}
+              onClick={() => setView('plan')}
               style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '7px 13px', borderRadius: 8,
-                background: 'transparent',
-                border: `1px solid ${G}60`,
-                color: G, fontSize: 13, fontWeight: 700,
-                fontFamily: "'Barlow Condensed', sans-serif",
-                letterSpacing: '0.5px', cursor: 'pointer',
-                transition: 'border-color 0.15s',
+                fontSize: 11, color: 'rgba(255,255,255,0.5)',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 6, padding: '5px 10px',
+                cursor: 'pointer', fontFamily: 'Barlow',
               }}
             >
-              <PencilIcon size={13} color={G} />
-              EDIT RULES
+              View Plan
             </motion.button>
           )}
         </div>
       </div>
 
       <AnimatePresence mode="wait">
+
         {/* ── Empty state ── */}
         {view === 'empty' && (
           <motion.div
@@ -278,32 +429,45 @@ export default function TradingPlan() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25 }}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 32px 60px' }}
+            style={{
+              flex: 1, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              padding: '0 32px 60px',
+            }}
           >
             <motion.div
-              animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-              style={{ fontSize: 48, marginBottom: 20 }}
+              animate={{ opacity: [0.4, 0.9, 0.4] }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ fontSize: 52, marginBottom: 20 }}
             >
               📋
             </motion.div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 800, color: '#fff', marginBottom: 10, textAlign: 'center', letterSpacing: 0.5 }}>
-              No Trading Plan Yet
+            <div style={{
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontSize: 24, fontWeight: 800, color: '#fff',
+              marginBottom: 10, textAlign: 'center', letterSpacing: 0.5,
+            }}>
+              Build Your Trading Plan
             </div>
-            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6, textAlign: 'center', marginBottom: 28, maxWidth: 280 }}>
-              Your AI coach will interview you about your strategy and build a custom plan tailored to how you trade.
+            <div style={{
+              fontSize: 14, color: 'rgba(255,255,255,0.45)',
+              lineHeight: 1.7, textAlign: 'center',
+              marginBottom: 30, maxWidth: 280,
+              fontFamily: "'Barlow', sans-serif",
+            }}>
+              Your AI coach will interview you about your strategy and create a personalized rulebook you can reference every session.
             </div>
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={startBuilding}
               style={{
-                padding: '12px 28px', borderRadius: 10,
-                background: GOLD, color: '#000',
+                padding: '13px 32px', borderRadius: 12,
+                background: G, color: '#000',
                 fontSize: 15, fontWeight: 800,
                 fontFamily: "'Barlow Condensed', sans-serif",
-                letterSpacing: '1px', textTransform: 'uppercase',
+                letterSpacing: '1.5px', textTransform: 'uppercase',
                 border: 'none', cursor: 'pointer',
-                boxShadow: `0 0 20px ${GOLD}50`,
+                boxShadow: `0 0 24px ${G}45`,
               }}
             >
               Start Building
@@ -321,33 +485,15 @@ export default function TradingPlan() {
             transition={{ duration: 0.2 }}
             style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0 16px 16px', minHeight: 0 }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                AI Plan Builder
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: `${GOLD}18`, color: GOLD, border: `1px solid ${GOLD}44` }}>
-                  PRO
-                </span>
-                {savedPlan && (
-                  <motion.button
-                    whileTap={{ scale: 0.92 }}
-                    onClick={() => setView('plan')}
-                    style={{
-                      fontSize: 11, color: 'rgba(255,255,255,0.5)',
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: 6, padding: '4px 9px',
-                      cursor: 'pointer', fontFamily: 'Barlow',
-                    }}
-                  >
-                    View Plan
-                  </motion.button>
-                )}
-              </div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 10 }}>
+              AI Plan Builder
             </div>
 
-            <div style={{ background: '#111811', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div style={{
+              background: '#0d1a0d', border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 12, overflow: 'hidden',
+              flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0,
+            }}>
               {/* Messages */}
               <div style={{ flex: 1, overflowY: 'auto', padding: '14px 14px 0', scrollbarWidth: 'none', minHeight: 0 }}>
                 <AnimatePresence>
@@ -357,18 +503,22 @@ export default function TradingPlan() {
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.2 }}
-                      style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: 12 }}
+                      style={{
+                        display: 'flex',
+                        justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start',
+                        marginBottom: 12,
+                      }}
                     >
                       <div style={{
                         maxWidth: '88%',
-                        padding: '14px 18px',
+                        padding: '12px 16px',
                         borderRadius: m.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                        background: m.role === 'user' ? GOLD : '#0d1a0d',
-                        color: m.role === 'user' ? '#000' : '#e0e0e0',
+                        background: m.role === 'user' ? `${G}22` : '#111811',
+                        color: m.role === 'user' ? G : '#e0e0e0',
                         fontSize: 15, lineHeight: 1.8,
                         fontWeight: m.role === 'user' ? 600 : 400,
                         fontFamily: "'Barlow', sans-serif",
-                        border: m.role === 'assistant' ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                        border: m.role === 'user' ? `1px solid ${G}40` : '1px solid rgba(255,255,255,0.1)',
                         whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                       }}>
                         {m.content}
@@ -379,20 +529,25 @@ export default function TradingPlan() {
 
                 {aiLoading && (
                   <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 10 }}>
-                    <div style={{ padding: '10px 14px', borderRadius: '14px 14px 14px 4px', background: '#0d1a0d', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div style={{ padding: '10px 14px', borderRadius: '14px 14px 14px 4px', background: '#111811', border: '1px solid rgba(255,255,255,0.08)' }}>
                       <PlanTypingDots />
                     </div>
                   </div>
                 )}
 
                 {error && (
-                  <div style={{ fontSize: 12, color: '#ff2d2d', marginBottom: 10 }}>{error}</div>
+                  <div style={{ fontSize: 12, color: R, marginBottom: 10 }}>{error}</div>
                 )}
                 <div ref={bottomRef} />
               </div>
 
               {/* Input */}
-              <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: 8, alignItems: 'center', background: 'rgba(0,0,0,0.3)', flexShrink: 0 }}>
+              <div style={{
+                padding: '10px 14px',
+                borderTop: '1px solid rgba(255,255,255,0.07)',
+                display: 'flex', gap: 8, alignItems: 'center',
+                background: 'rgba(0,0,0,0.3)', flexShrink: 0,
+              }}>
                 <input
                   value={input}
                   onChange={e => setInput(e.target.value)}
@@ -411,14 +566,16 @@ export default function TradingPlan() {
                   disabled={!input.trim() || aiLoading}
                   style={{
                     width: 36, height: 36, borderRadius: 8, flexShrink: 0, border: 'none',
-                    background: input.trim() && !aiLoading ? GOLD : 'rgba(255,255,255,0.08)',
+                    background: input.trim() && !aiLoading ? G : 'rgba(255,255,255,0.08)',
                     color: input.trim() && !aiLoading ? '#000' : 'rgba(255,255,255,0.25)',
                     cursor: input.trim() && !aiLoading ? 'pointer' : 'default',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     transition: 'background 0.15s, color 0.15s',
                   }}
                 >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                  </svg>
                 </motion.button>
               </div>
             </div>
@@ -435,24 +592,26 @@ export default function TradingPlan() {
             transition={{ duration: 0.25 }}
             style={{ flex: 1, overflowY: 'auto', padding: '0 16px 80px', scrollbarWidth: 'none' }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                Your Trading Plan
-              </div>
-              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: `${GOLD}18`, color: GOLD, border: `1px solid ${GOLD}44` }}>
-                PRO
-              </span>
-            </div>
-
             <div style={{
-              background: '#111811',
-              border: `1px solid ${GOLD}20`,
-              borderRadius: 12,
-              padding: '18px 16px',
+              background: '#0d1a0d',
+              border: `1px solid ${G}20`,
+              borderRadius: 14,
+              padding: '20px 18px',
             }}>
               <PlanRenderer content={savedPlan} />
             </div>
           </motion.div>
+        )}
+
+      </AnimatePresence>
+
+      {/* Reset confirmation modal */}
+      <AnimatePresence>
+        {showReset && (
+          <ResetModal
+            onCancel={() => setShowReset(false)}
+            onConfirm={handleReset}
+          />
         )}
       </AnimatePresence>
     </div>
