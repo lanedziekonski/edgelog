@@ -8,7 +8,7 @@ import { api } from '../services/api';
 
 const MOODS  = ['Focused', 'Calm', 'Confident', 'Anxious', 'Frustrated', 'Distracted'];
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const YEARS  = Array.from({ length: 11 }, (_, i) => 2020 + i); // 2020–2030
+const YEARS  = Array.from({ length: 13 }, (_, i) => 2018 + i); // 2018–2030
 
 const G = '#00ff41';
 const R = '#ff2d2d';
@@ -52,6 +52,10 @@ export default function Calendar({ trades, accounts = [], onNavigate, onLogTrade
     ? trades.filter(t => t.accountId === selectedAccountId || (!t.accountId && accounts.find(a => a.id === selectedAccountId)?.name === t.account))
     : trades;
 
+  // AI Coach session state
+  const [coachSession, setCoachSession]     = useState(null);
+  const [coachLoading, setCoachLoading]     = useState(false);
+
   // Daily journal state
   const [journalDates, setJournalDates]     = useState({}); // date → entry summary
   const [journalEntry, setJournalEntry]     = useState(null);
@@ -80,6 +84,16 @@ export default function Calendar({ trades, accounts = [], onNavigate, onLogTrade
       );
       setJournalEditing(false);
     }).catch(() => {});
+  }, [selectedDate, token]);
+
+  // Load AI Coach session for selected date
+  useEffect(() => {
+    if (!selectedDate || !token) { setCoachSession(null); return; }
+    setCoachLoading(true);
+    api.getCoachSession(token, selectedDate)
+      .then(rows => setCoachSession(Array.isArray(rows) && rows.length > 0 ? rows : null))
+      .catch(() => setCoachSession(null))
+      .finally(() => setCoachLoading(false));
   }, [selectedDate, token]);
 
   const saveJournal = useCallback(async () => {
@@ -220,9 +234,11 @@ export default function Calendar({ trades, accounts = [], onNavigate, onLogTrade
                   transition={{ duration: 0.15 }}
                   onClick={e => e.stopPropagation()}
                   style={{
-                    position: 'absolute', top: 'calc(100% + 8px)', left: '50%',
-                    transform: 'translateX(-50%)',
-                    zIndex: 200, width: 272,
+                    position: 'absolute', top: 'calc(100% + 8px)',
+                    left: '50%', transform: 'translateX(-50%)',
+                    zIndex: 200,
+                    width: 300, maxWidth: 'calc(100vw - 32px)',
+                    boxSizing: 'border-box',
                     background: '#0a0f0a',
                     border: `1px solid ${G}25`,
                     borderRadius: 14, padding: '14px 14px 12px',
@@ -248,7 +264,7 @@ export default function Calendar({ trades, accounts = [], onNavigate, onLogTrade
                     </div>
 
                     {/* Year column */}
-                    <div style={{ width: 58 }}>
+                    <div style={{ width: 64, flexShrink: 0 }}>
                       <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, fontFamily: "'Barlow Condensed', sans-serif" }}>Year</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 168, overflowY: 'auto', scrollbarWidth: 'none' }}>
                         {YEARS.map(y => (
@@ -619,6 +635,51 @@ export default function Calendar({ trades, accounts = [], onNavigate, onLogTrade
                     ) : (
                       <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
                         No journal entry for this day yet.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* AI Coach Session */}
+                  <div style={{ paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)', marginTop: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                      <span style={{ fontSize: 16, lineHeight: 1 }}>⚡</span>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                        AI Coach Session
+                      </div>
+                    </div>
+                    {coachLoading ? (
+                      <div style={{ display: 'flex', gap: 4, alignItems: 'center', padding: '6px 0' }}>
+                        {[0,1,2].map(i => (
+                          <div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: G, animation: `coachCalBounce 1.2s ease-in-out ${i*0.2}s infinite` }} />
+                        ))}
+                        <style>{`@keyframes coachCalBounce{0%,80%,100%{transform:scale(0.7);opacity:.3}40%{transform:scale(1);opacity:1}}`}</style>
+                      </div>
+                    ) : coachSession ? (
+                      <div style={{ maxHeight: 200, overflowY: 'auto', scrollbarWidth: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {coachSession.map((msg, i) => (
+                          <div key={i} style={{
+                            display: 'flex',
+                            justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                          }}>
+                            <div style={{
+                              maxWidth: '90%',
+                              padding: '8px 11px',
+                              borderRadius: msg.role === 'user' ? '10px 10px 3px 10px' : '10px 10px 10px 3px',
+                              background: msg.role === 'user' ? `${G}18` : 'rgba(255,255,255,0.04)',
+                              color: msg.role === 'user' ? G : 'rgba(255,255,255,0.65)',
+                              fontSize: 12, lineHeight: 1.6,
+                              fontFamily: "'Barlow', sans-serif",
+                              border: msg.role === 'user' ? `1px solid ${G}30` : '1px solid rgba(255,255,255,0.07)',
+                              whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                            }}>
+                              {msg.content}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
+                        No AI Coach session recorded for this day.
                       </div>
                     )}
                   </div>

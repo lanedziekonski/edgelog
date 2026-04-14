@@ -42,6 +42,11 @@ export const api = {
   planChat: (token, messages) =>
     call('/plan-chat', { method: 'POST', body: JSON.stringify({ messages }) }, token),
 
+  // AI Coach sessions
+  getCoachSession: (token, date) => call(`/coach/session/${date}`, {}, token),
+  saveCoachMessage: (token, date, role, content) =>
+    call('/coach/session', { method: 'POST', body: JSON.stringify({ date, role, content }) }, token),
+
   // Stripe
   createCheckoutSession: (token, plan) =>
     call('/stripe/create-checkout-session', { method: 'POST', body: JSON.stringify({ plan }) }, token),

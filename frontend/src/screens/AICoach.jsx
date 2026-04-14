@@ -21,20 +21,47 @@ const POST_SUGGESTIONS = [
   "Help me identify emotional mistakes",
 ];
 
+// Returns the trading-day date: if before 8AM use yesterday, otherwise today
+function getSessionDate() {
+  const now = new Date();
+  const cutoff = new Date(now);
+  cutoff.setHours(8, 0, 0, 0);
+  const d = now < cutoff ? new Date(now.getTime() - 24 * 60 * 60 * 1000) : now;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export default function AICoach({ trades }) {
   const { token } = useAuth();
   const [mode, setMode] = useState('premarket');
   const [messages, setMessages] = useState([]);
+  const [sessionLoading, setSessionLoading] = useState(true);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
+  // Stable session date for today (8AM cutoff), computed once on mount
+  const [sessionDate] = useState(() => getSessionDate());
+
   const today = todayStr();
   const todayTrades = trades.filter(t => t.date === today);
-  const todayStats = calcStats(todayTrades);
-  const allStats = calcStats(trades);
+  const todayStats  = calcStats(todayTrades);
+  const allStats    = calcStats(trades);
+
+  // Load today's session from DB on mount
+  useEffect(() => {
+    if (!token) { setSessionLoading(false); return; }
+    setSessionLoading(true);
+    api.getCoachSession(token, sessionDate)
+      .then(rows => {
+        if (Array.isArray(rows) && rows.length > 0) {
+          setMessages(rows);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setSessionLoading(false));
+  }, [token, sessionDate]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -42,7 +69,7 @@ export default function AICoach({ trades }) {
 
   const buildContext = () => {
     const parts = [
-      `Today's trades: ${todayTrades.length}/3`,
+      `Today's trades: ${todayTrades.length}`,
       `Today's P&L: ${fmtPnl(todayStats.totalPnl)}`,
       `All-time win rate: ${Math.round(allStats.winRate)}%`,
       `Rule following score: ${Math.round(allStats.ruleScore)}%`,
@@ -67,9 +94,14 @@ export default function AICoach({ trades }) {
     setMessages(newMessages);
     setLoading(true);
 
+    // Save user message to DB (non-blocking)
+    api.saveCoachMessage(token, sessionDate, 'user', userText).catch(() => {});
+
     try {
       const data = await api.chat(token, newMessages, mode, buildContext());
       setMessages(prev => [...prev, { role: 'assistant', content: data.content }]);
+      // Save assistant message to DB (non-blocking)
+      api.saveCoachMessage(token, sessionDate, 'assistant', data.content).catch(() => {});
     } catch (err) {
       setError(err.message);
       setMessages(prev => prev.slice(0, -1));
@@ -85,12 +117,19 @@ export default function AICoach({ trades }) {
     }
   };
 
+  // Clear local state only — DB messages persist
   const clearChat = () => {
     setMessages([]);
     setError(null);
   };
 
   const suggestions = mode === 'premarket' ? PRE_SUGGESTIONS : POST_SUGGESTIONS;
+
+  // Format session date for display
+  const sessionLabel = (() => {
+    const d = new Date(sessionDate + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  })();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#080c08' }}>
@@ -115,7 +154,7 @@ export default function AICoach({ trades }) {
               AI Coach
             </div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>
-              Powered by Claude
+              Powered by Claude · <span style={{ color: `${G}80` }}>{sessionLabel}</span>
             </div>
           </div>
           {messages.length > 0 && (
@@ -146,7 +185,7 @@ export default function AICoach({ trades }) {
           {[['premarket', 'Pre-Market'], ['postmarket', 'Post-Market']].map(([val, label]) => (
             <button
               key={val}
-              onClick={() => { setMode(val); clearChat(); }}
+              onClick={() => setMode(val)}
               style={{
                 flex: 1, padding: '8px 0', borderRadius: 8,
                 fontSize: 13, fontWeight: 700,
@@ -167,7 +206,11 @@ export default function AICoach({ trades }) {
 
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px', scrollbarWidth: 'none' }}>
-        {messages.length === 0 && (
+        {sessionLoading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+            <TypingDots />
+          </div>
+        ) : messages.length === 0 ? (
           <div>
             {/* Context card */}
             <motion.div
@@ -183,7 +226,7 @@ export default function AICoach({ trades }) {
                 Session Context
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}>
-                <CtxItem label="Today's trades" value={`${todayTrades.length}/3`} />
+                <CtxItem label="Today's trades" value={`${todayTrades.length}`} />
                 <CtxItem label="Today's P&L" value={fmtPnl(todayStats.totalPnl)} positive={todayStats.totalPnl >= 0} />
                 <CtxItem label="Win rate" value={`${Math.round(allStats.winRate)}%`} positive={allStats.winRate >= 50} />
                 <CtxItem label="Rule score" value={`${Math.round(allStats.ruleScore)}%`} positive={allStats.ruleScore >= 80} />
@@ -235,7 +278,7 @@ export default function AICoach({ trades }) {
               ))}
             </div>
           </div>
-        )}
+        ) : null}
 
         <AnimatePresence>
           {messages.map((msg, i) => (

@@ -435,6 +435,37 @@ app.delete('/api/trading-plan', requireAuth, async (req, res) => {
   }
 });
 
+// ─── AI COACH SESSIONS ────────────────────────────────────────────────────
+
+app.get('/api/coach/session/:date', requireAuth, async (req, res) => {
+  const { date } = req.params;
+  try {
+    const { rows } = await pool.query(
+      `SELECT role, content, created_at FROM coach_sessions WHERE user_id = $1 AND date = $2 ORDER BY created_at ASC`,
+      [req.userId, date]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Get coach session error:', err.message);
+    res.status(500).json({ error: 'Failed to load session' });
+  }
+});
+
+app.post('/api/coach/session', requireAuth, async (req, res) => {
+  const { date, role, content } = req.body;
+  if (!date || !role || !content) return res.status(400).json({ error: 'date, role, content required' });
+  try {
+    await pool.query(
+      `INSERT INTO coach_sessions (user_id, date, role, content) VALUES ($1, $2, $3, $4)`,
+      [req.userId, date, role, content]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Save coach session error:', err.message);
+    res.status(500).json({ error: 'Failed to save message' });
+  }
+});
+
 // ─── AI COACH (Elite only) ────────────────────────────────────────────────
 
 app.post('/api/chat', requireAuth, requirePlan('elite'), async (req, res) => {
