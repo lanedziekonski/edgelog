@@ -63,6 +63,14 @@ export const api = {
   saveDailyJournal: (token, data) =>
     call('/journal/daily', { method: 'POST', body: JSON.stringify(data) }, token),
 
+  // Trading plan
+  getTradingPlanMessages: (token) => call('/trading-plan/messages', {}, token),
+  saveTradingPlanMessage: (token, role, content) =>
+    call('/trading-plan/messages', { method: 'POST', body: JSON.stringify({ role, content }) }, token),
+  getTradingPlan: (token) => call('/trading-plan/plan', {}, token),
+  saveTradingPlan: (token, planContent) =>
+    call('/trading-plan/plan', { method: 'POST', body: JSON.stringify({ planContent }) }, token),
+
   // Screenshot upload (uses FormData, not JSON)
   uploadScreenshot: async (token, tradeId, file) => {
     const BASE_URL = import.meta.env.VITE_API_URL
