@@ -141,6 +141,25 @@ const TAB_PLANS = {
   pricing:   'free',
 };
 
+// Feature gate display info for locked tabs
+const FEATURE_INFO = {
+  accounts: {
+    name: 'Account Tracking',
+    description: 'Track all your funded accounts — Apex, FTMO, tastytrade, and more. Monitor daily loss limits, max drawdown, and profit targets in real time.',
+    bullets: ['Apex, FTMO & tastytrade tracking', 'Daily loss & drawdown alerts', 'Profit target progress', 'Auto-import trades via CSV'],
+  },
+  plan: {
+    name: 'AI Plan Builder',
+    description: 'Build a personalized trading plan with an AI that asks the right questions — covering your strategy, setups, risk rules, and psychology.',
+    bullets: ['Guided AI interview to build your plan', 'Setup-by-setup rules & criteria', 'Risk and psychology framework', 'Edit and refine anytime'],
+  },
+  coach: {
+    name: 'AI Coach',
+    description: 'Daily AI coaching sessions powered by your actual journal data. Pre-market prep and post-market review — like having a trading coach who knows every trade you\'ve taken.',
+    bullets: ['Pre-market preparation sessions', 'Post-market trade reviews', 'Emotional pattern analysis', 'Rule-following score tracking'],
+  },
+};
+
 function AppInner() {
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -249,10 +268,14 @@ function AppInner() {
     const required = TAB_PLANS[activeTab] || 'free';
 
     if (user && !hasAccess(userPlan, required)) {
+      const info = FEATURE_INFO[activeTab] || {};
       return (
         <FeatureGate
           requiredPlan={required}
           userPlan={userPlan}
+          featureName={info.name}
+          featureDescription={info.description}
+          featureBullets={info.bullets}
           onUpgrade={() => setActiveTab('pricing')}
         />
       );
