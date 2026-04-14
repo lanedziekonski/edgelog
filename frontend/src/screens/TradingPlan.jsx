@@ -206,7 +206,8 @@ export default function TradingPlan() {
   const [error, setError]         = useState('');
   const [showReset, setShowReset] = useState(false);
   const [toast, setToast]         = useState(null);
-  const bottomRef = useRef(null);
+  const bottomRef  = useRef(null);
+  const chatRef    = useRef(null);
   const toastTimer = useRef(null);
 
   const showToast = useCallback((msg, type = 'success') => {
@@ -325,6 +326,8 @@ export default function TradingPlan() {
       } catch { /* non-fatal */ }
     }
     setView('chat');
+    // Scroll to chat after the view switch renders
+    setTimeout(() => chatRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
     const editMsg = {
       role: 'assistant',
       content: savedPlan
@@ -440,7 +443,7 @@ export default function TradingPlan() {
 
         {/* ── Chat view ── */}
         {view === 'chat' && (
-          <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
+          <motion.div key="chat" ref={chatRef} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
             style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0 16px 16px', minHeight: 0 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 10 }}>
               AI Plan Builder
@@ -543,6 +546,35 @@ export default function TradingPlan() {
       {/* Reset modal */}
       <AnimatePresence>
         {showReset && <ResetModal onCancel={() => setShowReset(false)} onConfirm={handleReset} />}
+      </AnimatePresence>
+
+      {/* Fixed "View My Plan" button — visible when in chat mode with a saved plan */}
+      <AnimatePresence>
+        {view === 'chat' && savedPlan && (
+          <motion.button
+            key="view-plan-fixed"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+            transition={{ duration: 0.2 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setView('plan')}
+            style={{
+              position: 'fixed', bottom: 82, left: '50%', transform: 'translateX(-50%)',
+              zIndex: 800,
+              padding: '9px 20px', borderRadius: 20,
+              background: '#080c08',
+              border: `1px solid ${G}70`,
+              color: G, fontSize: 13, fontWeight: 700,
+              fontFamily: "'Barlow Condensed', sans-serif",
+              letterSpacing: '0.5px', cursor: 'pointer',
+              boxShadow: `0 2px 16px rgba(0,0,0,0.6), 0 0 12px ${G}20`,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            ← View My Plan
+          </motion.button>
+        )}
       </AnimatePresence>
 
       {/* Toast */}
