@@ -48,7 +48,7 @@ export default function Auth() {
           color: 'var(--text)',
           lineHeight: 1,
         }}>
-          Edge<span style={{ color: 'var(--green)' }}>Log</span>
+          Trade<span style={{ color: 'var(--green)' }}>Ascend</span>
         </div>
         <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6, letterSpacing: '0.3px' }}>
           Your trading edge, tracked.

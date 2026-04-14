@@ -66,7 +66,7 @@ function AppInner() {
           letterSpacing: '2px',
           color: 'var(--text)',
         }}>
-          Edge<span style={{ color: 'var(--green)' }}>Log</span>
+          Trade<span style={{ color: 'var(--green)' }}>Ascend</span>
         </div>
         <div style={{
           width: 32,
