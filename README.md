@@ -1,4 +1,4 @@
-# EdgeLog
+# TradeAscend
 
 A personal trading journal web app. Dark-themed, mobile-first, AI-powered.
 
@@ -47,19 +47,19 @@ Go to **railway.app** → Sign up (free tier available, no credit card required 
 ### Step 2 — Push code to GitHub
 
 ```bash
-cd /path/to/edgelog
+cd /path/to/tradeascend
 git init
 git add .
 git commit -m "Initial commit"
 # Create a repo on github.com, then:
-git remote add origin https://github.com/YOUR_USERNAME/edgelog.git
+git remote add origin https://github.com/YOUR_USERNAME/tradeascend.git
 git push -u origin main
 ```
 
 ### Step 3 — Create Railway project
 
 1. In Railway dashboard → **New Project** → **Deploy from GitHub repo**
-2. Select your `edgelog` repository
+2. Select your `tradeascend` repository
 3. Railway will detect the repo — click **Add Service** → **GitHub Repo**
 
 ### Step 4 — Set the root directory
@@ -85,7 +85,7 @@ In your service → **Variables** tab, add:
 |----------|-------|
 | `ANTHROPIC_API_KEY` | `sk-ant-...` (your key) |
 | `JWT_SECRET` | Any long random string (e.g. 64 hex chars) |
-| `DB_PATH` | `/data/edgelog.db` |
+| `DB_PATH` | `/data/tradeascend.db` |
 | `FRONTEND_URL` | Your Vercel URL (set after frontend is deployed — see below) |
 | `PORT` | Leave unset — Railway sets this automatically |
 
@@ -104,7 +104,7 @@ Optional (only if using Stripe payments):
 Railway deploys automatically on every push to `main`. Watch the deploy logs — it should show:
 
 ```
-EdgeLog backend running on http://localhost:XXXX
+TradeAscend backend running on http://localhost:XXXX
 ```
 
 ### Step 8 — Get your backend URL
@@ -129,7 +129,7 @@ Go to **vercel.com** → Sign up with GitHub (free, no credit card).
 ### Step 2 — Import project
 
 1. Vercel dashboard → **Add New Project** → **Import Git Repository**
-2. Select your `edgelog` repo
+2. Select your `tradeascend` repo
 3. **Important:** Under **Root Directory** → set it to `frontend`
 4. Framework preset will auto-detect as **Vite**
 5. Build command: `npm run build` (auto-detected)
@@ -186,7 +186,7 @@ After both are deployed:
 ```
 ANTHROPIC_API_KEY    # Required — Claude AI key
 JWT_SECRET           # Required — any long random string
-DB_PATH              # Required on Railway — /data/edgelog.db
+DB_PATH              # Required on Railway — /data/tradeascend.db
 FRONTEND_URL         # Required — your Vercel URL (for CORS)
 PORT                 # Set by Railway automatically — do not set manually
 ```

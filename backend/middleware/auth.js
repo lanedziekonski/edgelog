@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'edgelog-jwt-secret';
+const JWT_SECRET = process.env.JWT_SECRET || 'tradeascend-jwt-secret';
 
 function signToken(payload) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' });

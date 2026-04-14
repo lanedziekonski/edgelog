@@ -1038,7 +1038,7 @@ export default function Dashboard({ trades, tradesLoading, accounts = [] }) {
         <div style={{ padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 900, letterSpacing: '1px', color: G }}>
-              EDGELOG
+              TRADEASCEND
             </div>
             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '1px' }}>
               {now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · {greeting}

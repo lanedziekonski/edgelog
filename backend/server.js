@@ -76,7 +76,7 @@ if (!process.env.ANTHROPIC_API_KEY) {
 }
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const COACH_SYSTEM_PROMPT = `You are an AI trading coach embedded in EdgeLog, a personal trading journal app.
+const COACH_SYSTEM_PROMPT = `You are an AI trading coach embedded in TradeAscend, a personal trading journal app.
 
 You are coaching a real trader based entirely on their own strategy and rules — you have no assumptions about what they trade, what setups they use, or what their risk rules are. Everything you know about this trader comes from their journal data and what they tell you.
 
@@ -645,7 +645,7 @@ app.post('/api/plaid/create-link-token', requireAuth, requirePlan('trader'), asy
   try {
     const r = await plaidClient.linkTokenCreate({
       user: { client_user_id: String(req.userId) },
-      client_name: 'EdgeLog',
+      client_name: 'TradeAscend',
       products: ['investments'],
       country_codes: ['US'],
       language: 'en',
@@ -963,7 +963,7 @@ const PORT = process.env.PORT || 3001;
 
 initDb()
   .then(() => {
-    app.listen(PORT, () => console.log(`EdgeLog backend running on port ${PORT}`));
+    app.listen(PORT, () => console.log(`TradeAscend backend running on port ${PORT}`));
   })
   .catch(err => {
     console.error('Failed to initialize database:', err.message);

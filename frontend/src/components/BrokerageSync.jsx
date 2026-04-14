@@ -687,7 +687,7 @@ export default function BrokerageSync({ onTradesImported, preselectedAccountId =
     const blob = new Blob([CSV_TEMPLATE], { type: 'text/csv' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'edgelog-import-template.csv';
+    a.download = 'tradeascend-import-template.csv';
     a.click();
   };
 

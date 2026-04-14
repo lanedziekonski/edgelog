@@ -34,7 +34,7 @@ STRIPE_PRICE_ELITE=price_...
 FRONTEND_URL=http://localhost:5173
 
 # PostgreSQL (Render provides this automatically; for local dev use Neon/Supabase or local PG)
-DATABASE_URL=postgresql://user:password@host:5432/edgelog
+DATABASE_URL=postgresql://user:password@host:5432/tradeascend
 ```
 
 To receive Stripe webhooks locally:

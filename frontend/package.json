@@ -1,7 +1,7 @@
 {
-  "name": "edgelog-frontend",
+  "name": "tradeascend-frontend",
   "version": "1.0.0",
-  "description": "EdgeLog trading journal frontend",
+  "description": "TradeAscend trading journal frontend",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
