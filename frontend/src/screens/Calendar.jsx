@@ -222,75 +222,84 @@ export default function Calendar({ trades, accounts = [], onNavigate, onLogTrade
             <NavBtn onClick={nextYear}  label="»" />
           </div>
 
-          {/* Dropdown picker */}
+          {/* Bottom sheet date picker */}
           <AnimatePresence>
             {showDropdown && (
               <>
-                <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setShowDropdown(false)} />
+                {/* Backdrop */}
                 <motion.div
-                  initial={{ opacity: 0, y: -6, scale: 0.97 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -6, scale: 0.97 }}
-                  transition={{ duration: 0.15 }}
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  onClick={() => setShowDropdown(false)}
+                  style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.65)' }}
+                />
+                {/* Sheet */}
+                <motion.div
+                  initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                  transition={{ type: 'spring', damping: 32, stiffness: 320 }}
                   onClick={e => e.stopPropagation()}
                   style={{
-                    position: 'absolute', top: 'calc(100% + 8px)',
-                    left: '50%', transform: 'translateX(-50%)',
-                    zIndex: 200,
-                    width: 300, maxWidth: 'calc(100vw - 32px)',
-                    boxSizing: 'border-box',
-                    background: '#0a0f0a',
-                    border: `1px solid ${G}25`,
-                    borderRadius: 14, padding: '14px 14px 12px',
-                    boxShadow: '0 12px 40px rgba(0,0,0,0.8)',
+                    position: 'fixed', bottom: 0, left: 0, right: 0,
+                    zIndex: 301,
+                    background: '#111811',
+                    borderRadius: '18px 18px 0 0',
+                    padding: '0 16px 32px',
+                    boxShadow: '0 -8px 40px rgba(0,0,0,0.7)',
                   }}
                 >
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    {/* Month grid */}
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, fontFamily: "'Barlow Condensed', sans-serif" }}>Month</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3 }}>
-                        {MONTHS.map((m, i) => (
-                          <button key={m} onClick={() => setPickerMonth(i)} style={{
-                            padding: '5px 2px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                            background: pickerMonth === i ? G : 'rgba(255,255,255,0.05)',
-                            color: pickerMonth === i ? '#000' : 'rgba(255,255,255,0.6)',
-                            fontSize: 11, fontWeight: 700,
-                            fontFamily: "'Barlow Condensed', sans-serif",
-                            transition: 'background 0.1s',
-                          }}>{m}</button>
-                        ))}
-                      </div>
-                    </div>
+                  {/* Handle */}
+                  <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.15)', margin: '12px auto 0' }} />
 
-                    {/* Year column */}
-                    <div style={{ width: 64, flexShrink: 0 }}>
-                      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, fontFamily: "'Barlow Condensed', sans-serif" }}>Year</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 168, overflowY: 'auto', scrollbarWidth: 'none' }}>
-                        {YEARS.map(y => (
-                          <button key={y} onClick={() => setPickerYear(y)} style={{
-                            padding: '5px 0', borderRadius: 6, border: 'none', cursor: 'pointer',
-                            background: pickerYear === y ? G : 'rgba(255,255,255,0.05)',
-                            color: pickerYear === y ? '#000' : 'rgba(255,255,255,0.6)',
-                            fontSize: 12, fontWeight: 700,
-                            fontFamily: "'Barlow Condensed', sans-serif",
-                            textAlign: 'center', transition: 'background 0.1s',
-                          }}>{y}</button>
-                        ))}
-                      </div>
+                  {/* Title row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, marginBottom: 20 }}>
+                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: '1px', color: '#fff', textTransform: 'uppercase' }}>
+                      Select Month & Year
                     </div>
+                    <button onClick={() => setShowDropdown(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 22, cursor: 'pointer', lineHeight: 1, padding: '0 2px' }}>×</button>
                   </div>
 
+                  {/* Month pills */}
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, fontFamily: "'Barlow Condensed', sans-serif" }}>Month</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6, marginBottom: 20 }}>
+                    {MONTHS.map((m, i) => (
+                      <button key={m} onClick={() => setPickerMonth(i)} style={{
+                        padding: '8px 4px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                        background: pickerMonth === i ? G : 'rgba(255,255,255,0.06)',
+                        color: pickerMonth === i ? '#000' : 'rgba(255,255,255,0.65)',
+                        fontSize: 13, fontWeight: 700,
+                        fontFamily: "'Barlow Condensed', sans-serif",
+                        letterSpacing: '0.5px',
+                        transition: 'background 0.12s, color 0.12s',
+                      }}>{m}</button>
+                    ))}
+                  </div>
+
+                  {/* Year pills */}
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, fontFamily: "'Barlow Condensed', sans-serif" }}>Year</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 22 }}>
+                    {YEARS.map(y => (
+                      <button key={y} onClick={() => setPickerYear(y)} style={{
+                        padding: '8px 2px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                        background: pickerYear === y ? G : 'rgba(255,255,255,0.06)',
+                        color: pickerYear === y ? '#000' : 'rgba(255,255,255,0.65)',
+                        fontSize: 12, fontWeight: 700,
+                        fontFamily: "'Barlow Condensed', sans-serif",
+                        transition: 'background 0.12s, color 0.12s',
+                      }}>{y}</button>
+                    ))}
+                  </div>
+
+                  {/* GO button */}
                   <motion.button
-                    whileTap={{ scale: 0.96 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={applyDropdown}
                     style={{
-                      width: '100%', padding: '9px 0', marginTop: 10,
-                      background: G, color: '#000', border: 'none', borderRadius: 8,
-                      fontSize: 13, fontWeight: 800,
+                      width: '100%', padding: '14px 0',
+                      background: G, color: '#000', border: 'none', borderRadius: 12,
+                      fontSize: 16, fontWeight: 800,
                       fontFamily: "'Barlow Condensed', sans-serif",
-                      letterSpacing: '1.5px', cursor: 'pointer',
-                      boxShadow: `0 0 14px ${G}40`,
+                      letterSpacing: '2px', cursor: 'pointer',
+                      boxShadow: `0 0 20px ${G}50`,
                     }}
                   >
                     GO
