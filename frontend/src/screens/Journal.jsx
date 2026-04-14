@@ -9,14 +9,13 @@ import { api } from '../services/api';
 const G = '#00ff41';
 const R = '#ff2d2d';
 
-const SETUPS = ['ORB', 'VWAP Reclaim', 'Bull Flag', 'Gap Fill', 'Fade High'];
 const EMOTIONS_BEFORE = ['Calm', 'Focused', 'Confident', 'Anxious', 'Frustrated', 'Overconfident', 'Fear', 'FOMO', 'Revenge', 'Neutral'];
 const EMOTIONS_AFTER  = ['Calm', 'Focused', 'Confident', 'Anxious', 'Frustrated', 'Overconfident', 'Fear', 'FOMO', 'Revenge', 'Neutral', 'Satisfied', 'Regret', 'Excited'];
 
 const emptyForm = () => ({
   date: todayStr(),
   symbol: '',
-  setup: 'ORB',
+  setup: '',
   account: '',
   pnl: '',
   side: 'Long',
@@ -277,9 +276,11 @@ export default function Journal({ trades, addTrade, deleteTrade, patchTrade, acc
               <div className="form-row">
                 <div className="form-field">
                   <label className="form-label">Setup</label>
-                  <select value={form.setup} onChange={e => set('setup', e.target.value)}>
-                    {SETUPS.map(s => <option key={s}>{s}</option>)}
-                  </select>
+                  <input
+                    placeholder="e.g. breakout, pullback…"
+                    value={form.setup}
+                    onChange={e => set('setup', e.target.value)}
+                  />
                 </div>
                 <div className="form-field">
                   <label className="form-label">Account</label>

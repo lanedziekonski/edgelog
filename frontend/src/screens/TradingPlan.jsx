@@ -14,6 +14,16 @@ export default function TradingPlan() {
   const [aiError, setAiError]       = useState('');
   const bottomRef = useRef(null);
 
+  // Kick off the interview with a greeting on first load
+  useEffect(() => {
+    if (token && aiMessages.length === 0) {
+      setAiMessages([{
+        role: 'assistant',
+        content: "Hey, I'm your trading plan coach. I'm going to help you build a complete, custom trading plan based entirely on your own strategy — no templates.\n\nLet's start from the beginning: describe your trading strategy in your own words. What does a typical trade look like for you?",
+      }]);
+    }
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [aiMessages]);
 
   const sendAiMessage = async (text) => {
@@ -72,42 +82,7 @@ export default function TradingPlan() {
         </div>
 
         <div style={{ background: '#111811', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ padding: '14px 14px 0', maxHeight: 340, overflowY: 'auto', scrollbarWidth: 'none' }}>
-            {aiMessages.length === 0 && (
-              <div style={{ paddingBottom: 14 }}>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 12, lineHeight: 1.6 }}>
-                  Build and refine your trading plan with AI. Ask about setups, risk frameworks, or psychology rules.
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                  {[
-                    'Help me define entry criteria for a breakout setup',
-                    'What risk rules should I add to my plan?',
-                    'How do I build a pre-market routine?',
-                  ].map((s, i) => (
-                    <motion.button
-                      key={i}
-                      whileHover={{ borderColor: `${GOLD}60`, background: `${GOLD}0a` }}
-                      whileTap={{ scale: 0.98 }}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.06 }}
-                      onClick={() => sendAiMessage(s)}
-                      style={{
-                        textAlign: 'left', padding: '10px 12px',
-                        background: 'rgba(255,255,255,0.04)',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        borderRadius: 8, color: 'rgba(255,255,255,0.75)',
-                        fontSize: 12, cursor: 'pointer', fontFamily: 'Barlow', lineHeight: 1.4,
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      {s}
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-            )}
-
+          <div style={{ padding: '14px 14px 0', maxHeight: 400, overflowY: 'auto', scrollbarWidth: 'none' }}>
             <AnimatePresence>
               {aiMessages.map((m, i) => (
                 <motion.div
@@ -115,15 +90,18 @@ export default function TradingPlan() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2 }}
-                  style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: 10 }}
+                  style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: 12 }}
                 >
                   <div style={{
-                    maxWidth: '85%', padding: '9px 12px',
+                    maxWidth: '88%',
+                    padding: '14px 18px',
                     borderRadius: m.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
                     background: m.role === 'user' ? GOLD : '#0d1a0d',
-                    color: m.role === 'user' ? '#000' : 'rgba(255,255,255,0.85)',
-                    fontSize: 13, lineHeight: 1.55, fontWeight: m.role === 'user' ? 600 : 400,
-                    border: m.role === 'assistant' ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                    color: m.role === 'user' ? '#000' : '#e0e0e0',
+                    fontSize: 15, lineHeight: 1.8,
+                    fontWeight: m.role === 'user' ? 600 : 400,
+                    fontFamily: "'Barlow', sans-serif",
+                    border: m.role === 'assistant' ? '1px solid rgba(255,255,255,0.1)' : 'none',
                     whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                   }}>
                     {m.content}
@@ -152,7 +130,7 @@ export default function TradingPlan() {
               value={aiInput}
               onChange={e => setAiInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAiMessage(); } }}
-              placeholder="Ask about your trading plan…"
+              placeholder="Describe your strategy, answer questions…"
               style={{
                 flex: 1, background: 'rgba(255,255,255,0.06)',
                 border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
@@ -178,35 +156,6 @@ export default function TradingPlan() {
           </div>
         </div>
 
-        {/* Empty state */}
-        {aiMessages.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.4 }}
-            style={{ textAlign: 'center', padding: '40px 32px 20px' }}
-          >
-            <div style={{
-              width: 52, height: 52, borderRadius: 14, margin: '0 auto 14px',
-              background: `${GOLD}12`, border: `1px solid ${GOLD}30`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="16" y1="13" x2="8" y2="13"/>
-                <line x1="16" y1="17" x2="8" y2="17"/>
-                <polyline points="10 9 9 9 8 9"/>
-              </svg>
-            </div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 6, color: '#fff' }}>
-              Your plan is a blank canvas
-            </div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', lineHeight: 1.6, maxWidth: 260, margin: '0 auto' }}>
-              Use the AI Plan Builder above to define your setups, risk rules, and trading psychology — or build it manually.
-            </div>
-          </motion.div>
-        )}
       </div>
     </div>
   );

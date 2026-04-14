@@ -262,12 +262,13 @@ export default function AICoach({ trades }) {
                 </div>
               )}
               <div style={{
-                maxWidth: '80%', padding: '10px 14px',
+                maxWidth: '82%', padding: '14px 18px',
                 borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                 background: msg.role === 'user' ? `${G}22` : '#111811',
-                color: msg.role === 'user' ? G : 'rgba(255,255,255,0.85)',
-                fontSize: 14, lineHeight: 1.6,
-                border: msg.role === 'user' ? `1px solid ${G}40` : '1px solid rgba(255,255,255,0.08)',
+                color: msg.role === 'user' ? G : '#e0e0e0',
+                fontSize: 15, lineHeight: 1.8,
+                fontFamily: "'Barlow', sans-serif",
+                border: msg.role === 'user' ? `1px solid ${G}40` : '1px solid rgba(255,255,255,0.1)',
                 fontWeight: msg.role === 'user' ? 600 : 400,
                 whiteSpace: 'pre-wrap', wordBreak: 'break-word',
               }}>

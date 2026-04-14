@@ -56,18 +56,17 @@ export function calcStats(trades) {
   const avgWin  = wins.length   ? wins.reduce((s, t)   => s + t.pnl, 0) / wins.length   : 0;
   const avgLoss = losses.length ? losses.reduce((s, t) => s + t.pnl, 0) / losses.length : 0;
 
-  const SETUPS = ['ORB', 'VWAP Reclaim', 'Bull Flag', 'Gap Fill', 'Fade High'];
+  // Build bySetup dynamically from actual trade data
   const bySetup = {};
-  SETUPS.forEach(s => {
-    const st = trades.filter(t => t.setup === s);
-    const sw = st.filter(t => t.pnl > 0);
-    bySetup[s] = {
-      total: st.length,
-      wins: sw.length,
-      winRate: st.length ? (sw.length / st.length) * 100 : 0,
-      pnl: st.reduce((sum, t) => sum + t.pnl, 0),
-    };
+  trades.forEach(t => {
+    const s = t.setup || '';
+    if (!s) return;
+    if (!bySetup[s]) bySetup[s] = { total: 0, wins: 0, winRate: 0, pnl: 0 };
+    bySetup[s].total += 1;
+    bySetup[s].pnl   += t.pnl;
+    if (t.pnl > 0) bySetup[s].wins += 1;
   });
+  Object.values(bySetup).forEach(v => { v.winRate = v.total ? (v.wins / v.total) * 100 : 0; });
 
   return { totalPnl, winRate, totalTrades: trades.length, ruleScore, wins: wins.length, losses: losses.length, bySetup, avgWin, avgLoss };
 }
