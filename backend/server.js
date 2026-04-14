@@ -71,6 +71,9 @@ if (process.env.PLAID_CLIENT_ID && !process.env.PLAID_CLIENT_ID.includes('your_'
 }
 
 // ─── Anthropic ────────────────────────────────────────────────────────────
+if (!process.env.ANTHROPIC_API_KEY) {
+  console.warn('WARNING: ANTHROPIC_API_KEY is not set — AI routes will fail at request time');
+}
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const COACH_SYSTEM_PROMPT = `You are an AI trading coach embedded in EdgeLog, a personal trading journal app. You know this trader's complete plan:
@@ -356,7 +359,8 @@ app.post('/api/chat', requireAuth, requirePlan('elite'), async (req, res) => {
     });
     res.json({ content: response.content[0].text });
   } catch (err) {
-    console.error('Claude API error:', err.message);
+    console.error('Claude API error — status:', err.status, '| type:', err.error?.error?.type, '| message:', err.message);
+    if (err.error) console.error('Claude API error body:', JSON.stringify(err.error));
     res.status(500).json({ error: 'Failed to reach AI coach' });
   }
 });
@@ -377,7 +381,8 @@ app.post('/api/plan-chat', requireAuth, requirePlan('pro'), async (req, res) => 
     });
     res.json({ content: response.content[0].text });
   } catch (err) {
-    console.error('Plan builder error:', err.message);
+    console.error('Plan builder error — status:', err.status, '| type:', err.error?.error?.type, '| message:', err.message);
+    if (err.error) console.error('Plan builder error body:', JSON.stringify(err.error));
     res.status(500).json({ error: 'Failed to reach AI plan builder' });
   }
 });
