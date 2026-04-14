@@ -506,13 +506,18 @@ export default function TradingPlan() {
               </div>
 
               {/* Input */}
-              <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: 8, alignItems: 'center', background: 'rgba(0,0,0,0.3)', flexShrink: 0 }}>
-                <input
+              <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: 8, alignItems: 'flex-end', background: 'rgba(0,0,0,0.3)', flexShrink: 0 }}>
+                <textarea
                   value={input}
-                  onChange={e => setInput(e.target.value)}
+                  rows={1}
+                  onChange={e => {
+                    setInput(e.target.value);
+                    e.target.style.height = 'auto';
+                    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                  }}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
                   placeholder="Describe your strategy, answer questions…"
-                  style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '8px 11px', fontSize: 13, color: '#fff', fontFamily: 'Barlow', outline: 'none' }}
+                  style={{ flex: 1, resize: 'none', minHeight: 36, maxHeight: 120, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '8px 11px', fontSize: 13, color: '#fff', fontFamily: 'Barlow', outline: 'none', lineHeight: 1.5, overflowY: 'hidden' }}
                 />
                 <motion.button whileTap={{ scale: 0.9 }} onClick={() => sendMessage()} disabled={!input.trim() || aiLoading}
                   style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, border: 'none', background: input.trim() && !aiLoading ? G : 'rgba(255,255,255,0.08)', color: input.trim() && !aiLoading ? '#000' : 'rgba(255,255,255,0.25)', cursor: input.trim() && !aiLoading ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s, color 0.15s' }}>

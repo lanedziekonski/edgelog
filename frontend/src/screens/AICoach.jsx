@@ -334,7 +334,7 @@ export default function AICoach({ trades }) {
             border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: 10, padding: '10px 12px',
             fontSize: 14, color: '#fff', fontFamily: 'Barlow',
-            outline: 'none', overflowY: 'auto', lineHeight: 1.5,
+            outline: 'none', overflowY: 'hidden', lineHeight: 1.5,
           }}
         />
         <motion.button
