@@ -85,7 +85,25 @@ async function initDb() {
         UNIQUE(user_id, date)
       )
     `);
-    console.log('Database schema ready');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS trading_plan_messages (
+        id         SERIAL PRIMARY KEY,
+        user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role       TEXT NOT NULL,
+        content    TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS trading_plans (
+        id           SERIAL PRIMARY KEY,
+        user_id      INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        plan_content TEXT NOT NULL,
+        created_at   TIMESTAMPTZ DEFAULT NOW(),
+        updated_at   TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    console.log('Database schema ready — all tables OK including trading_plans');
   } catch (err) {
     console.error('Schema creation failed:', err.message);
     console.error('Full error:', err);

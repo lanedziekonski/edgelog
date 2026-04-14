@@ -374,9 +374,11 @@ app.get('/api/trading-plan/plan', requireAuth, async (req, res) => {
       `SELECT plan_content, updated_at FROM trading_plans WHERE user_id = $1`,
       [req.userId]
     );
+    const found = !!rows[0];
+    console.log(`[trading-plan] GET plan — user ${req.userId} — found: ${found}`);
     res.json(rows[0] || null);
   } catch (err) {
-    console.error('Get plan error:', err.message);
+    console.error(`[trading-plan] GET plan FAILED for user ${req.userId}:`, err.message);
     res.status(500).json({ error: 'Failed to load plan' });
   }
 });
@@ -384,17 +386,40 @@ app.get('/api/trading-plan/plan', requireAuth, async (req, res) => {
 app.post('/api/trading-plan/plan', requireAuth, async (req, res) => {
   const { planContent } = req.body;
   if (!planContent) return res.status(400).json({ error: 'planContent required' });
+  console.log(`[trading-plan] Save attempt — user ${req.userId}, length ${planContent.length}`);
   try {
     const { rows } = await pool.query(
       `INSERT INTO trading_plans (user_id, plan_content)
        VALUES ($1, $2)
        ON CONFLICT (user_id) DO UPDATE SET plan_content = $2, updated_at = NOW()
-       RETURNING updated_at`,
+       RETURNING plan_content, updated_at`,
       [req.userId, planContent]
     );
-    res.json({ ok: true, updatedAt: rows[0].updated_at });
+    console.log(`[trading-plan] Saved successfully for user ${req.userId}`);
+    res.json({ ok: true, plan_content: rows[0].plan_content, updatedAt: rows[0].updated_at });
   } catch (err) {
-    console.error('Save plan error:', err.message);
+    console.error(`[trading-plan] Save FAILED for user ${req.userId}:`, err.message);
+    res.status(500).json({ error: 'Failed to save plan' });
+  }
+});
+
+// Alias: /save maps to the same upsert so both paths work
+app.post('/api/trading-plan/save', requireAuth, async (req, res) => {
+  const { planContent } = req.body;
+  if (!planContent) return res.status(400).json({ error: 'planContent required' });
+  console.log(`[trading-plan/save] Save attempt — user ${req.userId}, length ${planContent.length}`);
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO trading_plans (user_id, plan_content)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id) DO UPDATE SET plan_content = $2, updated_at = NOW()
+       RETURNING plan_content, updated_at`,
+      [req.userId, planContent]
+    );
+    console.log(`[trading-plan/save] Saved successfully for user ${req.userId}`);
+    res.json({ ok: true, plan_content: rows[0].plan_content, updatedAt: rows[0].updated_at });
+  } catch (err) {
+    console.error(`[trading-plan/save] Save FAILED for user ${req.userId}:`, err.message);
     res.status(500).json({ error: 'Failed to save plan' });
   }
 });
