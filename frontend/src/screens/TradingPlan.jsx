@@ -253,7 +253,7 @@ export default function TradingPlan() {
   const startBuilding = async () => {
     const greeting = {
       role: 'assistant',
-      content: "Let's build your personalized trading plan. Start by telling me — what markets or instruments do you trade?",
+      content: "Let's build your personalized trading plan. First, tell me about your trading strategy — what is your overall approach to the markets? For example, do you trade momentum, reversals, breakouts, scalping, swing trading, or something else? Describe how you like to trade in your own words.",
     };
     setMessages([greeting]);
     setView('chat');
