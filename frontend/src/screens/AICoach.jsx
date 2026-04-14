@@ -202,6 +202,15 @@ export default function AICoach({ trades }) {
             </button>
           ))}
         </div>
+
+        {/* Disclaimer */}
+        <div style={{
+          fontSize: 10, color: 'rgba(255,255,255,0.22)',
+          letterSpacing: '0.4px', lineHeight: 1.5,
+          paddingBottom: 10, textAlign: 'center',
+        }}>
+          AI Coach provides performance coaching only — not financial advice.
+        </div>
       </div>
 
       {/* Messages */}
