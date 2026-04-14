@@ -457,7 +457,7 @@ app.post('/api/chat', requireAuth, requirePlan('elite'), async (req, res) => {
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
       system,
-      messages,
+      messages: messages.map(m => ({ role: m.role, content: m.content })),
     });
     res.json({ content: response.content[0].text });
   } catch (err) {
@@ -479,7 +479,7 @@ app.post('/api/plan-chat', requireAuth, requirePlan('pro'), async (req, res) => 
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 2048,
       system: PLAN_BUILDER_SYSTEM_PROMPT,
-      messages,
+      messages: messages.map(m => ({ role: m.role, content: m.content })),
     });
     res.json({ content: response.content[0].text });
   } catch (err) {
