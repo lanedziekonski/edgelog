@@ -29,31 +29,14 @@ function extractPlan(text) {
   return text.trim();
 }
 
-// ── Plan renderer ──────────────────────────────────────────────────────────────
-function PlanRenderer({ content }) {
-  const lines = content.split('\n');
+// ── Render a list of raw lines (used inside each accordion section body) ────────
+function renderLines(lines) {
   const elements = [];
   let key = 0;
-
   for (const raw of lines) {
     const line = raw.trim();
-    if (!line) { elements.push(<div key={key++} style={{ height: 8 }} />); continue; }
-
-    const headerMatch = line.match(/^\*\*(.+)\*\*$/) || line.match(/^#{1,3}\s+(.+)$/);
-    if (headerMatch) {
-      elements.push(
-        <div key={key++} style={{
-          fontSize: 12, fontWeight: 800, color: G,
-          letterSpacing: '1.5px', textTransform: 'uppercase',
-          marginTop: 20, marginBottom: 8,
-          fontFamily: "'Barlow Condensed', sans-serif",
-          borderBottom: `1px solid ${G}20`, paddingBottom: 5,
-        }}>
-          {headerMatch[1]}
-        </div>
-      );
-      continue;
-    }
+    if (!line) { elements.push(<div key={key++} style={{ height: 6 }} />); continue; }
+    if (line === PLAN_MARKER.trim()) continue;
 
     const numMatch = line.match(/^(\d+)\.\s+(.+)$/);
     if (numMatch) {
@@ -64,10 +47,8 @@ function PlanRenderer({ content }) {
             background: `${G}18`, border: `1px solid ${G}35`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 11, fontWeight: 800, color: G, flexShrink: 0, marginTop: 2,
-          }}>
-            {numMatch[1]}
-          </span>
-          <span style={{ fontSize: 15, color: '#e8e8e8', lineHeight: 1.8, fontFamily: "'Barlow', sans-serif" }}>
+          }}>{numMatch[1]}</span>
+          <span style={{ fontSize: 14, color: '#e0e0e0', lineHeight: 1.75, fontFamily: "'Barlow', sans-serif" }}>
             {numMatch[2]}
           </span>
         </div>
@@ -78,9 +59,9 @@ function PlanRenderer({ content }) {
     const bulletMatch = line.match(/^[-•›]\s+(.+)$/);
     if (bulletMatch) {
       elements.push(
-        <div key={key++} style={{ display: 'flex', gap: 8, marginBottom: 7, alignItems: 'flex-start', paddingLeft: 4 }}>
-          <span style={{ color: G, fontSize: 14, marginTop: 2, flexShrink: 0, fontWeight: 700 }}>›</span>
-          <span style={{ fontSize: 15, color: '#e8e8e8', lineHeight: 1.8, fontFamily: "'Barlow', sans-serif" }}>
+        <div key={key++} style={{ display: 'flex', gap: 8, marginBottom: 7, alignItems: 'flex-start', paddingLeft: 2 }}>
+          <span style={{ color: G, fontSize: 13, marginTop: 3, flexShrink: 0, fontWeight: 700 }}>›</span>
+          <span style={{ fontSize: 14, color: '#e0e0e0', lineHeight: 1.75, fontFamily: "'Barlow', sans-serif" }}>
             {bulletMatch[1]}
           </span>
         </div>
@@ -88,15 +69,155 @@ function PlanRenderer({ content }) {
       continue;
     }
 
-    if (line === PLAN_MARKER.trim()) continue;
     elements.push(
-      <div key={key++} style={{ fontSize: 15, color: 'rgba(255,255,255,0.65)', lineHeight: 1.8, fontFamily: "'Barlow', sans-serif", marginBottom: 4 }}>
+      <div key={key++} style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', lineHeight: 1.75, fontFamily: "'Barlow', sans-serif", marginBottom: 4 }}>
         {line}
       </div>
     );
   }
+  return <>{elements}</>;
+}
 
-  return <div>{elements}</div>;
+// ── Parse plan text into titled sections ────────────────────────────────────────
+function parsePlanSections(content) {
+  const lines = content.split('\n');
+  const sections = [];
+  let current = { title: null, lines: [] };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    const hm = line.match(/^\*\*(.+)\*\*$/) || line.match(/^#{1,3}\s+(.+)$/);
+    if (hm) {
+      // push the accumulated section (skip empty untitled intros)
+      if (current.title !== null || current.lines.some(l => l.trim())) {
+        sections.push(current);
+      }
+      current = { title: hm[1], lines: [] };
+    } else {
+      current.lines.push(raw);
+    }
+  }
+  // push final section
+  if (current.title !== null || current.lines.some(l => l.trim())) {
+    sections.push(current);
+  }
+  return sections;
+}
+
+// ── Accordion section ───────────────────────────────────────────────────────────
+function AccordionSection({ title, isOpen, onToggle, children }) {
+  return (
+    <div style={{
+      borderRadius: 10, overflow: 'hidden', marginBottom: 6,
+      border: isOpen ? `1px solid ${G}28` : '1px solid rgba(255,255,255,0.07)',
+      transition: 'border-color 0.2s',
+    }}>
+      {/* Header row */}
+      <button
+        onClick={onToggle}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 14px 12px 0',
+          background: isOpen ? '#0d1a0d' : '#0a120a',
+          border: 'none', cursor: 'pointer',
+          borderLeft: `3px solid ${isOpen ? G : 'transparent'}`,
+          paddingLeft: 13,
+          transition: 'background 0.18s, border-color 0.18s',
+        }}
+      >
+        <span style={{
+          fontFamily: "'Barlow Condensed', sans-serif",
+          fontSize: 13, fontWeight: 800,
+          letterSpacing: '1.5px', textTransform: 'uppercase',
+          color: isOpen ? G : 'rgba(255,255,255,0.55)',
+          transition: 'color 0.18s',
+          textAlign: 'left',
+        }}>
+          {title}
+        </span>
+        <motion.span
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.22, ease: 'easeInOut' }}
+          style={{
+            fontSize: 10, color: isOpen ? G : 'rgba(255,255,255,0.3)',
+            flexShrink: 0, marginLeft: 10,
+            display: 'inline-block', lineHeight: 1,
+            transition: 'color 0.18s',
+          }}
+        >▼</motion.span>
+      </button>
+
+      {/* Collapsible body */}
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ height: { duration: 0.22, ease: 'easeInOut' }, opacity: { duration: 0.18 } }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div style={{
+              padding: '12px 16px 14px',
+              background: '#0d1a0d',
+              borderTop: `1px solid rgba(255,255,255,0.06)`,
+            }}>
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ── Plan renderer — shows accordion if sections found, flat otherwise ───────────
+function PlanRenderer({ content }) {
+  const sections = parsePlanSections(content);
+  const hasTitledSections = sections.some(s => s.title !== null);
+
+  // Accordion state — all collapsed by default, allow multiple open
+  const [openSections, setOpenSections] = useState(() => new Set());
+  const toggle = (idx) => setOpenSections(prev => {
+    const next = new Set(prev);
+    next.has(idx) ? next.delete(idx) : next.add(idx);
+    return next;
+  });
+
+  // Fallback: flat render for plans without section headers
+  if (!hasTitledSections) {
+    return <div>{renderLines(content.split('\n'))}</div>;
+  }
+
+  return (
+    <div>
+      {sections.map((section, idx) => {
+        // Untitled intro block (content before first header) — render inline, no accordion
+        if (section.title === null) {
+          const introLines = section.lines.filter(l => l.trim() && l.trim() !== PLAN_MARKER.trim());
+          if (!introLines.length) return null;
+          return (
+            <div key={idx} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              {renderLines(section.lines)}
+            </div>
+          );
+        }
+
+        return (
+          <AccordionSection
+            key={idx}
+            title={section.title}
+            isOpen={openSections.has(idx)}
+            onToggle={() => toggle(idx)}
+          >
+            {renderLines(section.lines)}
+          </AccordionSection>
+        );
+      })}
+    </div>
+  );
 }
 
 // ── Typing dots ────────────────────────────────────────────────────────────────
