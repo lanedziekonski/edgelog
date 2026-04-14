@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-export default function Auth() {
+export default function Auth({ onClose, initialMode = 'signup' }) {
   const { login, register } = useAuth();
-  const [mode, setMode] = useState('login'); // 'login' | 'signup'
+  const [mode, setMode] = useState(initialMode); // 'login' | 'signup'
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,7 +36,24 @@ export default function Auth() {
       alignItems: 'center',
       justifyContent: 'center',
       padding: '24px 20px',
+      position: 'relative',
     }}>
+      {/* Back button when opened from within the app */}
+      {onClose && (
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute', top: 18, left: 16,
+            background: 'none', border: 'none',
+            color: 'rgba(255,255,255,0.45)', fontSize: 15,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+            fontFamily: 'Barlow', fontWeight: 600,
+            padding: '6px 4px',
+          }}
+        >
+          ‹ Back
+        </button>
+      )}
       {/* Logo */}
       <div style={{ marginBottom: 40, textAlign: 'center' }}>
         <div style={{

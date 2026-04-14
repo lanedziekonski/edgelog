@@ -5,7 +5,7 @@ import { api } from '../services/api';
 
 const G = '#00ff41';
 
-export default function Profile({ onNavigate }) {
+export default function Profile({ onNavigate, onSignUp }) {
   const { user, token, logout, refreshUser } = useAuth();
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState('');
@@ -63,6 +63,62 @@ export default function Profile({ onNavigate }) {
       </div>
 
       <div style={{ padding: '0 16px 80px' }}>
+        {/* Guest sign-up prompt */}
+        {!user && onSignUp && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            style={{
+              background: `linear-gradient(135deg, ${G}0d, ${G}05)`,
+              border: `1px solid ${G}30`,
+              borderRadius: 14, padding: '20px 16px', marginBottom: 14,
+              textAlign: 'center',
+            }}
+          >
+            <div style={{
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontSize: 22, fontWeight: 700, letterSpacing: '1px',
+              color: '#fff', marginBottom: 6,
+            }}>
+              Trade<span style={{ color: G }}>Ascend</span>
+            </div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 18, lineHeight: 1.5 }}>
+              Create a free account to save your trades,<br />unlock AI tools, and track your progress.
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              onClick={onSignUp}
+              style={{
+                width: '100%', padding: '13px 0', borderRadius: 10,
+                background: G, color: '#000', border: 'none',
+                fontFamily: "'Barlow Condensed', sans-serif",
+                fontSize: 16, fontWeight: 800, letterSpacing: '1.5px',
+                cursor: 'pointer', marginBottom: 10,
+                boxShadow: `0 0 20px ${G}40`,
+              }}
+            >
+              CREATE FREE ACCOUNT
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              onClick={onSignUp}
+              style={{
+                width: '100%', padding: '11px 0', borderRadius: 10,
+                background: 'transparent',
+                border: '1px solid rgba(255,255,255,0.12)',
+                color: 'rgba(255,255,255,0.5)',
+                fontFamily: 'Barlow', fontSize: 14, fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Sign In
+            </motion.button>
+          </motion.div>
+        )}
+
+        {/* Authenticated content */}
+        {user && <>
         {/* User card */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -292,6 +348,7 @@ export default function Profile({ onNavigate }) {
             Sign Out
           </motion.button>
         </motion.div>
+        </>}
       </div>
     </div>
   );
