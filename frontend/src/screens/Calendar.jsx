@@ -52,9 +52,11 @@ export default function Calendar({ trades, accounts = [], onNavigate, onLogTrade
     ? trades.filter(t => t.accountId === selectedAccountId || (!t.accountId && accounts.find(a => a.id === selectedAccountId)?.name === t.account))
     : trades;
 
-  // AI Coach session state
-  const [coachSession, setCoachSession]     = useState(null);
-  const [coachLoading, setCoachLoading]     = useState(false);
+  // AI Coach session state — keyed by period
+  const [coachData, setCoachData]             = useState({ pre_market: [], post_market: [] });
+  const [coachLoading, setCoachLoading]       = useState(false);
+  const [coachPeriod, setCoachPeriod]         = useState('pre_market');
+  const [coachSessionNum, setCoachSessionNum] = useState(1);
 
   // Daily journal state
   const [journalDates, setJournalDates]     = useState({}); // date → entry summary
@@ -86,14 +88,23 @@ export default function Calendar({ trades, accounts = [], onNavigate, onLogTrade
     }).catch(() => {});
   }, [selectedDate, token]);
 
-  // Load AI Coach session for selected date
+  // Load AI Coach sessions (both periods) for selected date
   useEffect(() => {
-    if (!selectedDate || !token) { setCoachSession(null); return; }
+    if (!selectedDate || !token) { setCoachData({ pre_market: [], post_market: [] }); return; }
     setCoachLoading(true);
-    api.getCoachSession(token, selectedDate)
-      .then(rows => setCoachSession(Array.isArray(rows) && rows.length > 0 ? rows : null))
-      .catch(() => setCoachSession(null))
-      .finally(() => setCoachLoading(false));
+    setCoachSessionNum(1);
+    Promise.all([
+      api.getCoachSessions(token, selectedDate, 'pre_market').catch(() => []),
+      api.getCoachSessions(token, selectedDate, 'post_market').catch(() => []),
+    ]).then(([pre, post]) => {
+      const preLoaded  = Array.isArray(pre)  ? pre.map(s  => ({ number: s.session_number, messages: s.messages })) : [];
+      const postLoaded = Array.isArray(post) ? post.map(s => ({ number: s.session_number, messages: s.messages })) : [];
+      setCoachData({ pre_market: preLoaded, post_market: postLoaded });
+      const defaultPeriod = preLoaded.length > 0 ? 'pre_market'
+        : postLoaded.length > 0 ? 'post_market' : 'pre_market';
+      setCoachPeriod(defaultPeriod);
+      setCoachSessionNum(1);
+    }).finally(() => setCoachLoading(false));
   }, [selectedDate, token]);
 
   const saveJournal = useCallback(async () => {
@@ -648,14 +659,15 @@ export default function Calendar({ trades, accounts = [], onNavigate, onLogTrade
                     )}
                   </div>
 
-                  {/* AI Coach Session */}
+                  {/* AI Coach Sessions */}
                   <div style={{ paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)', marginTop: 4 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
                       <span style={{ fontSize: 16, lineHeight: 1 }}>⚡</span>
                       <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                        AI Coach Session
+                        AI Coach
                       </div>
                     </div>
+
                     {coachLoading ? (
                       <div style={{ display: 'flex', gap: 4, alignItems: 'center', padding: '6px 0' }}>
                         {[0,1,2].map(i => (
@@ -663,34 +675,100 @@ export default function Calendar({ trades, accounts = [], onNavigate, onLogTrade
                         ))}
                         <style>{`@keyframes coachCalBounce{0%,80%,100%{transform:scale(0.7);opacity:.3}40%{transform:scale(1);opacity:1}}`}</style>
                       </div>
-                    ) : coachSession ? (
-                      <div style={{ maxHeight: 200, overflowY: 'auto', scrollbarWidth: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {coachSession.map((msg, i) => (
-                          <div key={i} style={{
-                            display: 'flex',
-                            justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                    ) : (() => {
+                      const activeSessions = coachData[coachPeriod] || [];
+                      const activeSession  = activeSessions.find(s => s.number === coachSessionNum) || activeSessions[0] || null;
+                      const activeMessages = activeSession?.messages || [];
+                      const hasAnyData     = coachData.pre_market.length > 0 || coachData.post_market.length > 0;
+
+                      return (
+                        <>
+                          {/* Period tabs */}
+                          <div style={{
+                            display: 'flex', background: 'rgba(255,255,255,0.05)',
+                            borderRadius: 8, padding: 2, marginBottom: 8,
+                            border: '1px solid rgba(255,255,255,0.07)',
                           }}>
-                            <div style={{
-                              maxWidth: '90%',
-                              padding: '8px 11px',
-                              borderRadius: msg.role === 'user' ? '10px 10px 3px 10px' : '10px 10px 10px 3px',
-                              background: msg.role === 'user' ? `${G}18` : 'rgba(255,255,255,0.04)',
-                              color: msg.role === 'user' ? G : 'rgba(255,255,255,0.65)',
-                              fontSize: 12, lineHeight: 1.6,
-                              fontFamily: "'Barlow', sans-serif",
-                              border: msg.role === 'user' ? `1px solid ${G}30` : '1px solid rgba(255,255,255,0.07)',
-                              whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                            }}>
-                              {msg.content}
-                            </div>
+                            {[['pre_market', 'Pre-Market'], ['post_market', 'Post-Market']].map(([p, label]) => {
+                              const hasData = coachData[p].length > 0;
+                              const isActive = coachPeriod === p;
+                              return (
+                                <button
+                                  key={p}
+                                  onClick={() => { setCoachPeriod(p); setCoachSessionNum(1); }}
+                                  style={{
+                                    flex: 1, padding: '6px 0', borderRadius: 6,
+                                    fontSize: 11, fontWeight: 700,
+                                    fontFamily: "'Barlow Condensed', sans-serif",
+                                    letterSpacing: '0.5px', textTransform: 'uppercase',
+                                    background: isActive ? G : 'transparent',
+                                    color: isActive ? '#000' : hasData ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.25)',
+                                    border: 'none', cursor: 'pointer',
+                                    transition: 'background 0.15s, color 0.15s',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                                  }}
+                                >
+                                  {label}
+                                  {hasData && !isActive && (
+                                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: G, display: 'inline-block', opacity: 0.7 }} />
+                                  )}
+                                </button>
+                              );
+                            })}
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
-                        No AI Coach session recorded for this day.
-                      </div>
-                    )}
+
+                          {/* Session pills — only when 2+ sessions in this period */}
+                          {activeSessions.length > 1 && (
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
+                              {activeSessions.map(s => (
+                                <button
+                                  key={s.number}
+                                  onClick={() => setCoachSessionNum(s.number)}
+                                  style={{
+                                    padding: '2px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700,
+                                    fontFamily: 'Barlow', cursor: 'pointer',
+                                    background: coachSessionNum === s.number ? `${G}18` : 'rgba(255,255,255,0.05)',
+                                    color: coachSessionNum === s.number ? G : 'rgba(255,255,255,0.35)',
+                                    border: `1px solid ${coachSessionNum === s.number ? `${G}40` : 'rgba(255,255,255,0.08)'}`,
+                                  }}
+                                >
+                                  Session {s.number} · {s.messages.length} msg{s.messages.length !== 1 ? 's' : ''}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Messages */}
+                          {activeMessages.length > 0 ? (
+                            <div style={{ maxHeight: 200, overflowY: 'auto', scrollbarWidth: 'none', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                              {activeMessages.map((msg, i) => (
+                                <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                                  <div style={{
+                                    maxWidth: '90%', padding: '7px 10px',
+                                    borderRadius: msg.role === 'user' ? '10px 10px 3px 10px' : '10px 10px 10px 3px',
+                                    background: msg.role === 'user' ? `${G}18` : 'rgba(255,255,255,0.04)',
+                                    color: msg.role === 'user' ? G : 'rgba(255,255,255,0.65)',
+                                    fontSize: 12, lineHeight: 1.6, fontFamily: "'Barlow', sans-serif",
+                                    border: msg.role === 'user' ? `1px solid ${G}30` : '1px solid rgba(255,255,255,0.07)',
+                                    whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                                  }}>
+                                    {msg.content}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : hasAnyData ? (
+                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
+                              No {coachPeriod === 'pre_market' ? 'pre-market' : 'post-market'} session recorded for this day.
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
+                              No AI Coach sessions recorded for this day.
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
 
                   <button onClick={() => setSelectedDate(null)} className="btn-ghost" style={{ width: '100%', textAlign: 'center', marginTop: 16 }}>
