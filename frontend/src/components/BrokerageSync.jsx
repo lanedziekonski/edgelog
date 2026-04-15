@@ -546,12 +546,15 @@ const BROKER_INSTRUCTIONS = {
   tradovate: {
     title: 'Export your trades from Tradovate',
     steps: [
-      'Log in at trader.tradovate.com',
-      'Open the left sidebar and click "History"',
-      'Use the date picker at the top to set your date range',
-      'Click the export icon (↓) in the top-right corner of the table',
-      'Select "CSV" and save the file to your device',
+      'Log in to Tradovate (desktop app or tradovate.com)',
+      'Click the dropdown with your account name at the top',
+      'Click the small gear icon ⚙️ to open "Account Reports"',
+      'Click the "Orders" tab — do NOT use the Performance tab',
+      'Select your date range and click "Go"',
+      'Click "Download Report" to save the CSV to your device',
+      'Upload that file here',
     ],
+    warning: 'Important: Make sure to select the Orders tab, not Performance. Using the wrong tab will cause import errors.',
   },
   apex: {
     title: 'Export your trades from Apex Trader Funding',
@@ -929,6 +932,12 @@ export default function BrokerageSync({ onTradesImported, preselectedAccountId =
                   </div>
                 ))}
               </div>
+              {BROKER_INSTRUCTIONS[selectedBroker].warning && (
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', background: 'rgba(240,165,0,0.08)', border: '1px solid rgba(240,165,0,0.3)', borderRadius: 8, padding: '10px 12px', marginBottom: 14 }}>
+                  <span style={{ fontSize: 14, flexShrink: 0 }}>⚠️</span>
+                  <span style={{ fontSize: 12, color: '#f0a500', lineHeight: 1.5 }}>{BROKER_INSTRUCTIONS[selectedBroker].warning}</span>
+                </div>
+              )}
               {BROKER_INSTRUCTIONS[selectedBroker].showTemplate && (
                 <button
                   onClick={downloadTemplate}
