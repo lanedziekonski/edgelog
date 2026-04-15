@@ -53,7 +53,6 @@ const TIERS = [
     annualSavings: 25,
     tagline: 'Build and refine your edge',
     color: '#f0a500',
-    popular: true,
     features: [
       { label: 'Everything in Trader', ok: true },
       { label: 'AI trading plan builder', ok: true },
@@ -72,6 +71,7 @@ const TIERS = [
     annualSavings: 25,
     tagline: 'Full AI coaching suite',
     color: '#00f07a',
+    popular: true,
     features: [
       { label: 'Everything in Pro', ok: true },
       { label: 'AI pre-market coaching sessions', ok: true },
