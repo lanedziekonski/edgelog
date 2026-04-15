@@ -407,42 +407,14 @@ export default function Profile({ onNavigate, onSignUp, onLogin }) {
           </motion.div>
         )}
 
-        {/* Sign out */}
+        {/* Legal */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.22, duration: 0.3 }}
           style={{
             background: '#111811', border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 14, padding: '14px 16px',
-          }}
-        >
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 12 }}>
-            Account
-          </div>
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={logout}
-            style={{
-              width: '100%', padding: '11px', borderRadius: 8,
-              background: 'transparent', border: '1px solid rgba(255,45,45,0.35)',
-              color: '#ff2d2d', fontWeight: 600, fontSize: 14,
-              cursor: 'pointer', fontFamily: 'Barlow',
-            }}
-          >
-            Sign Out
-          </motion.button>
-        </motion.div>
-        </>}
-
-        {/* Legal */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.26, duration: 0.3 }}
-          style={{
-            background: '#111811', border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 14, padding: '14px 16px', marginTop: 14,
+            borderRadius: 14, padding: '14px 16px', marginBottom: 14,
           }}
         >
           <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 12 }}>
@@ -473,6 +445,34 @@ export default function Profile({ onNavigate, onSignUp, onLogin }) {
             ))}
           </div>
         </motion.div>
+
+        {/* Sign out */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.26, duration: 0.3 }}
+          style={{
+            background: '#111811', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 14, padding: '14px 16px',
+          }}
+        >
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 12 }}>
+            Account
+          </div>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={logout}
+            style={{
+              width: '100%', padding: '11px', borderRadius: 8,
+              background: 'transparent', border: '1px solid rgba(255,45,45,0.35)',
+              color: '#ff2d2d', fontWeight: 600, fontSize: 14,
+              cursor: 'pointer', fontFamily: 'Barlow',
+            }}
+          >
+            Sign Out
+          </motion.button>
+        </motion.div>
+        </>}
       </div>
     </div>
   );

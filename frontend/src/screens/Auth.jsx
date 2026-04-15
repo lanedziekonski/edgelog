@@ -201,6 +201,12 @@ export default function Auth({ onClose, initialMode = 'login' }) {
               {error && <ErrorBox msg={error} />}
 
               <SubmitBtn loading={loading} label="Sign In" />
+              <div style={{ textAlign: 'center', marginTop: 14, fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>
+                By continuing you agree to our{' '}
+                <button type="button" onClick={() => { window.open('/terms-of-service', '_blank'); }} style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, color: 'rgba(0,255,65,0.6)', cursor: 'pointer', fontFamily: 'Barlow, sans-serif' }}>Terms of Service</button>
+                {' '}and{' '}
+                <button type="button" onClick={() => { window.open('/privacy-policy', '_blank'); }} style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, color: 'rgba(0,255,65,0.6)', cursor: 'pointer', fontFamily: 'Barlow, sans-serif' }}>Privacy Policy</button>
+              </div>
             </form>
           </>
         )}
@@ -255,6 +261,12 @@ export default function Auth({ onClose, initialMode = 'login' }) {
               {error && <ErrorBox msg={error} />}
 
               <SubmitBtn loading={loading} label="Create Account" />
+              <div style={{ textAlign: 'center', marginTop: 14, fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>
+                By continuing you agree to our{' '}
+                <button type="button" onClick={() => { window.open('/terms-of-service', '_blank'); }} style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, color: 'rgba(0,255,65,0.6)', cursor: 'pointer', fontFamily: 'Barlow, sans-serif' }}>Terms of Service</button>
+                {' '}and{' '}
+                <button type="button" onClick={() => { window.open('/privacy-policy', '_blank'); }} style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, color: 'rgba(0,255,65,0.6)', cursor: 'pointer', fontFamily: 'Barlow, sans-serif' }}>Privacy Policy</button>
+              </div>
             </form>
           </>
         )}
