@@ -155,6 +155,7 @@ async function initDb() {
     `);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token TEXT`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMPTZ`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMPTZ`);
     console.log('Database schema ready — all tables OK including trading_plans, coach_sessions');
   } catch (err) {
     console.error('Schema creation failed:', err.message);

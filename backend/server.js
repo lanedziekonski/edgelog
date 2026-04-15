@@ -194,6 +194,7 @@ app.post('/api/auth/login', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Invalid email or password' });
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) return res.status(401).json({ error: 'Invalid email or password' });
+    await pool.query(`UPDATE users SET last_login = NOW() WHERE id = $1`, [user.id]);
     const token = signToken({ userId: user.id, plan: user.plan });
     res.json({ token, user: safeUser(user) });
   } catch (err) {
@@ -1041,6 +1042,157 @@ function rowToDailyJournal(row) {
     updatedAt: row.updated_at,
   };
 }
+
+// ─── ADMIN ────────────────────────────────────────────────────────────────
+
+const jwt = require('jsonwebtoken');
+const ADMIN_JWT_SECRET = process.env.JWT_SECRET || 'tradeascend-jwt-secret';
+
+function requireAdmin(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Admin authentication required' });
+  }
+  try {
+    const payload = jwt.verify(header.slice(7), ADMIN_JWT_SECRET);
+    if (!payload.admin) return res.status(403).json({ error: 'Admin access required' });
+    next();
+  } catch {
+    res.status(401).json({ error: 'Invalid or expired admin token' });
+  }
+}
+
+app.post('/api/admin/login', (req, res) => {
+  const { password } = req.body;
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+  if (!ADMIN_PASSWORD) return res.status(503).json({ error: 'Admin not configured on this server' });
+  if (!password || password !== ADMIN_PASSWORD) {
+    return res.status(401).json({ error: 'Invalid password' });
+  }
+  const token = jwt.sign({ admin: true }, ADMIN_JWT_SECRET, { expiresIn: '24h' });
+  res.json({ token });
+});
+
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT u.id, u.email, u.name, u.plan, u.created_at, u.last_login,
+             COUNT(t.id)::int AS trade_count
+      FROM users u
+      LEFT JOIN trades t ON t.user_id = u.id
+      GROUP BY u.id
+      ORDER BY u.created_at DESC
+    `);
+    res.json(rows.map(r => ({
+      id: r.id,
+      email: r.email,
+      name: r.name || '',
+      plan: r.plan || 'free',
+      joinedAt: r.created_at,
+      lastLogin: r.last_login || null,
+      tradeCount: r.trade_count || 0,
+    })));
+  } catch (err) {
+    console.error('Admin users error:', err);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+app.post('/api/admin/users/:id/plan', requireAdmin, async (req, res) => {
+  const { plan } = req.body;
+  const validPlans = ['free', 'trader', 'pro', 'elite'];
+  if (!validPlans.includes(plan)) return res.status(400).json({ error: 'Invalid plan' });
+  try {
+    const { rows } = await pool.query(
+      `UPDATE users SET plan = $1 WHERE id = $2 RETURNING id, email, plan`,
+      [plan, req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'User not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Admin set plan error:', err);
+    res.status(500).json({ error: 'Failed to update plan' });
+  }
+});
+
+app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const [totalUsers, planCounts, totalTrades, todaySignups, weekSignups] = await Promise.all([
+      pool.query(`SELECT COUNT(*)::int AS count FROM users`),
+      pool.query(`SELECT plan, COUNT(*)::int AS count FROM users GROUP BY plan`),
+      pool.query(`SELECT COUNT(*)::int AS count FROM trades`),
+      pool.query(`SELECT COUNT(*)::int AS count FROM users WHERE created_at::date = $1::date`, [today]),
+      pool.query(`SELECT COUNT(*)::int AS count FROM users WHERE created_at >= $1`, [weekAgo]),
+    ]);
+    const byPlan = {};
+    planCounts.rows.forEach(r => { byPlan[r.plan] = r.count; });
+    res.json({
+      totalUsers: totalUsers.rows[0].count,
+      byPlan: {
+        free:   byPlan.free   || 0,
+        trader: byPlan.trader || 0,
+        pro:    byPlan.pro    || 0,
+        elite:  byPlan.elite  || 0,
+      },
+      totalTrades: totalTrades.rows[0].count,
+      newToday:    todaySignups.rows[0].count,
+      newThisWeek: weekSignups.rows[0].count,
+    });
+  } catch (err) {
+    console.error('Admin stats error:', err);
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
+app.get('/api/admin/referrals', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT rc.id, rc.code, rc.created_at, u.email,
+             COUNT(ru.id)::int AS use_count,
+             COALESCE(SUM(ru.earnings_amount), 0) AS total_earnings
+      FROM referral_codes rc
+      JOIN users u ON u.id = rc.user_id
+      LEFT JOIN referral_uses ru ON ru.code = rc.code
+      GROUP BY rc.id, rc.code, rc.created_at, u.email
+      ORDER BY rc.created_at DESC
+    `);
+    res.json(rows.map(r => ({
+      id: r.id,
+      code: r.code,
+      email: r.email,
+      createdAt: r.created_at,
+      useCount: r.use_count || 0,
+      totalEarnings: parseFloat(r.total_earnings) || 0,
+    })));
+  } catch (err) {
+    console.error('Admin referrals error:', err);
+    res.status(500).json({ error: 'Failed to fetch referrals' });
+  }
+});
+
+app.post('/api/admin/referrals/assign', requireAdmin, async (req, res) => {
+  const { email, code } = req.body;
+  if (!email || !code) return res.status(400).json({ error: 'email and code are required' });
+  try {
+    const { rows: users } = await pool.query(
+      `SELECT id FROM users WHERE email = $1`, [email.toLowerCase().trim()]
+    );
+    if (!users[0]) return res.status(404).json({ error: 'No user found with that email' });
+    const cleanCode = code.toUpperCase().trim();
+    await pool.query(
+      `INSERT INTO referral_codes (user_id, code) VALUES ($1, $2)
+       ON CONFLICT (user_id) DO UPDATE SET code = $2`,
+      [users[0].id, cleanCode]
+    );
+    res.json({ success: true, code: cleanCode });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'That code is already assigned to another user' });
+    console.error('Admin assign referral error:', err);
+    res.status(500).json({ error: 'Failed to assign referral code' });
+  }
+});
 
 // ─── MISC ─────────────────────────────────────────────────────────────────
 

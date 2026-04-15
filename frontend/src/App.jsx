@@ -18,6 +18,7 @@ import ForgotPassword from './screens/ForgotPassword';
 import ResetPassword from './screens/ResetPassword';
 import PrivacyPolicy from './screens/PrivacyPolicy';
 import TermsOfService from './screens/TermsOfService';
+import Admin from './screens/Admin';
 import TermsAgreementPopup, { needsTermsAgreement } from './components/TermsAgreementPopup';
 import { useTrades } from './hooks/useTrades';
 import { useAccounts } from './hooks/useAccounts';
@@ -349,6 +350,7 @@ export default function App() {
   if (path === '/reset-password')   return <ResetPassword />;
   if (path === '/privacy-policy')   return <PrivacyPolicy />;
   if (path === '/terms-of-service') return <TermsOfService />;
+  if (path === '/admin')            return <Admin />;
 
   return (
     <AuthProvider>
