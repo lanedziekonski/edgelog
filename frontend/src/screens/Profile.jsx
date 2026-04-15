@@ -5,7 +5,7 @@ import { api } from '../services/api';
 
 const G = '#00ff41';
 
-export default function Profile({ onNavigate, onSignUp }) {
+export default function Profile({ onNavigate, onSignUp, onLogin }) {
   const { user, token, logout, refreshUser } = useAuth();
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState('');
@@ -118,7 +118,7 @@ export default function Profile({ onNavigate, onSignUp }) {
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.96 }}
-              onClick={onSignUp}
+              onClick={onLogin}
               style={{
                 width: '100%', padding: '11px 0', borderRadius: 10,
                 background: 'transparent',

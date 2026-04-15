@@ -24,6 +24,10 @@ export const api = {
   login: (email, password) =>
     call('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   me: (token) => call('/auth/me', {}, token),
+  forgotPassword: (email) =>
+    call('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+  resetPassword: (token, password) =>
+    call('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) }),
 
   // Trades
   getTrades: (token) => call('/trades', {}, token),

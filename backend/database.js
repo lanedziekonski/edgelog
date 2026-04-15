@@ -149,6 +149,8 @@ async function initDb() {
       ALTER TABLE referral_uses
       ADD COLUMN IF NOT EXISTS plan_type TEXT NOT NULL DEFAULT 'monthly'
     `);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token TEXT`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMPTZ`);
     console.log('Database schema ready — all tables OK including trading_plans, coach_sessions');
   } catch (err) {
     console.error('Schema creation failed:', err.message);

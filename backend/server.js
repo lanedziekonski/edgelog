@@ -70,6 +70,21 @@ if (process.env.PLAID_CLIENT_ID && !process.env.PLAID_CLIENT_ID.includes('your_'
   }));
 }
 
+// ─── Nodemailer (optional — graceful degradation when not configured) ───────
+let mailer = null;
+if (process.env.EMAIL_HOST && !process.env.EMAIL_HOST.includes('your_')) {
+  const nodemailer = require('nodemailer');
+  mailer = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port: parseInt(process.env.EMAIL_PORT || '587'),
+    secure: process.env.EMAIL_PORT === '465',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+}
+
 // ─── Anthropic ────────────────────────────────────────────────────────────
 if (!process.env.ANTHROPIC_API_KEY) {
   console.warn('WARNING: ANTHROPIC_API_KEY is not set — AI routes will fail at request time');
@@ -220,6 +235,93 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
     res.json({ user: safeUser(rows[0]) });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch user' });
+  }
+});
+
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email is required' });
+  try {
+    const { rows } = await pool.query(`SELECT id FROM users WHERE email = $1`, [email.toLowerCase().trim()]);
+    // Always return success to prevent email enumeration
+    if (!rows[0]) return res.json({ message: 'If an account with that email exists, a reset link has been sent.' });
+
+    const crypto = require('crypto');
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await pool.query(
+      `UPDATE users SET password_reset_token = $1, password_reset_expires = $2 WHERE id = $3`,
+      [token, expires, rows[0].id]
+    );
+
+    const frontendUrl = process.env.FRONTEND_URL && !process.env.FRONTEND_URL.includes('localhost')
+      ? process.env.FRONTEND_URL
+      : 'https://edgelog-mu.vercel.app';
+    const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+
+    if (mailer) {
+      await mailer.sendMail({
+        from: `"TradeAscend" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: 'Reset your TradeAscend password',
+        html: `
+          <div style="background:#080c08;color:#fff;font-family:Arial,sans-serif;max-width:520px;margin:0 auto;border-radius:12px;overflow:hidden;border:1px solid rgba(0,255,65,0.15)">
+            <div style="padding:32px 32px 0;text-align:center">
+              <div style="font-size:28px;font-weight:900;letter-spacing:2px;text-transform:uppercase">
+                Trade<span style="color:#00ff41">Ascend</span>
+              </div>
+            </div>
+            <div style="padding:28px 32px">
+              <p style="font-size:16px;margin:0 0 16px">Hi,</p>
+              <p style="font-size:14px;color:rgba(255,255,255,0.7);margin:0 0 24px;line-height:1.6">
+                We received a request to reset your password. Click the button below to set a new password. This link expires in <strong style="color:#fff">1 hour</strong>.
+              </p>
+              <div style="text-align:center;margin:28px 0">
+                <a href="${resetUrl}" style="display:inline-block;padding:14px 32px;background:#00ff41;color:#000;border-radius:10px;font-weight:900;font-size:15px;text-decoration:none;letter-spacing:1px">
+                  RESET PASSWORD
+                </a>
+              </div>
+              <p style="font-size:12px;color:rgba(255,255,255,0.3);margin:20px 0 0;line-height:1.5">
+                If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.<br><br>
+                Or copy this link: <span style="color:#00ff41;word-break:break-all">${resetUrl}</span>
+              </p>
+            </div>
+          </div>
+        `,
+      });
+    } else {
+      // Dev fallback — log the reset URL so it can be used without email configured
+      console.log(`[forgot-password] Reset URL for ${email}: ${resetUrl}`);
+    }
+
+    res.json({ message: 'If an account with that email exists, a reset link has been sent.' });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ error: 'Failed to process request' });
+  }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password) return res.status(400).json({ error: 'Token and password are required' });
+  if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  try {
+    const { rows } = await pool.query(
+      `SELECT id FROM users WHERE password_reset_token = $1 AND password_reset_expires > NOW()`,
+      [token]
+    );
+    if (!rows[0]) return res.status(400).json({ error: 'This reset link is invalid or has expired.' });
+
+    const hash = await bcrypt.hash(password, 10);
+    await pool.query(
+      `UPDATE users SET password_hash = $1, password_reset_token = NULL, password_reset_expires = NULL WHERE id = $2`,
+      [hash, rows[0].id]
+    );
+    res.json({ message: 'Password updated successfully.' });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    res.status(500).json({ error: 'Failed to reset password' });
   }
 });
 

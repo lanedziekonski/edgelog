@@ -4,6 +4,7 @@ import { AuthProvider, useAuth, hasAccess } from './context/AuthContext';
 import { AccountFilterProvider, useAccountFilter } from './context/AccountFilterContext';
 import BottomNav from './components/BottomNav';
 import FeatureGate from './components/FeatureGate';
+import GuestGate from './components/GuestGate';
 import Auth from './screens/Auth';
 import Dashboard from './screens/Dashboard';
 import Journal from './screens/Journal';
@@ -13,13 +14,15 @@ import TradingPlan from './screens/TradingPlan';
 import AICoach from './screens/AICoach';
 import Profile from './screens/Profile';
 import Pricing from './screens/Pricing';
+import ForgotPassword from './screens/ForgotPassword';
+import ResetPassword from './screens/ResetPassword';
 import { useTrades } from './hooks/useTrades';
 import { useAccounts } from './hooks/useAccounts';
 
 const G = '#00ff41';
 const POPUP_KEY = 'ta_signup_popup_shown';
 
-function SignupPopup({ onClose, onSignUp }) {
+function SignupPopup({ onClose, onSignUp, onLogin }) {
   return (
     <AnimatePresence>
       <motion.div
@@ -111,7 +114,7 @@ function SignupPopup({ onClose, onSignUp }) {
             CREATE FREE ACCOUNT
           </button>
           <button
-            onClick={onClose}
+            onClick={onLogin}
             style={{
               width: '100%', padding: '11px 0', borderRadius: 10,
               background: 'transparent',
@@ -121,7 +124,7 @@ function SignupPopup({ onClose, onSignUp }) {
               cursor: 'pointer',
             }}
           >
-            Maybe later
+            Already have an account? Sign In
           </button>
         </motion.div>
       </motion.div>
@@ -165,7 +168,7 @@ function AppInner() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [focusTradeId, setFocusTradeId]       = useState(null);
   const [pendingTradeDate, setPendingTradeDate] = useState(null);
-  const [showAuth, setShowAuth]               = useState(false);
+  const [showAuth, setShowAuth]               = useState(null); // null | 'login' | 'signup'
   const [showPopup, setShowPopup]             = useState(false);
   const tradeContext   = useTrades();
   const accountContext = useAccounts();
@@ -193,13 +196,19 @@ function AppInner() {
 
   // Auto-close auth screen once user logs in
   useEffect(() => {
-    if (user) setShowAuth(false);
+    if (user) setShowAuth(null);
   }, [user]);
 
-  const openAuth = () => {
+  const openSignup = () => {
     setShowPopup(false);
     localStorage.setItem(POPUP_KEY, '1');
-    setShowAuth(true);
+    setShowAuth('signup');
+  };
+
+  const openLogin = () => {
+    setShowPopup(false);
+    localStorage.setItem(POPUP_KEY, '1');
+    setShowAuth('login');
   };
 
   const dismissPopup = () => {
@@ -248,8 +257,10 @@ function AppInner() {
   }
 
   // Guest navigating to Auth full-screen
+  // key={showAuth} forces a fresh component mount each time the mode changes,
+  // so useState(initialMode) always picks up the correct starting tab.
   if (!user && showAuth) {
-    return <Auth onClose={() => setShowAuth(false)} />;
+    return <Auth key={showAuth} onClose={() => setShowAuth(null)} initialMode={showAuth} />;
   }
 
   // Full-page screens that don't use the shell layout
@@ -264,9 +275,18 @@ function AppInner() {
     if (tradeId) setFocusTradeId(tradeId);
   };
 
+  // Tabs that require an account — logged-out users see GuestGate, not the plan upgrade screen
+  const AUTH_REQUIRED_TABS = ['accounts', 'plan', 'coach'];
+
   const renderScreen = () => {
     const required = TAB_PLANS[activeTab] || 'free';
 
+    // Layer 1: auth gate — no account at all
+    if (!user && AUTH_REQUIRED_TABS.includes(activeTab)) {
+      return <GuestGate onSignUp={openSignup} onLogin={openLogin} />;
+    }
+
+    // Layer 2: plan-tier gate — logged in but wrong plan
     if (user && !hasAccess(userPlan, required)) {
       const info = FEATURE_INFO[activeTab] || {};
       return (
@@ -288,7 +308,7 @@ function AppInner() {
       case 'accounts':  return <Accounts {...tradeContext} {...accountContext} />;
       case 'plan':      return <TradingPlan />;
       case 'coach':     return <AICoach {...tradeContext} />;
-      case 'profile':   return <Profile onNavigate={handleNavigate} onSignUp={openAuth} />;
+      case 'profile':   return <Profile onNavigate={handleNavigate} onSignUp={openSignup} onLogin={openLogin} />;
       default:          return <Dashboard {...tradeContext} />;
     }
   };
@@ -301,13 +321,17 @@ function AppInner() {
       <BottomNav active={activeTab} onNavigate={handleNavigate} />
       {/* First-visit sign-up popup for guests */}
       {!user && showPopup && (
-        <SignupPopup onClose={dismissPopup} onSignUp={openAuth} />
+        <SignupPopup onClose={dismissPopup} onSignUp={openSignup} onLogin={openLogin} />
       )}
     </div>
   );
 }
 
 export default function App() {
+  const path = window.location.pathname;
+  if (path === '/forgot-password') return <ForgotPassword />;
+  if (path === '/reset-password')  return <ResetPassword />;
+
   return (
     <AuthProvider>
       <AccountFilterProvider>
