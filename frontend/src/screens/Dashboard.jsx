@@ -76,7 +76,7 @@ function ParticleCanvas() {
 // ── Shared sub-components ─────────────────────────────────────────────────
 function PanelHeader({ label, title, right }) {
   return (
-    <div style={{ marginBottom: 14, position: 'relative', zIndex: 1 }}>
+    <div style={{ marginBottom: 16, position: 'relative', zIndex: 1 }}>
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8, marginBottom: title ? 4 : 0,
       }}>
@@ -101,7 +101,7 @@ function PanelHeader({ label, title, right }) {
 function StatPill({ label, value, color }) {
   return (
     <div>
-      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 10 }}>{label}</div>
+      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 16 }}>{label}</div>
       <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 17, fontWeight: 700, color: color || '#fff', lineHeight: 1 }}>{value}</div>
     </div>
   );
@@ -110,7 +110,7 @@ function StatPill({ label, value, color }) {
 function StatBlock({ label, value, color, size = 30 }) {
   return (
     <div>
-      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: size, fontWeight: 900, lineHeight: 1, color: color || '#fff', marginBottom: 10 }}>{value}</div>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: size, fontWeight: 900, lineHeight: 1, color: color || '#fff', marginBottom: 16 }}>{value}</div>
       <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>{label}</div>
     </div>
   );
@@ -137,7 +137,7 @@ function HeroSection({ stats, todayPnl, weekPnl, sectionId }) {
       style={{
         position: 'relative', overflow: 'hidden',
         background: 'radial-gradient(ellipse at 50% 80%, #0f1f0f 0%, #080c08 70%)',
-        padding: '28px 20px 26px',
+        padding: '28px 20px 28px',
       }}
     >
       <ParticleCanvas />
@@ -165,7 +165,7 @@ function HeroSection({ stats, todayPnl, weekPnl, sectionId }) {
           {isPos ? '+' : '-'}${fmt$(absTotal)}
         </div>
 
-        <div style={{ width: 28, height: 1, background: 'rgba(0,255,65,0.3)', margin: '14px auto' }} />
+        <div style={{ width: 28, height: 1, background: 'rgba(0,255,65,0.3)', margin: '16px auto' }} />
 
         <div style={{ display: 'flex', gap: 28, justifyContent: 'center', flexWrap: 'wrap' }}>
           <StatPill label="Today"     value={`${todayPnl >= 0 ? '+' : '-'}$${fmt$(absToday)}`} color={todayPnl >= 0 ? G : R} />
@@ -199,7 +199,7 @@ function WinRateSection({ stats, sectionId }) {
         id={sectionId} ref={ref}
         style={{
           background: BG2,
-          padding: '18px 20px 20px',
+          padding: '20px 20px 28px',
           position: 'relative', overflow: 'hidden',
         }}
       >
@@ -212,7 +212,7 @@ function WinRateSection({ stats, sectionId }) {
           style={{ position: 'relative', zIndex: 1 }}
         >
           {/* Big win rate + bar */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, marginBottom: 16 }}>
             <div style={{
               fontFamily: "'Barlow Condensed', sans-serif",
               fontSize: 'clamp(48px, 14vw, 72px)',
@@ -220,7 +220,7 @@ function WinRateSection({ stats, sectionId }) {
             }}>
               {Math.round(wrVal)}<span style={{ fontSize: '38%', opacity: 0.5 }}>%</span>
             </div>
-            <div style={{ flex: 1, paddingBottom: 8 }}>
+            <div style={{ flex: 1, paddingBottom: 20 }}>
               <div style={{ height: 3, background: 'rgba(255,255,255,0.07)', borderRadius: 2, overflow: 'hidden' }}>
                 <motion.div
                   initial={{ width: 0 }}
@@ -229,14 +229,14 @@ function WinRateSection({ stats, sectionId }) {
                   style={{ height: '100%', background: G, boxShadow: `0 0 8px ${G}` }}
                 />
               </div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 5 }}>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 16 }}>
                 {stats.wins}W / {stats.losses}L of {Math.round(totVal)} trades
               </div>
             </div>
           </div>
 
           {/* Stats grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginTop: 16 }}>
             <StatBlock label="Avg Win"   value={`+$${fmt$(stats.avgWin, 0)}`}           color={G} size={22} />
             <StatBlock label="Avg Loss"  value={`-$${fmt$(Math.abs(stats.avgLoss), 0)}`} color={R} size={22} />
             <StatBlock label="Avg R:R"   value={stats.avgLoss !== 0 ? `${rrVal.toFixed(1)}R` : '∞'} color={avgRR >= 1 ? G : R} size={22} />
@@ -268,11 +268,11 @@ function RecentTradesSection({ trades, sectionId }) {
         id={sectionId} ref={ref}
         style={{
           background: BG,
-          padding: '18px 0 20px',
+          padding: '20px 0 28px',
           position: 'relative', overflow: 'hidden',
         }}
       >
-        <div style={{ padding: '0 20px', marginBottom: 12 }}>
+        <div style={{ padding: '0 20px', marginBottom: 16 }}>
           <PanelHeader label="Recent Trades" title={`Last ${recent.length} Trades`} />
         </div>
 
@@ -281,7 +281,7 @@ function RecentTradesSection({ trades, sectionId }) {
           {/* Header */}
           <div style={{
             display: 'grid', gridTemplateColumns: '72px 56px 1fr 72px 68px',
-            padding: '5px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', gap: 6,
+            padding: '5px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', gap: 16,
           }}>
             {['Date', 'Symbol', 'Setup', 'Account', 'P&L'].map(h => (
               <div key={h} style={{ fontSize: 8, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', fontWeight: 700 }}>
@@ -300,7 +300,7 @@ function RecentTradesSection({ trades, sectionId }) {
               whileHover={{ backgroundColor: 'rgba(0,255,65,0.04)', x: 2 }}
               style={{
                 display: 'grid', gridTemplateColumns: '72px 56px 1fr 72px 68px',
-                padding: '9px 20px', gap: 12,
+                padding: '20px 20px', gap: 16,
                 borderBottom: '1px solid rgba(255,255,255,0.04)',
                 cursor: 'default', transition: 'background 0.12s',
               }}
@@ -327,7 +327,7 @@ function RecentTradesSection({ trades, sectionId }) {
           initial={{ opacity: 0 }}
           animate={inV ? { opacity: 1 } : {}}
           transition={{ delay: 0.5, duration: 0.5 }}
-          style={{ padding: '14px 20px 0', display: 'flex', gap: 12, flexWrap: 'wrap' }}
+          style={{ padding: '20px 20px 0', display: 'flex', gap: 16, flexWrap: 'wrap' }}
         >
           {(() => {
             const byDate = {};
@@ -362,7 +362,7 @@ function EquitySection({ curve, stats, sectionId }) {
         id={sectionId} ref={ref}
         style={{
           background: BG2,
-          padding: '18px 20px 20px',
+          padding: '20px 20px 28px',
           position: 'relative', overflow: 'hidden',
         }}
       >
@@ -410,7 +410,7 @@ function EquitySection({ curve, stats, sectionId }) {
           initial={{ opacity: 0, y: 12 }}
           animate={inV ? { opacity: 1, y: 0 } : {}}
           transition={{ delay: 0.4, duration: 0.6 }}
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.05)' }}
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginTop: 16, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.05)' }}
         >
           <StatBlock label="Best Day"  value={`+$${fmt$(bestVal, 0)}`}  color={G} size={22} />
           <StatBlock label="Worst Day" value={`-$${fmt$(worstVal, 0)}`} color={R} size={22} />
@@ -445,7 +445,7 @@ function PlaybookSection({ stats, sectionId }) {
         id={sectionId} ref={ref}
         style={{
           background: BG,
-          padding: '18px 20px 20px',
+          padding: '20px 20px 28px',
           position: 'relative', overflow: 'hidden',
         }}
       >
@@ -455,9 +455,9 @@ function PlaybookSection({ stats, sectionId }) {
           right={stats.bestSetup ? `Best: ${stats.bestSetup.name}` : null}
         />
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'relative', zIndex: 1 }}>
           {setups.length === 0 ? (
-            <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, padding: '14px 0' }}>No setup data yet.</div>
+            <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, padding: '20px 0' }}>No setup data yet.</div>
           ) : setups.map(([name, v], i) => {
             const isP   = v.pnl >= 0;
             const barPct = Math.round((Math.abs(v.pnl) / maxAbs) * 100);
@@ -472,14 +472,14 @@ function PlaybookSection({ stats, sectionId }) {
                 style={{
                   background: BG2,
                   border: '1px solid rgba(255,255,255,0.07)',
-                  borderRadius: 10, padding: '12px 14px',
+                  borderRadius: 10, padding: '20px 14px',
                   cursor: 'default', transition: 'border-color 0.2s',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                   <div>
                     <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, color: '#fff' }}>{name}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 10 }}>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 16 }}>
                       {v.total} trade{v.total !== 1 ? 's' : ''} · {Math.round(v.winRate)}% win
                     </div>
                   </div>
@@ -536,7 +536,7 @@ function MonthlyPnLSection({ trades, sectionId }) {
         id={sectionId} ref={ref}
         style={{
           background: BG2,
-          padding: '18px 20px 80px',
+          padding: '20px 20px 80px',
           position: 'relative', overflow: 'hidden',
         }}
       >
@@ -577,7 +577,7 @@ function MonthlyPnLSection({ trades, sectionId }) {
         >
           <div style={{
             display: 'grid', gridTemplateColumns: '52px 1fr 48px 48px 54px',
-            padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.07)', gap: 4, marginBottom: 10,
+            padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.07)', gap: 16, marginBottom: 16,
           }}>
             {['Month', 'P&L', 'Days', 'Trades', 'Win%'].map(h => (
               <div key={h} style={{ fontSize: 8, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)', fontWeight: 700, textAlign: h === 'P&L' || h === 'Win%' ? 'right' : 'left' }}>
@@ -594,7 +594,7 @@ function MonthlyPnLSection({ trades, sectionId }) {
               transition={{ delay: 0.38 + i * 0.035, duration: 0.28 }}
               style={{
                 display: 'grid', gridTemplateColumns: '52px 1fr 48px 48px 54px',
-                padding: '14px 0', gap: 12,
+                padding: '20px 0', gap: 16,
                 borderBottom: '1px solid rgba(255,255,255,0.04)',
               }}
             >
