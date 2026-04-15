@@ -15,6 +15,19 @@ function accountColor(name) {
   return `hsl(${hues[h % hues.length]}, 70%, 55%)`;
 }
 
+const COMMISSION_PRESETS = [
+  { label: 'Apex Trader Funding — ES/NQ (Tradovate)',       rate: 5.50 },
+  { label: 'Apex Trader Funding — Micro ES/NQ (Tradovate)', rate: 1.03 },
+  { label: 'Apex Trader Funding — ES/NQ (Rithmic)',         rate: 5.98 },
+  { label: 'TopStep (TopstepX platform)',                   rate: 0.00 },
+  { label: 'TopStep (T4 / Other platform)',                 rate: 6.34 },
+  { label: 'Tradovate (Standard — no membership)',          rate: 4.16 },
+  { label: 'Tradovate (Micro — no membership)',             rate: 1.12 },
+  { label: 'NinjaTrader Brokerage — ES/NQ',                 rate: 3.98 },
+  { label: 'Interactive Brokers — Futures',                 rate: 4.05 },
+  { label: 'Custom — enter manually',                       rate: null },
+];
+
 const ACCOUNT_TYPES = [
   { value: 'prop',  label: 'Prop Firm' },
   { value: 'live',  label: 'Live Brokerage' },
@@ -29,6 +42,9 @@ const emptyForm = () => ({
   dailyLossLimit: '',
   maxDrawdown: '',
   profitTarget: '',
+  commissionPreset: '',
+  commissionPerContract: '0',
+  applyCommission: true,
 });
 
 export default function Accounts({
@@ -52,13 +68,15 @@ export default function Accounts({
     setCreateErr('');
     try {
       await createAccount({
-        name:            form.name.trim(),
-        type:            form.type,
-        phase:           form.type === 'prop' ? form.phase : null,
-        startingBalance: form.startingBalance ? parseFloat(form.startingBalance) : 0,
-        dailyLossLimit:  form.dailyLossLimit  ? parseFloat(form.dailyLossLimit)  : null,
-        maxDrawdown:     form.maxDrawdown      ? parseFloat(form.maxDrawdown)     : null,
-        profitTarget:    form.profitTarget     ? parseFloat(form.profitTarget)    : null,
+        name:                  form.name.trim(),
+        type:                  form.type,
+        phase:                 form.type === 'prop' ? form.phase : null,
+        startingBalance:       form.startingBalance       ? parseFloat(form.startingBalance)       : 0,
+        dailyLossLimit:        form.dailyLossLimit        ? parseFloat(form.dailyLossLimit)        : null,
+        maxDrawdown:           form.maxDrawdown           ? parseFloat(form.maxDrawdown)           : null,
+        profitTarget:          form.profitTarget          ? parseFloat(form.profitTarget)          : null,
+        commissionPerContract: form.commissionPerContract ? parseFloat(form.commissionPerContract) : 0,
+        applyCommission:       form.applyCommission,
       });
       setForm(emptyForm());
       setShowCreate(false);
@@ -264,6 +282,9 @@ export default function Accounts({
                   </div>
                 ))}
               </div>
+
+              {/* Commission Settings */}
+              <CommissionSettings form={form} setF={setF} />
 
               {createErr && (
                 <div style={{ fontSize: 12, color: R, marginBottom: 10 }}>{createErr}</div>
@@ -769,13 +790,16 @@ function AccountCard({ account, trades, today, importing, onStartImport, onCance
 
 function EditAccountCard({ account, onSave, onCancel }) {
   const [form, setForm] = useState({
-    name:            account.name,
-    type:            account.type,
-    phase:           account.phase || 'evaluation',
-    startingBalance: account.startingBalance ? String(account.startingBalance) : '',
-    dailyLossLimit:  account.dailyLossLimit  ? String(account.dailyLossLimit)  : '',
-    maxDrawdown:     account.maxDrawdown      ? String(account.maxDrawdown)     : '',
-    profitTarget:    account.profitTarget     ? String(account.profitTarget)    : '',
+    name:                  account.name,
+    type:                  account.type,
+    phase:                 account.phase || 'evaluation',
+    startingBalance:       account.startingBalance       ? String(account.startingBalance)       : '',
+    dailyLossLimit:        account.dailyLossLimit        ? String(account.dailyLossLimit)        : '',
+    maxDrawdown:           account.maxDrawdown           ? String(account.maxDrawdown)           : '',
+    profitTarget:          account.profitTarget          ? String(account.profitTarget)          : '',
+    commissionPreset:      '',
+    commissionPerContract: account.commissionPerContract ? String(account.commissionPerContract) : '0',
+    applyCommission:       account.applyCommission !== false,
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr]       = useState('');
@@ -786,13 +810,15 @@ function EditAccountCard({ account, onSave, onCancel }) {
     setSaving(true); setErr('');
     try {
       await onSave(account.id, {
-        name:            form.name.trim(),
-        type:            form.type,
-        phase:           form.type === 'prop' ? form.phase : null,
-        startingBalance: form.startingBalance ? parseFloat(form.startingBalance) : 0,
-        dailyLossLimit:  form.dailyLossLimit  ? parseFloat(form.dailyLossLimit)  : null,
-        maxDrawdown:     form.maxDrawdown      ? parseFloat(form.maxDrawdown)     : null,
-        profitTarget:    form.profitTarget     ? parseFloat(form.profitTarget)    : null,
+        name:                  form.name.trim(),
+        type:                  form.type,
+        phase:                 form.type === 'prop' ? form.phase : null,
+        startingBalance:       form.startingBalance       ? parseFloat(form.startingBalance)       : 0,
+        dailyLossLimit:        form.dailyLossLimit        ? parseFloat(form.dailyLossLimit)        : null,
+        maxDrawdown:           form.maxDrawdown           ? parseFloat(form.maxDrawdown)           : null,
+        profitTarget:          form.profitTarget          ? parseFloat(form.profitTarget)          : null,
+        commissionPerContract: form.commissionPerContract ? parseFloat(form.commissionPerContract) : 0,
+        applyCommission:       form.applyCommission,
       });
     } catch (e) {
       setErr(e.message || 'Failed to save'); setSaving(false);
@@ -903,6 +929,9 @@ function EditAccountCard({ account, onSave, onCancel }) {
         ))}
       </div>
 
+      {/* Commission Settings */}
+      <CommissionSettings form={form} setF={setF} />
+
       {err && <div style={{ fontSize: 12, color: R, marginBottom: 10 }}>{err}</div>}
 
       <div style={{ display: 'flex', gap: 8 }}>
@@ -921,6 +950,101 @@ function EditAccountCard({ account, onSave, onCancel }) {
         >
           Cancel
         </motion.button>
+      </div>
+    </div>
+  );
+}
+
+// ── CommissionSettings (shared by New Account and Edit Account forms) ────────
+
+function CommissionSettings({ form, setF }) {
+  return (
+    <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 14, marginBottom: 14 }}>
+      <div style={{ fontSize: 10, color: G, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, marginBottom: 12 }}>
+        Commission Settings
+      </div>
+
+      {/* Preset dropdown */}
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 5 }}>
+          Select your broker/firm to auto-fill rate
+        </div>
+        <select
+          value={form.commissionPreset}
+          onChange={e => {
+            const preset = COMMISSION_PRESETS.find(p => p.label === e.target.value);
+            setF('commissionPreset', e.target.value);
+            if (preset && preset.rate !== null) setF('commissionPerContract', String(preset.rate));
+          }}
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            background: '#111811', border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 8, padding: '9px 11px', fontSize: 12,
+            color: form.commissionPreset ? '#fff' : 'rgba(255,255,255,0.35)',
+            fontFamily: 'Barlow', outline: 'none', cursor: 'pointer',
+            appearance: 'none', WebkitAppearance: 'none',
+          }}
+          onFocus={e => e.target.style.borderColor = `${G}70`}
+          onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
+        >
+          <option value="" disabled style={{ background: '#111811' }}>— Select platform —</option>
+          {COMMISSION_PRESETS.map(p => (
+            <option key={p.label} value={p.label} style={{ background: '#111811' }}>{p.label}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Rate input */}
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 5 }}>
+          All-in cost per contract (round trip $)
+        </div>
+        <input
+          type="number" min="0" step="0.01" placeholder="0.00"
+          value={form.commissionPerContract}
+          onChange={e => setF('commissionPerContract', e.target.value)}
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            background: '#111811', border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 8, padding: '9px 11px', fontSize: 13,
+            color: '#fff', fontFamily: 'Barlow', outline: 'none',
+          }}
+          onFocus={e => e.target.style.borderColor = `${G}70`}
+          onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
+        />
+      </div>
+
+      {/* Apply toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Apply commission to trades</span>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {[true, false].map(val => (
+            <button
+              key={String(val)}
+              onClick={() => setF('applyCommission', val)}
+              style={{
+                padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                fontFamily: 'Barlow', cursor: 'pointer',
+                background: form.applyCommission === val ? (val ? `${G}25` : 'rgba(255,45,45,0.15)') : 'rgba(255,255,255,0.04)',
+                color: form.applyCommission === val ? (val ? G : R) : 'rgba(255,255,255,0.3)',
+                border: form.applyCommission === val
+                  ? `1px solid ${val ? `${G}50` : 'rgba(255,45,45,0.4)'}`
+                  : '1px solid rgba(255,255,255,0.1)',
+                transition: 'all 0.12s',
+              }}
+            >
+              {val ? 'ON' : 'OFF'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Notes */}
+      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', lineHeight: 1.5, marginBottom: 6 }}>
+        Includes broker commission + exchange + NFA fees. To verify your exact rate: check your broker statement or contact your prop firm support.
+      </div>
+      <div style={{ fontSize: 11, color: GOLD, lineHeight: 1.5 }}>
+        ⚠️ Note: Rates vary by instrument. If you trade both standard and micro contracts in the same account, use your most common contract's rate or set a blended average.
       </div>
     </div>
   );

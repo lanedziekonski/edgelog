@@ -66,7 +66,10 @@ async function initDb() {
   `);
     // Migrations — safe to run on every boot
     await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS account_id TEXT`);
+    await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS commission_total NUMERIC DEFAULT 0`);
     await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS phase TEXT DEFAULT 'evaluation'`);
+    await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS commission_per_contract NUMERIC DEFAULT 0`);
+    await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS apply_commission BOOLEAN DEFAULT true`);
     await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS entry_price NUMERIC`);
     await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS exit_price NUMERIC`);
     await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS quantity INTEGER`);
@@ -181,7 +184,8 @@ function rowToTrade(row) {
     quantity:      row.quantity     != null ? parseInt(row.quantity)       : null,
     side:          row.side         || null,
     stopPrice:     row.stop_price   != null ? parseFloat(row.stop_price)   : null,
-    screenshotUrl: row.screenshot_url || null,
+    screenshotUrl:    row.screenshot_url    || null,
+    commissionTotal:  parseFloat(row.commission_total || 0),
   };
 }
 
@@ -190,8 +194,10 @@ function rowToAccount(row) {
     id:              row.id,
     name:            row.name,
     type:            row.type || 'prop',
-    phase:           row.phase || 'evaluation',
-    startingBalance: parseFloat(row.starting_balance || 0),
+    phase:                 row.phase || 'evaluation',
+    commissionPerContract: parseFloat(row.commission_per_contract || 0),
+    applyCommission:       row.apply_commission !== false,
+    startingBalance:       parseFloat(row.starting_balance || 0),
     dailyLossLimit:  row.daily_loss_limit != null ? parseFloat(row.daily_loss_limit) : null,
     maxDrawdown:     row.max_drawdown     != null ? parseFloat(row.max_drawdown)     : null,
     profitTarget:    row.profit_target    != null ? parseFloat(row.profit_target)    : null,

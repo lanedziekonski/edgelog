@@ -522,8 +522,10 @@ function TradeCard({ trade, onDelete, onUpdate, isFocused, onFocusConsumed }) {
     return () => clearTimeout(t);
   }, [isFocused]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const isWin       = trade.pnl > 0;
-  const accentColor = isWin ? G : R;
+  const commissionTotal = trade.commissionTotal || 0;
+  const grossPnl        = trade.pnl + commissionTotal;
+  const isWin           = trade.pnl > 0;
+  const accentColor     = isWin ? G : R;
 
   const handleExpand = () => {
     if (editing) return;
@@ -625,8 +627,15 @@ function TradeCard({ trade, onDelete, onUpdate, isFocused, onFocusConsumed }) {
                   <circle cx="12" cy="13" r="4"/>
                 </svg>
               )}
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, color: accentColor }}>
-                {fmtPnl(trade.pnl)}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                {commissionTotal > 0 && (
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.3px' }}>
+                    Gross {fmtPnl(grossPnl)}
+                  </div>
+                )}
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, color: accentColor }}>
+                  {commissionTotal > 0 ? 'Net ' : ''}{fmtPnl(trade.pnl)}
+                </div>
               </div>
             </div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{trade.account}</div>
@@ -662,9 +671,19 @@ function TradeCard({ trade, onDelete, onUpdate, isFocused, onFocusConsumed }) {
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
+                      {commissionTotal > 0 && (
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 1 }}>
+                          Gross {fmtPnl(grossPnl)}
+                        </div>
+                      )}
                       <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 28, fontWeight: 700, color: accentColor, lineHeight: 1 }}>
-                        {fmtPnl(trade.pnl)}
+                        {commissionTotal > 0 ? 'Net ' : ''}{fmtPnl(trade.pnl)}
                       </div>
+                      {commissionTotal > 0 && (
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>
+                          −${commissionTotal.toFixed(2)} commission
+                        </div>
+                      )}
                       <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>{trade.date}</div>
                     </div>
                   </div>
