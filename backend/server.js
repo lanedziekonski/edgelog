@@ -70,20 +70,9 @@ if (process.env.PLAID_CLIENT_ID && !process.env.PLAID_CLIENT_ID.includes('your_'
   }));
 }
 
-// ─── Nodemailer (optional — graceful degradation when not configured) ───────
-let mailer = null;
-if (process.env.EMAIL_HOST && !process.env.EMAIL_HOST.includes('your_')) {
-  const nodemailer = require('nodemailer');
-  mailer = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: parseInt(process.env.EMAIL_PORT || '587'),
-    secure: process.env.EMAIL_PORT === '465',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-}
+// ─── Resend (email sending) ──────────────────────────────────────────────────
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ─── Anthropic ────────────────────────────────────────────────────────────
 if (!process.env.ANTHROPIC_API_KEY) {
@@ -260,40 +249,13 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       : 'https://edgelog-mu.vercel.app';
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
-    if (mailer) {
-      await mailer.sendMail({
-        from: `"TradeAscend" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: 'Reset your TradeAscend password',
-        html: `
-          <div style="background:#080c08;color:#fff;font-family:Arial,sans-serif;max-width:520px;margin:0 auto;border-radius:12px;overflow:hidden;border:1px solid rgba(0,255,65,0.15)">
-            <div style="padding:32px 32px 0;text-align:center">
-              <div style="font-size:28px;font-weight:900;letter-spacing:2px;text-transform:uppercase">
-                Trade<span style="color:#00ff41">Ascend</span>
-              </div>
-            </div>
-            <div style="padding:28px 32px">
-              <p style="font-size:16px;margin:0 0 16px">Hi,</p>
-              <p style="font-size:14px;color:rgba(255,255,255,0.7);margin:0 0 24px;line-height:1.6">
-                We received a request to reset your password. Click the button below to set a new password. This link expires in <strong style="color:#fff">1 hour</strong>.
-              </p>
-              <div style="text-align:center;margin:28px 0">
-                <a href="${resetUrl}" style="display:inline-block;padding:14px 32px;background:#00ff41;color:#000;border-radius:10px;font-weight:900;font-size:15px;text-decoration:none;letter-spacing:1px">
-                  RESET PASSWORD
-                </a>
-              </div>
-              <p style="font-size:12px;color:rgba(255,255,255,0.3);margin:20px 0 0;line-height:1.5">
-                If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.<br><br>
-                Or copy this link: <span style="color:#00ff41;word-break:break-all">${resetUrl}</span>
-              </p>
-            </div>
-          </div>
-        `,
-      });
-    } else {
-      // Dev fallback — log the reset URL so it can be used without email configured
-      console.log(`[forgot-password] Reset URL for ${email}: ${resetUrl}`);
-    }
+    await resend.emails.send({
+      from: 'TradeAscend <onboarding@resend.dev>',
+      to: email,
+      subject: 'Reset your TradeAscend password',
+      html: `<div style="background:#0a0a0a;color:#fff;padding:40px;font-family:sans-serif;"><h2 style="color:#00ff41">Reset Your Password</h2><p>Click the link below to reset your password. It expires in 1 hour.</p><a href="${resetUrl}" style="background:#00ff41;color:#000;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block;margin-top:16px">Reset Password</a></div>`,
+    });
+    console.log(`[forgot-password] Reset email sent to ${email}`);
 
     res.status(200).json({ message: 'If an account with that email exists, a reset link has been sent.' });
   } catch (err) {
