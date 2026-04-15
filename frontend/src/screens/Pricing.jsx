@@ -29,9 +29,9 @@ const TIERS = [
     id: 'trader',
     name: 'Trader',
     monthlyPrice: 9.99,
-    annualPrice: 79.99,
-    annualPerMonth: 6.67,
-    annualSavings: 33,
+    annualPrice: 89.91,
+    annualPerMonth: 7.49,
+    annualSavings: 25,
     tagline: 'For serious part-time traders',
     color: '#6c63ff',
     features: [
@@ -48,9 +48,9 @@ const TIERS = [
     id: 'pro',
     name: 'Pro',
     monthlyPrice: 24.99,
-    annualPrice: 249.99,
-    annualPerMonth: 20.83,
-    annualSavings: 17,
+    annualPrice: 224.91,
+    annualPerMonth: 18.74,
+    annualSavings: 25,
     tagline: 'Build and refine your edge',
     color: '#f0a500',
     popular: true,
@@ -67,9 +67,9 @@ const TIERS = [
     id: 'elite',
     name: 'Elite',
     monthlyPrice: 49.99,
-    annualPrice: 499.99,
-    annualPerMonth: 41.67,
-    annualSavings: 17,
+    annualPrice: 449.91,
+    annualPerMonth: 37.49,
+    annualSavings: 25,
     tagline: 'Full AI coaching suite',
     color: '#00f07a',
     features: [
@@ -219,7 +219,7 @@ export default function Pricing({ onClose }) {
                     fontSize: 9, fontWeight: 800, padding: '1px 6px', borderRadius: 20,
                     background: `${G}25`, color: G, border: `1px solid ${G}40`,
                     letterSpacing: '0.5px',
-                  }}>SAVE UP TO 33%</span>
+                  }}>SAVE 25%</span>
                 )}
               </button>
             ))}
@@ -311,6 +311,7 @@ export default function Pricing({ onClose }) {
                         </div>
                       )}
                       <div style={{ lineHeight: 1 }}>
+                        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>only </span>
                         <span style={{
                           fontFamily: "'Barlow Condensed', sans-serif",
                           fontSize: 30, fontWeight: 800, color: '#fff',
@@ -318,7 +319,7 @@ export default function Pricing({ onClose }) {
                         <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>/mo</span>
                       </div>
                       <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
-                        ${tier.annualPrice}/year
+                        billed ${tier.annualPrice}/year
                       </div>
                     </div>
                   ) : (

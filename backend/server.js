@@ -187,7 +187,6 @@ app.post('/api/auth/register', async (req, res) => {
       [email.toLowerCase().trim(), hash, name || '']
     );
     const user = rows[0];
-    await getOrCreateReferralCode(user.id).catch(() => {}); // non-blocking — ignore if fails
     const token = signToken({ userId: user.id, plan: user.plan });
     res.json({ token, user: safeUser(user) });
   } catch (err) {
@@ -487,8 +486,10 @@ app.delete('/api/trading-plan', requireAuth, async (req, res) => {
 
 app.get('/api/referrals/my-code', requireAuth, async (req, res) => {
   try {
-    const code = await getOrCreateReferralCode(req.userId);
-    res.json({ code });
+    const { rows } = await pool.query(
+      'SELECT code FROM referral_codes WHERE user_id = $1', [req.userId]
+    );
+    res.json({ code: rows[0]?.code || null });
   } catch (err) {
     console.error('Get referral code error:', err.message);
     res.status(500).json({ error: 'Failed to get referral code' });

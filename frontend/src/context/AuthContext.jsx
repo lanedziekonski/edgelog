@@ -80,7 +80,7 @@ export function hasAccess(userPlan, requiredPlan) {
 
 export const PLANS = {
   free:   { name: 'Free',   price: 0,     annualPrice: 0,      annualPerMonth: 0,     color: '#888888' },
-  trader: { name: 'Trader', price: 9.99,  annualPrice: 79.99,  annualPerMonth: 6.67,  color: '#6c63ff', annualSavings: 33 },
-  pro:    { name: 'Pro',    price: 24.99, annualPrice: 249.99, annualPerMonth: 20.83, color: '#f0a500', annualSavings: 17 },
-  elite:  { name: 'Elite',  price: 49.99, annualPrice: 499.99, annualPerMonth: 41.67, color: '#00f07a', annualSavings: 17 },
+  trader: { name: 'Trader', price: 9.99,  annualPrice: 89.91,  annualPerMonth: 7.49,  color: '#6c63ff', annualSavings: 25 },
+  pro:    { name: 'Pro',    price: 24.99, annualPrice: 224.91, annualPerMonth: 18.74, color: '#f0a500', annualSavings: 25 },
+  elite:  { name: 'Elite',  price: 49.99, annualPrice: 449.91, annualPerMonth: 37.49, color: '#00f07a', annualSavings: 25 },
 };

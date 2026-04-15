@@ -313,8 +313,8 @@ export default function Profile({ onNavigate, onSignUp }) {
           })}
         </motion.div>
 
-        {/* Referral Program */}
-        <motion.div
+        {/* Referral Program — only shown if this user has been assigned a code */}
+        {refCode && <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.17, duration: 0.3 }}
@@ -388,7 +388,7 @@ export default function Profile({ onNavigate, onSignUp }) {
           }}>
             Share your code — they get <span style={{ color: G, fontWeight: 700 }}>20% off</span> their first 3 months, you earn <span style={{ color: G, fontWeight: 700 }}>15%</span> of their payments for 3 months.
           </div>
-        </motion.div>
+        </motion.div>}
 
         {/* Billing */}
         {user?.plan !== 'free' && (
