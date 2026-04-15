@@ -358,7 +358,7 @@ export default function Profile({ onNavigate, onSignUp }) {
             padding: '9px 11px', background: `${G}05`,
             borderRadius: 8, border: `1px solid ${G}10`,
           }}>
-            Share your code — they get <span style={{ color: G, fontWeight: 700 }}>20% off</span> their first 3 months, you earn <span style={{ color: G, fontWeight: 700 }}>15%</span> of their payments for 3 months.
+            Share your code with other traders — they get <span style={{ color: G, fontWeight: 700 }}>20% off</span> their first 3 months on a monthly plan, or <span style={{ color: G, fontWeight: 700 }}>20% off</span> their entire first year on an annual plan. You earn <span style={{ color: G, fontWeight: 700 }}>15%</span> of whatever they pay during that discounted period.
           </div>
         </motion.div>}
 
