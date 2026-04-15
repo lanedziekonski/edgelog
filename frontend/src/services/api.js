@@ -37,18 +37,18 @@ export const api = {
     call(`/trades/${id}`, { method: 'DELETE' }, token),
 
   // AI
-  chat: (token, messages, mode, context) =>
-    call('/chat', { method: 'POST', body: JSON.stringify({ messages, mode, context }) }, token),
+  chat: (token, messages, period, context) =>
+    call('/chat', { method: 'POST', body: JSON.stringify({ messages, period, context }) }, token),
   planChat: (token, messages) =>
     call('/plan-chat', { method: 'POST', body: JSON.stringify({ messages }) }, token),
 
   // AI Coach sessions
   // Flat (all messages for a date) — used by Calendar
   getCoachSession: (token, date) => call(`/coach/session/${date}`, {}, token),
-  // Grouped by session_number — used by AI Coach screen
-  getCoachSessions: (token, date) => call(`/coach/sessions/${date}`, {}, token),
-  saveCoachMessage: (token, date, role, content, sessionNumber = 1) =>
-    call('/coach/session', { method: 'POST', body: JSON.stringify({ date, role, content, session_number: sessionNumber }) }, token),
+  // Grouped by session_number, filtered by period — used by AI Coach screen
+  getCoachSessions: (token, date, period) => call(`/coach/sessions/${date}?period=${period}`, {}, token),
+  saveCoachMessage: (token, date, role, content, sessionNumber = 1, period = 'pre_market') =>
+    call('/coach/session', { method: 'POST', body: JSON.stringify({ date, role, content, session_number: sessionNumber, period }) }, token),
 
   // Stripe
   createCheckoutSession: (token, plan) =>

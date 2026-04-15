@@ -30,13 +30,34 @@ function getSessionDate() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// Auto-detect period based on current time in EST:
+// before 9:30 AM → pre_market, otherwise → post_market
+function detectPeriod() {
+  try {
+    const estStr = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+    const est = new Date(estStr);
+    const totalMins = est.getHours() * 60 + est.getMinutes();
+    return totalMins < 9 * 60 + 30 ? 'pre_market' : 'post_market';
+  } catch {
+    return 'pre_market';
+  }
+}
+
+const EMPTY_PERIOD_DATA = () => ({ sessions: [{ number: 1, messages: [] }], currentNumber: 1 });
+
 export default function AICoach({ trades }) {
   const { token } = useAuth();
-  const [mode, setMode] = useState('premarket');
-  // sessions = [{ number: int, messages: [{role, content}] }, ...]
-  const [sessions, setSessions]               = useState([]);
-  const [currentSessionNumber, setCurrentSessionNumber] = useState(1);
-  const [sessionLoading, setSessionLoading]   = useState(true);
+
+  // 'pre_market' | 'post_market' — drives both the toggle UI and data isolation
+  const [period, setPeriod] = useState(() => detectPeriod());
+
+  // All sessions data keyed by period — loaded on mount for both periods
+  const [allSessions, setAllSessions] = useState({
+    pre_market:  EMPTY_PERIOD_DATA(),
+    post_market: EMPTY_PERIOD_DATA(),
+  });
+  const [periodLoading, setPeriodLoading] = useState({ pre_market: true, post_market: true });
+
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -51,36 +72,49 @@ export default function AICoach({ trades }) {
   const todayStats  = calcStats(todayTrades);
   const allStats    = calcStats(trades);
 
-  // Derive current session's messages
-  const messages = sessions.find(s => s.number === currentSessionNumber)?.messages || [];
+  // Derived from active period
+  const periodData      = allSessions[period];
+  const sessions        = periodData.sessions;
+  const currentSessionNumber = periodData.currentNumber;
+  const messages        = sessions.find(s => s.number === currentSessionNumber)?.messages || [];
+  const sessionLoading  = periodLoading[period];
 
-  // Load today's sessions from DB on mount
+  // Load both periods on mount
   useEffect(() => {
-    if (!token) { setSessionLoading(false); return; }
-    setSessionLoading(true);
-    api.getCoachSessions(token, sessionDate)
-      .then(data => {
+    if (!token) {
+      setPeriodLoading({ pre_market: false, post_market: false });
+      return;
+    }
+    const loadPeriod = async (p) => {
+      try {
+        const data = await api.getCoachSessions(token, sessionDate, p);
         if (Array.isArray(data) && data.length > 0) {
           const loaded = data.map(s => ({ number: s.session_number, messages: s.messages }));
-          setSessions(loaded);
-          // Default to the latest (highest number) session
-          setCurrentSessionNumber(loaded[loaded.length - 1].number);
-        } else {
-          // No sessions yet — start with empty Session 1
-          setSessions([{ number: 1, messages: [] }]);
-          setCurrentSessionNumber(1);
+          setAllSessions(prev => ({
+            ...prev,
+            [p]: { sessions: loaded, currentNumber: loaded[loaded.length - 1].number },
+          }));
         }
-      })
-      .catch(() => {
-        setSessions([{ number: 1, messages: [] }]);
-        setCurrentSessionNumber(1);
-      })
-      .finally(() => setSessionLoading(false));
+        // else keep EMPTY_PERIOD_DATA defaults
+      } catch {
+        // keep defaults
+      } finally {
+        setPeriodLoading(prev => ({ ...prev, [p]: false }));
+      }
+    };
+    loadPeriod('pre_market');
+    loadPeriod('post_market');
   }, [token, sessionDate]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Clear input and error when switching periods
+  useEffect(() => {
+    setInput('');
+    setError(null);
+  }, [period]);
 
   const buildContext = () => {
     const parts = [
@@ -99,9 +133,19 @@ export default function AICoach({ trades }) {
   };
 
   const updateCurrentSession = (updater) => {
-    setSessions(prev => prev.map(s =>
-      s.number === currentSessionNumber ? { ...s, messages: updater(s.messages) } : s
-    ));
+    setAllSessions(prev => ({
+      ...prev,
+      [period]: {
+        ...prev[period],
+        sessions: prev[period].sessions.map(s =>
+          s.number === currentSessionNumber ? { ...s, messages: updater(s.messages) } : s
+        ),
+      },
+    }));
+  };
+
+  const setCurrentSessionNumber = (n) => {
+    setAllSessions(prev => ({ ...prev, [period]: { ...prev[period], currentNumber: n } }));
   };
 
   const sendMessage = async (text) => {
@@ -115,15 +159,13 @@ export default function AICoach({ trades }) {
     updateCurrentSession(() => newMessages);
     setLoading(true);
 
-    // Save user message to DB (non-blocking)
-    api.saveCoachMessage(token, sessionDate, 'user', userText, currentSessionNumber).catch(() => {});
+    api.saveCoachMessage(token, sessionDate, 'user', userText, currentSessionNumber, period).catch(() => {});
 
     try {
-      const data = await api.chat(token, newMessages, mode, buildContext());
+      const data = await api.chat(token, newMessages, period, buildContext());
       const assistantMsg = { role: 'assistant', content: data.content };
       updateCurrentSession(msgs => [...msgs, assistantMsg]);
-      // Save assistant message to DB (non-blocking)
-      api.saveCoachMessage(token, sessionDate, 'assistant', data.content, currentSessionNumber).catch(() => {});
+      api.saveCoachMessage(token, sessionDate, 'assistant', data.content, currentSessionNumber, period).catch(() => {});
     } catch (err) {
       setError(err.message);
       updateCurrentSession(msgs => msgs.slice(0, -1));
@@ -139,17 +181,22 @@ export default function AICoach({ trades }) {
     }
   };
 
-  // "Clear" creates a new session tab — DB messages persist
+  // Creates a new session tab under the current period — DB messages persist
   const handleNewSession = () => {
     const nextNumber = sessions.length > 0
       ? Math.max(...sessions.map(s => s.number)) + 1
       : 1;
-    setSessions(prev => [...prev, { number: nextNumber, messages: [] }]);
-    setCurrentSessionNumber(nextNumber);
+    setAllSessions(prev => ({
+      ...prev,
+      [period]: {
+        sessions: [...prev[period].sessions, { number: nextNumber, messages: [] }],
+        currentNumber: nextNumber,
+      },
+    }));
     setError(null);
   };
 
-  const suggestions = mode === 'premarket' ? PRE_SUGGESTIONS : POST_SUGGESTIONS;
+  const suggestions = period === 'pre_market' ? PRE_SUGGESTIONS : POST_SUGGESTIONS;
 
   // Format session date for display
   const sessionLabel = (() => {
@@ -184,42 +231,42 @@ export default function AICoach({ trades }) {
             </div>
           </div>
           <motion.button
-              whileTap={{ scale: 0.93 }}
-              onClick={handleNewSession}
-              style={{
-                fontSize: 12, color: 'rgba(255,255,255,0.5)',
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 6, padding: '5px 10px',
-                cursor: 'pointer', fontFamily: 'Barlow',
-              }}
-            >
-              + New Session
-            </motion.button>
+            whileTap={{ scale: 0.93 }}
+            onClick={handleNewSession}
+            style={{
+              fontSize: 12, color: 'rgba(255,255,255,0.5)',
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 6, padding: '5px 10px',
+              cursor: 'pointer', fontFamily: 'Barlow',
+            }}
+          >
+            + New Session
+          </motion.button>
         </div>
 
-        {/* Mode Toggle */}
+        {/* Period Toggle — Pre-Market / Post-Market */}
         <div style={{
           display: 'flex',
           background: 'rgba(255,255,255,0.05)',
           borderRadius: 10, padding: 3, marginTop: 12,
           border: '1px solid rgba(255,255,255,0.08)',
-          marginBottom: 14,
+          marginBottom: 10,
         }}>
-          {[['premarket', 'Pre-Market'], ['postmarket', 'Post-Market']].map(([val, label]) => (
+          {[['pre_market', 'Pre-Market'], ['post_market', 'Post-Market']].map(([val, label]) => (
             <button
               key={val}
-              onClick={() => setMode(val)}
+              onClick={() => setPeriod(val)}
               style={{
                 flex: 1, padding: '8px 0', borderRadius: 8,
                 fontSize: 13, fontWeight: 700,
                 fontFamily: "'Barlow Condensed', sans-serif",
                 letterSpacing: '0.5px', textTransform: 'uppercase',
-                background: mode === val ? G : 'transparent',
-                color: mode === val ? '#000' : 'rgba(255,255,255,0.4)',
+                background: period === val ? G : 'transparent',
+                color: period === val ? '#000' : 'rgba(255,255,255,0.4)',
                 border: 'none', cursor: 'pointer',
                 transition: 'background 0.15s, color 0.15s',
-                boxShadow: mode === val ? `0 0 12px ${G}50` : 'none',
+                boxShadow: period === val ? `0 0 12px ${G}50` : 'none',
               }}
             >
               {label}
@@ -231,13 +278,13 @@ export default function AICoach({ trades }) {
         <div style={{
           fontSize: 10, color: 'rgba(255,255,255,0.22)',
           letterSpacing: '0.4px', lineHeight: 1.5,
-          paddingBottom: 10, textAlign: 'center',
+          paddingBottom: 8, textAlign: 'center',
         }}>
           AI Coach provides performance coaching only — not financial advice.
         </div>
       </div>
 
-      {/* Session Tabs */}
+      {/* Session Tabs — only shown when current period has 2+ sessions */}
       {sessions.length > 1 && (
         <div style={{ display: 'flex', gap: 5, padding: '0 16px 8px', flexWrap: 'wrap', flexShrink: 0 }}>
           {sessions.map(s => (
@@ -268,6 +315,7 @@ export default function AICoach({ trades }) {
           <div>
             {/* Context card */}
             <motion.div
+              key={period}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
@@ -297,10 +345,10 @@ export default function AICoach({ trades }) {
                 ⚡
               </motion.div>
               <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 16, marginBottom: 4, color: '#fff' }}>
-                {mode === 'premarket' ? 'Pre-Market Check-In' : 'Post-Market Review'}
+                {period === 'pre_market' ? 'Pre-Market Check-In' : 'Post-Market Review'}
               </div>
               <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
-                {mode === 'premarket'
+                {period === 'pre_market'
                   ? "Let's prepare for today's session. I know your plan inside out."
                   : "Let's review how today went and what to take forward."}
               </div>
@@ -310,7 +358,7 @@ export default function AICoach({ trades }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
               {suggestions.map((s, i) => (
                 <motion.button
-                  key={i}
+                  key={`${period}-${i}`}
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.06, duration: 0.25 }}
@@ -337,7 +385,7 @@ export default function AICoach({ trades }) {
         <AnimatePresence>
           {messages.map((msg, i) => (
             <motion.div
-              key={i}
+              key={`${period}-${currentSessionNumber}-${i}`}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
@@ -423,7 +471,7 @@ export default function AICoach({ trades }) {
             e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Ask your coach…"
+          placeholder={period === 'pre_market' ? 'Ask your coach before the session…' : 'Review your session with your coach…'}
           rows={1}
           style={{
             flex: 1, resize: 'none', minHeight: 42, maxHeight: 120,

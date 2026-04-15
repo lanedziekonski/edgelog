@@ -472,17 +472,18 @@ app.get('/api/coach/session/:date', requireAuth, async (req, res) => {
   }
 });
 
-// Grouped by session_number (used by AI Coach screen)
+// Grouped by session_number, filtered by period (used by AI Coach screen)
 app.get('/api/coach/sessions/:date', requireAuth, async (req, res) => {
   const { date } = req.params;
+  const { period } = req.query; // 'pre_market' | 'post_market'
+  if (!period) return res.status(400).json({ error: 'period query param required' });
   try {
     const { rows } = await pool.query(
       `SELECT session_number, role, content FROM coach_sessions
-       WHERE user_id = $1 AND date = $2
+       WHERE user_id = $1 AND date = $2 AND period = $3
        ORDER BY session_number ASC, created_at ASC`,
-      [req.userId, date]
+      [req.userId, date, period]
     );
-    // Group by session_number
     const map = {};
     for (const row of rows) {
       const n = row.session_number;
@@ -500,12 +501,12 @@ app.get('/api/coach/sessions/:date', requireAuth, async (req, res) => {
 });
 
 app.post('/api/coach/session', requireAuth, async (req, res) => {
-  const { date, role, content, session_number = 1 } = req.body;
+  const { date, role, content, session_number = 1, period = 'pre_market' } = req.body;
   if (!date || !role || !content) return res.status(400).json({ error: 'date, role, content required' });
   try {
     await pool.query(
-      `INSERT INTO coach_sessions (user_id, date, role, content, session_number) VALUES ($1, $2, $3, $4, $5)`,
-      [req.userId, date, role, content, session_number]
+      `INSERT INTO coach_sessions (user_id, date, role, content, session_number, period) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [req.userId, date, role, content, session_number, period]
     );
     res.json({ ok: true });
   } catch (err) {
@@ -517,11 +518,15 @@ app.post('/api/coach/session', requireAuth, async (req, res) => {
 // ─── AI COACH (Elite only) ────────────────────────────────────────────────
 
 app.post('/api/chat', requireAuth, requirePlan('elite'), async (req, res) => {
-  const { messages, mode, context } = req.body;
+  const { messages, period, context } = req.body;
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'messages array required' });
   }
-  const modeLabel = mode === 'premarket' ? 'PRE-MARKET SESSION' : 'POST-MARKET REVIEW';
+  const isPreMarket = period === 'pre_market';
+  const modeLabel = isPreMarket ? 'PRE-MARKET SESSION' : 'POST-MARKET REVIEW';
+  const periodContext = isPreMarket
+    ? 'This is a pre-market coaching session. Help the trader prepare mentally and strategically for the trading day ahead. Focus on game planning, mindset, reviewing their trading plan, and setting intentions.'
+    : 'This is a post-market coaching session. Help the trader review and reflect on their trading day. Focus on what went well, what to improve, emotional patterns, and lessons learned.';
   // Inject the user's saved trading plan if one exists
   const { rows: planRows } = await pool.query(
     'SELECT plan_content FROM trading_plans WHERE user_id = $1', [req.userId]
@@ -530,7 +535,7 @@ app.post('/api/chat', requireAuth, requirePlan('elite'), async (req, res) => {
   const planSection = savedPlan
     ? `\n\nTHIS TRADER'S TRADING PLAN (reference these specific rules when coaching):\n${savedPlan}`
     : '\n\nNote: This trader has not yet built a trading plan. Encourage them to use the Trading Plan tab to create one.';
-  const system = `${COACH_SYSTEM_PROMPT}${planSection}\n\n--- CURRENT MODE: ${modeLabel} ---${context ? `\n\nSession context: ${context}` : ''}`;
+  const system = `${COACH_SYSTEM_PROMPT}${planSection}\n\n--- CURRENT MODE: ${modeLabel} ---\n${periodContext}${context ? `\n\nSession context: ${context}` : ''}`;
   try {
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
