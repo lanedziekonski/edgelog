@@ -227,7 +227,7 @@ export default function AICoach({ trades }) {
               AI Coach
             </div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>
-              Powered by Claude · <span style={{ color: `${G}80` }}>{sessionLabel}</span>
+              <span style={{ color: `${G}80` }}>{sessionLabel}</span>
             </div>
           </div>
           <motion.button
