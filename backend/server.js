@@ -513,8 +513,10 @@ app.post('/api/referrals/validate', async (req, res) => {
 });
 
 app.post('/api/referrals/apply', requireAuth, async (req, res) => {
-  const { code } = req.body;
+  const { code, plan_type = 'monthly' } = req.body;
   if (!code) return res.status(400).json({ error: 'code required' });
+  const billingType   = plan_type === 'annual' ? 'annual' : 'monthly';
+  const durationMonths = billingType === 'annual' ? 12 : 3;
   try {
     const normalized = code.trim().toUpperCase();
     const { rows: codeRows } = await pool.query(
@@ -529,11 +531,11 @@ app.post('/api/referrals/apply', requireAuth, async (req, res) => {
     );
     if (existing.length > 0) return res.status(400).json({ error: 'You have already used a referral code' });
     await pool.query(
-      `INSERT INTO referral_uses (code, referrer_user_id, referred_user_id, discount_percent, duration_months)
-       VALUES ($1, $2, $3, 20, 3)`,
-      [normalized, codeRows[0].user_id, req.userId]
+      `INSERT INTO referral_uses (code, referrer_user_id, referred_user_id, discount_percent, duration_months, plan_type)
+       VALUES ($1, $2, $3, 20, $4, $5)`,
+      [normalized, codeRows[0].user_id, req.userId, durationMonths, billingType]
     );
-    res.json({ ok: true, discount_percent: 20, duration_months: 3 });
+    res.json({ ok: true, discount_percent: 20, duration_months: durationMonths, plan_type: billingType });
   } catch (err) {
     if (err.code === '23505') return res.status(400).json({ error: 'You have already used a referral code' });
     console.error('Apply referral error:', err.message);

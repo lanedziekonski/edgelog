@@ -145,6 +145,10 @@ async function initDb() {
         earnings_amount  NUMERIC DEFAULT 0
       )
     `);
+    await pool.query(`
+      ALTER TABLE referral_uses
+      ADD COLUMN IF NOT EXISTS plan_type TEXT NOT NULL DEFAULT 'monthly'
+    `);
     console.log('Database schema ready — all tables OK including trading_plans, coach_sessions');
   } catch (err) {
     console.error('Schema creation failed:', err.message);

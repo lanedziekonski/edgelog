@@ -59,8 +59,8 @@ export const api = {
   // Referrals
   getMyReferralCode: (token) => call('/referrals/my-code', {}, token),
   validateReferralCode: (code) => call('/referrals/validate', { method: 'POST', body: JSON.stringify({ code }) }),
-  applyReferralCode: (token, code) =>
-    call('/referrals/apply', { method: 'POST', body: JSON.stringify({ code }) }, token),
+  applyReferralCode: (token, code, billing = 'monthly') =>
+    call('/referrals/apply', { method: 'POST', body: JSON.stringify({ code, plan_type: billing }) }, token),
   getReferralEarnings: (token) => call('/referrals/earnings', {}, token),
 
   // CSV import

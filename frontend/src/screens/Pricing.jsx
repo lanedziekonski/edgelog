@@ -119,9 +119,11 @@ export default function Pricing({ onClose }) {
       const vData = await api.validateReferralCode(refCode.trim().toUpperCase());
       if (!vData.valid) { setRefStatus('invalid'); setRefMsg('That code doesn\'t exist. Check and try again.'); setRefLoading(false); return; }
       if (!token) { setRefStatus('error'); setRefMsg('Sign in to apply a referral code.'); setRefLoading(false); return; }
-      await api.applyReferralCode(token, refCode.trim().toUpperCase());
+      await api.applyReferralCode(token, refCode.trim().toUpperCase(), billing);
       setRefStatus('valid');
-      setRefMsg('20% off your first 3 months has been applied!');
+      setRefMsg(billing === 'annual'
+        ? '20% off your first year has been applied!'
+        : '20% off your first 3 months has been applied!');
     } catch (err) {
       if (err.message.includes('own')) { setRefStatus('own'); setRefMsg("You can't use your own referral code."); }
       else if (err.message.includes('already')) { setRefStatus('used'); setRefMsg('You\'ve already used a referral code.'); }

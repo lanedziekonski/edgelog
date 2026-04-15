@@ -9,7 +9,6 @@ export default function Profile({ onNavigate, onSignUp }) {
   const { user, token, logout, refreshUser } = useAuth();
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState('');
-  const [billing, setBilling] = useState('monthly');
   const [refCode, setRefCode] = useState(null);
   const [earnings, setEarnings] = useState({ total: 0, referral_count: 0 });
   const [copied, setCopied] = useState(false);
@@ -212,41 +211,14 @@ export default function Profile({ onNavigate, onSignUp }) {
                   <div style={{ fontSize: 13, fontWeight: 700, color: isUnlocked ? pData.color : 'rgba(255,255,255,0.25)', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px' }}>
                     {pData.name}
                   </div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
-                    {pData.price === 0 ? 'Free' : `$${pData.price}/mo`}
-                  </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Billing toggle */}
-          {plan.price > 0 && (
-            <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: 2, marginBottom: 14, border: '1px solid rgba(255,255,255,0.07)' }}>
-              {[['monthly', 'Monthly'], ['annual', 'Annual']].map(([val, label]) => (
-                <button key={val} onClick={() => setBilling(val)} style={{
-                  flex: 1, padding: '6px 0', borderRadius: 6, fontSize: 11, fontWeight: 700,
-                  fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px', textTransform: 'uppercase',
-                  background: billing === val ? G : 'transparent',
-                  color: billing === val ? '#000' : 'rgba(255,255,255,0.4)',
-                  border: 'none', cursor: 'pointer', transition: 'background 0.15s, color 0.15s',
-                }}>
-                  {label}{val === 'annual' && billing !== 'annual' && plan.annualSavings ? ` — Save ${plan.annualSavings}%` : ''}
-                </button>
-              ))}
-            </div>
-          )}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, color: plan.color }}>
-                {plan.name} Plan
-              </div>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
-                {plan.price === 0 ? 'Free forever'
-                  : billing === 'annual' && plan.annualPrice
-                  ? `$${plan.annualPerMonth}/mo · $${plan.annualPrice}/year`
-                  : `$${plan.price}/month`}
-              </div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, color: plan.color }}>
+              {plan.name} Plan
             </div>
             <motion.button
               whileTap={{ scale: 0.93 }}
