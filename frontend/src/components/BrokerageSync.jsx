@@ -528,6 +528,113 @@ const CSV_TEMPLATE = `date,symbol,pnl,setup,account,entry_time,exit_time,emotion
 
 // ── Main component ────────────────────────────────────────────────────────
 
+// ── Guided import broker definitions ──────────────────────────────────────
+
+const BROKER_OPTIONS = [
+  { id: 'tradovate',           label: 'Tradovate',           icon: '📊' },
+  { id: 'apex',                label: 'Apex Trader Funding', icon: '🔺' },
+  { id: 'topstep',             label: 'TopStep',             icon: '📈' },
+  { id: 'interactive_brokers', label: 'Interactive Brokers', icon: '🏦' },
+  { id: 'thinkorswim',         label: 'ThinkorSwim',         icon: '💹' },
+  { id: 'tradestation',        label: 'TradeStation',        icon: '📉' },
+  { id: 'webull',              label: 'Webull',              icon: '🐂' },
+  { id: 'ninjatrader',         label: 'NinjaTrader',         icon: '🥷' },
+  { id: 'generic',             label: 'Other / Generic CSV', icon: '📄' },
+];
+
+const BROKER_INSTRUCTIONS = {
+  tradovate: {
+    title: 'Export your trades from Tradovate',
+    steps: [
+      'Log in at trader.tradovate.com',
+      'Open the left sidebar and click "History"',
+      'Use the date picker at the top to set your date range',
+      'Click the export icon (↓) in the top-right corner of the table',
+      'Select "CSV" and save the file to your device',
+    ],
+  },
+  apex: {
+    title: 'Export your trades from Apex Trader Funding',
+    steps: [
+      'Log in to your Apex dashboard at apextraderfunding.com',
+      'Click "Accounts" and select your funded account',
+      'Navigate to the "Trade History" tab',
+      'Set the desired date range',
+      'Click "Export to CSV" and save the file to your device',
+    ],
+  },
+  topstep: {
+    title: 'Export your trades from TopStep',
+    steps: [
+      'Log in at app.topstep.com',
+      'Go to "Account" → "Trade History"',
+      'Select the date range for the trades you want',
+      'Click the CSV export button in the top-right',
+      'Save the file to your device',
+    ],
+  },
+  interactive_brokers: {
+    title: 'Export your trades from Interactive Brokers',
+    steps: [
+      'Log in to Client Portal at clientportal.ibkr.com',
+      'Go to Reports → Activity (or use Flex Queries for custom exports)',
+      'Select "Trade Confirmation" as the report type',
+      'Set the date range and choose CSV as the output format',
+      'Run the report and download the file',
+    ],
+  },
+  thinkorswim: {
+    title: 'Export your trades from ThinkorSwim',
+    steps: [
+      'Open thinkorswim desktop and go to the "Monitor" tab',
+      'Click "Account Statement" in the sub-menu',
+      'Set the date range using the calendar controls at the top',
+      'Right-click anywhere in the Trades section',
+      'Select "Export to File…" and choose CSV format',
+    ],
+  },
+  tradestation: {
+    title: 'Export your trades from TradeStation',
+    steps: [
+      'Log in to your TradeStation account',
+      'Open "Reports" from the top menu and select "Activity & Orders"',
+      'Choose the "Trade History" report type',
+      'Set the desired date range',
+      'Click Export → Download as CSV and save the file',
+    ],
+  },
+  webull: {
+    title: 'Export your trades from Webull',
+    steps: [
+      'Log in at webull.com (use the desktop/web version)',
+      'Click your account icon → "Orders" or "Trade History"',
+      'Use the date filter to select your range',
+      'Click the export/download icon in the top-right',
+      'Select CSV format and save the file to your device',
+    ],
+  },
+  ninjatrader: {
+    title: 'Export your trades from NinjaTrader',
+    steps: [
+      'Open NinjaTrader and go to Control Center',
+      'Click "Account Performance" from the menu',
+      'Set the start and end dates for your export',
+      'Right-click inside the trade history table',
+      'Select "Export" → choose CSV format and save the file',
+    ],
+  },
+  generic: {
+    title: 'Upload a generic CSV file',
+    steps: [
+      'Export trades from your broker as a CSV file',
+      'Ensure your file includes columns for: symbol, date/time, quantity, price, and side (buy/sell)',
+      'Alternatively, download our CSV template below and fill it in manually',
+      'Upload the CSV file in the next step',
+    ],
+    showTemplate: true,
+  },
+};
+
 export default function BrokerageSync({ onTradesImported, preselectedAccountId = null, preselectedAccountName = '' }) {
   const { token } = useAuth();
   const fileRef   = useRef(null);
@@ -542,6 +649,11 @@ export default function BrokerageSync({ onTradesImported, preselectedAccountId =
   const [importAccount, setImportAccount] = useState(preselectedAccountId || '');
   // Store raw text so we can re-parse when account changes
   const [rawCsvText, setRawCsvText] = useState('');
+
+  // Guided import flow
+  const [importStep, setImportStep]         = useState(1);
+  const [selectedBroker, setSelectedBroker] = useState(null);
+  const [isDragging, setIsDragging]         = useState(false);
 
   const doParse = (text, account) => {
     try {
@@ -570,6 +682,17 @@ export default function BrokerageSync({ onTradesImported, preselectedAccountId =
     e.target.value = '';
   };
 
+  const handleFileDrop = (e) => {
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setRawCsvText(ev.target.result);
+      doParse(ev.target.result, importAccount);
+    };
+    reader.readAsText(file);
+  };
+
   const handleAccountChange = (newAccount) => {
     setImportAccount(newAccount);
     if (rawCsvText) doParse(rawCsvText, newAccount);
@@ -585,6 +708,8 @@ export default function BrokerageSync({ onTradesImported, preselectedAccountId =
       setImportResult(data);
       setCsvRows(null);
       setRawCsvText('');
+      setImportStep(1);
+      setSelectedBroker(null);
       onTradesImported && onTradesImported();
     } catch (e) {
       setError(e.message);
@@ -601,7 +726,7 @@ export default function BrokerageSync({ onTradesImported, preselectedAccountId =
     a.click();
   };
 
-  const cancelImport = () => { setCsvRows(null); setCsvErrors([]); setRawCsvText(''); setShowAllTrades(false); };
+  const cancelImport = () => { setCsvRows(null); setCsvErrors([]); setRawCsvText(''); setShowAllTrades(false); setImportStep(3); };
 
   const previewRows = showAllTrades ? csvRows : csvRows?.slice(0, 3);
 
@@ -620,40 +745,7 @@ export default function BrokerageSync({ onTradesImported, preselectedAccountId =
         </div>
       )}
 
-      {/* Upload buttons */}
-      {!csvRows && (
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>CSV Import</div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10, lineHeight: 1.5 }}>
-            Auto-detects Tradovate, Interactive Brokers, ThinkorSwim, TradeStation, Webull, or generic CSV format.
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              onClick={() => fileRef.current?.click()}
-              style={{
-                padding: '9px 14px', borderRadius: 8,
-                background: 'var(--green)', color: '#000',
-                fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer',
-                fontFamily: 'Barlow', display: 'flex', alignItems: 'center', gap: 6,
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-              </svg>
-              Upload CSV
-            </button>
-            <button
-              onClick={downloadTemplate}
-              style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', fontFamily: 'Barlow' }}
-            >
-              Template
-            </button>
-          </div>
-          <input ref={fileRef} type="file" accept=".csv" onChange={handleFileUpload} style={{ display: 'none' }} />
-        </div>
-      )}
-
-      {/* Preview */}
+      {/* CSV Preview (shown after a file is parsed) */}
       {csvRows && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 14, marginBottom: 16 }}>
 
@@ -756,6 +848,142 @@ export default function BrokerageSync({ onTradesImported, preselectedAccountId =
               Cancel
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Guided import flow (steps 1–3) */}
+      {!csvRows && (
+        <div style={{ marginBottom: 16 }}>
+
+          {/* Step indicator */}
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20 }}>
+            {[1, 2, 3].map((s) => (
+              <React.Fragment key={s}>
+                <div style={{
+                  width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                  background: s <= importStep ? '#00ff41' : 'transparent',
+                  border: `1.5px solid ${s <= importStep ? '#00ff41' : 'var(--border)'}`,
+                  color: s <= importStep ? '#000' : 'var(--text-muted)',
+                  fontSize: 11, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>{s}</div>
+                {s < 3 && (
+                  <div style={{ flex: 1, height: 1, background: s < importStep ? '#00ff41' : 'var(--border)', margin: '0 6px' }} />
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+
+          {/* Step 1: Broker selector */}
+          {importStep === 1 && (
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>Select your broker</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.5 }}>
+                Choose your platform for step-by-step export instructions.
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                {BROKER_OPTIONS.map((broker) => (
+                  <button
+                    key={broker.id}
+                    onClick={() => { setSelectedBroker(broker.id); setImportStep(2); }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#00ff41'; e.currentTarget.style.color = '#00ff41'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)'; }}
+                    style={{
+                      padding: '12px 8px', borderRadius: 8, textAlign: 'center',
+                      background: 'var(--surface)', border: '1px solid var(--border)',
+                      color: 'var(--text)', cursor: 'pointer', fontFamily: 'Barlow',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                      transition: 'border-color 0.15s, color 0.15s',
+                    }}
+                  >
+                    <span style={{ fontSize: 20 }}>{broker.icon}</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, lineHeight: 1.3 }}>{broker.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Export instructions */}
+          {importStep === 2 && selectedBroker && (
+            <div>
+              <button
+                onClick={() => setImportStep(1)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', fontFamily: 'Barlow', padding: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: 4 }}
+              >
+                ← Back
+              </button>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 12 }}>
+                {BROKER_INSTRUCTIONS[selectedBroker].title}
+              </div>
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '14px 16px', marginBottom: 14 }}>
+                {BROKER_INSTRUCTIONS[selectedBroker].steps.map((step, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: i < BROKER_INSTRUCTIONS[selectedBroker].steps.length - 1 ? 12 : 0 }}>
+                    <div style={{
+                      width: 22, height: 22, borderRadius: '50%',
+                      background: 'rgba(0,255,65,0.1)', border: '1px solid rgba(0,255,65,0.25)',
+                      color: '#00ff41', fontSize: 11, fontWeight: 700, flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>{i + 1}</div>
+                    <span style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, paddingTop: 2 }}>{step}</span>
+                  </div>
+                ))}
+              </div>
+              {BROKER_INSTRUCTIONS[selectedBroker].showTemplate && (
+                <button
+                  onClick={downloadTemplate}
+                  style={{ width: '100%', padding: '9px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', fontFamily: 'Barlow', marginBottom: 10 }}
+                >
+                  Download CSV Template
+                </button>
+              )}
+              <button
+                onClick={() => setImportStep(3)}
+                style={{ width: '100%', padding: '11px', borderRadius: 8, background: '#00ff41', color: '#000', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer', fontFamily: 'Barlow' }}
+              >
+                I'm ready — Upload my CSV →
+              </button>
+            </div>
+          )}
+
+          {/* Step 3: Drag-and-drop upload */}
+          {importStep === 3 && (
+            <div>
+              <button
+                onClick={() => setImportStep(2)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', fontFamily: 'Barlow', padding: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: 4 }}
+              >
+                ← Back
+              </button>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>Upload your CSV</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.5 }}>
+                Drag and drop your exported file here, or click to browse.
+              </div>
+              <div
+                onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={e => { e.preventDefault(); setIsDragging(false); handleFileDrop(e); }}
+                onClick={() => fileRef.current?.click()}
+                style={{
+                  border: `2px dashed ${isDragging ? '#00ff41' : 'var(--border)'}`,
+                  borderRadius: 10,
+                  padding: '40px 20px',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  background: isDragging ? 'rgba(0,255,65,0.04)' : 'var(--surface)',
+                  transition: 'border-color 0.15s, background 0.15s',
+                  marginBottom: 10,
+                }}
+              >
+                <div style={{ fontSize: 32, marginBottom: 10 }}>📂</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: isDragging ? '#00ff41' : 'var(--text)', marginBottom: 4, transition: 'color 0.15s' }}>
+                  {isDragging ? 'Drop it here!' : 'Drop CSV here or click to browse'}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Supports .csv files</div>
+              </div>
+              <input ref={fileRef} type="file" accept=".csv" onChange={handleFileUpload} style={{ display: 'none' }} />
+            </div>
+          )}
         </div>
       )}
 
