@@ -66,6 +66,7 @@ async function initDb() {
   `);
     // Migrations — safe to run on every boot
     await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS account_id TEXT`);
+    await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS phase TEXT DEFAULT 'evaluation'`);
     await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS entry_price NUMERIC`);
     await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS exit_price NUMERIC`);
     await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS quantity INTEGER`);
@@ -189,6 +190,7 @@ function rowToAccount(row) {
     id:              row.id,
     name:            row.name,
     type:            row.type || 'prop',
+    phase:           row.phase || 'evaluation',
     startingBalance: parseFloat(row.starting_balance || 0),
     dailyLossLimit:  row.daily_loss_limit != null ? parseFloat(row.daily_loss_limit) : null,
     maxDrawdown:     row.max_drawdown     != null ? parseFloat(row.max_drawdown)     : null,

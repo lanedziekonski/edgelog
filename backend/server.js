@@ -402,14 +402,15 @@ app.get('/api/accounts', requireAuth, async (req, res) => {
 });
 
 app.post('/api/accounts', requireAuth, async (req, res) => {
-  const { name, type, startingBalance, dailyLossLimit, maxDrawdown, profitTarget } = req.body;
+  const { name, type, phase, startingBalance, dailyLossLimit, maxDrawdown, profitTarget } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'Account name is required' });
   const id = `acct-${req.userId}-${Date.now()}`;
   try {
     const { rows } = await pool.query(
-      `INSERT INTO user_accounts (id, user_id, name, type, starting_balance, daily_loss_limit, max_drawdown, profit_target)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      `INSERT INTO user_accounts (id, user_id, name, type, phase, starting_balance, daily_loss_limit, max_drawdown, profit_target)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
       [id, req.userId, name.trim(), type || 'prop',
+       (type === 'prop' ? (phase || 'evaluation') : null),
        startingBalance || 0,
        dailyLossLimit  || null,
        maxDrawdown     || null,
@@ -418,6 +419,30 @@ app.post('/api/accounts', requireAuth, async (req, res) => {
     res.json(rowToAccount(rows[0]));
   } catch (err) {
     res.status(500).json({ error: 'Failed to create account' });
+  }
+});
+
+app.put('/api/accounts/:id', requireAuth, async (req, res) => {
+  const { name, type, phase, startingBalance, dailyLossLimit, maxDrawdown, profitTarget } = req.body;
+  if (!name?.trim()) return res.status(400).json({ error: 'Account name is required' });
+  try {
+    const { rows } = await pool.query(
+      `UPDATE user_accounts
+       SET name=$1, type=$2, phase=$3, starting_balance=$4, daily_loss_limit=$5, max_drawdown=$6, profit_target=$7
+       WHERE id=$8 AND user_id=$9
+       RETURNING *`,
+      [name.trim(), type || 'prop',
+       (type === 'prop' ? (phase || 'evaluation') : null),
+       startingBalance || 0,
+       dailyLossLimit  || null,
+       maxDrawdown     || null,
+       profitTarget    || null,
+       req.params.id, req.userId]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Account not found' });
+    res.json(rowToAccount(rows[0]));
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update account' });
   }
 });
 

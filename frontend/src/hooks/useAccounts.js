@@ -24,10 +24,16 @@ export function useAccounts() {
     return acc;
   }, [token]);
 
+  const updateAccount = useCallback(async (id, data) => {
+    const acc = await api.updateAccount(token, id, data);
+    setAccounts(prev => prev.map(a => a.id === id ? acc : a));
+    return acc;
+  }, [token]);
+
   const deleteAccount = useCallback(async (id) => {
     await api.deleteAccount(token, id);
     setAccounts(prev => prev.filter(a => a.id !== id));
   }, [token]);
 
-  return { accounts, accountsLoading, createAccount, deleteAccount, reloadAccounts: reload };
+  return { accounts, accountsLoading, createAccount, updateAccount, deleteAccount, reloadAccounts: reload };
 }

@@ -72,9 +72,10 @@ export const api = {
     call('/trades/import-csv', { method: 'POST', body: JSON.stringify({ rows, accountId }) }, token),
 
   // User accounts
-  getAccounts:   (token)       => call('/accounts', {}, token),
-  createAccount: (token, data) => call('/accounts', { method: 'POST', body: JSON.stringify(data) }, token),
-  deleteAccount: (token, id)   => call(`/accounts/${id}`, { method: 'DELETE' }, token),
+  getAccounts:    (token)          => call('/accounts', {}, token),
+  createAccount:  (token, data)    => call('/accounts', { method: 'POST', body: JSON.stringify(data) }, token),
+  updateAccount:  (token, id, data) => call(`/accounts/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
+  deleteAccount:  (token, id)      => call(`/accounts/${id}`, { method: 'DELETE' }, token),
 
   // Daily journal
   getDailyJournalDates: (token) => call('/journal/daily', {}, token),
