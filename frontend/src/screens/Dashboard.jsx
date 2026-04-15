@@ -137,7 +137,7 @@ function HeroSection({ stats, todayPnl, weekPnl, sectionId }) {
       style={{
         position: 'relative', overflow: 'hidden',
         background: 'radial-gradient(ellipse at 50% 80%, #0f1f0f 0%, #080c08 70%)',
-        padding: '80px 48px 80px', minHeight: 360,
+        padding: '130px 48px 130px', minHeight: 360,
       }}
     >
       <ParticleCanvas />
@@ -157,7 +157,7 @@ function HeroSection({ stats, todayPnl, weekPnl, sectionId }) {
         </div>
         <div style={{
           fontFamily: "'Barlow Condensed', sans-serif",
-          fontSize: 'clamp(136px, 40vw, 198px)',
+          fontSize: 'clamp(95px, 28vw, 139px)',
           fontWeight: 900, lineHeight: 1, letterSpacing: '-2px',
           color: isPos ? G : R,
           textShadow: `0 0 40px ${isPos ? 'rgba(0,255,65,0.22)' : 'rgba(255,45,45,0.22)'}`,
