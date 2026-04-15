@@ -118,15 +118,15 @@ export default function TermsAgreementPopup({ onAccept }) {
 function CheckRow({ checked, onChange, label }) {
   return (
     <label style={{
-      display: 'flex', alignItems: 'flex-start', gap: 12,
+      display: 'flex', alignItems: 'center', gap: 12,
       cursor: 'pointer', userSelect: 'none',
+      minHeight: 44, paddingTop: 12, paddingBottom: 12,
     }}>
-      {/* Custom checkbox */}
+      {/* Custom checkbox — 22x22 minimum tap target */}
       <div
         onClick={() => onChange(v => !v)}
         style={{
-          width: 20, height: 20, borderRadius: 5, flexShrink: 0,
-          marginTop: 1,
+          width: 22, height: 22, borderRadius: 5, flexShrink: 0,
           border: `2px solid ${checked ? G : 'rgba(255,255,255,0.25)'}`,
           background: checked ? G : 'transparent',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
