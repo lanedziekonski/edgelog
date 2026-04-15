@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { api } from '../services/api';
 
 const G    = '#00ff41';
 const BG   = '#080c08';
@@ -34,10 +33,22 @@ export default function ForgotPassword() {
     setError('');
     setLoading(true);
     try {
-      await api.forgotPassword(email);
-      setDone(true);
+      const base = import.meta.env.VITE_API_URL
+        ? `${import.meta.env.VITE_API_URL}/api`
+        : 'https://edgelog.onrender.com/api';
+      const res = await fetch(`${base}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok || res.status === 200) {
+        setDone(true);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'Something went wrong. Please try again.');
+      }
     } catch (err) {
-      setError(err.message);
+      setError(err?.message || 'Network error. Please try again.');
     } finally {
       setLoading(false);
     }
