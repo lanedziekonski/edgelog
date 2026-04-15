@@ -33,8 +33,10 @@ function getSessionDate() {
 export default function AICoach({ trades }) {
   const { token } = useAuth();
   const [mode, setMode] = useState('premarket');
-  const [messages, setMessages] = useState([]);
-  const [sessionLoading, setSessionLoading] = useState(true);
+  // sessions = [{ number: int, messages: [{role, content}] }, ...]
+  const [sessions, setSessions]               = useState([]);
+  const [currentSessionNumber, setCurrentSessionNumber] = useState(1);
+  const [sessionLoading, setSessionLoading]   = useState(true);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -49,17 +51,30 @@ export default function AICoach({ trades }) {
   const todayStats  = calcStats(todayTrades);
   const allStats    = calcStats(trades);
 
-  // Load today's session from DB on mount
+  // Derive current session's messages
+  const messages = sessions.find(s => s.number === currentSessionNumber)?.messages || [];
+
+  // Load today's sessions from DB on mount
   useEffect(() => {
     if (!token) { setSessionLoading(false); return; }
     setSessionLoading(true);
-    api.getCoachSession(token, sessionDate)
-      .then(rows => {
-        if (Array.isArray(rows) && rows.length > 0) {
-          setMessages(rows);
+    api.getCoachSessions(token, sessionDate)
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          const loaded = data.map(s => ({ number: s.session_number, messages: s.messages }));
+          setSessions(loaded);
+          // Default to the latest (highest number) session
+          setCurrentSessionNumber(loaded[loaded.length - 1].number);
+        } else {
+          // No sessions yet — start with empty Session 1
+          setSessions([{ number: 1, messages: [] }]);
+          setCurrentSessionNumber(1);
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        setSessions([{ number: 1, messages: [] }]);
+        setCurrentSessionNumber(1);
+      })
       .finally(() => setSessionLoading(false));
   }, [token, sessionDate]);
 
@@ -83,6 +98,12 @@ export default function AICoach({ trades }) {
     return parts.join('. ');
   };
 
+  const updateCurrentSession = (updater) => {
+    setSessions(prev => prev.map(s =>
+      s.number === currentSessionNumber ? { ...s, messages: updater(s.messages) } : s
+    ));
+  };
+
   const sendMessage = async (text) => {
     const userText = (text || input).trim();
     if (!userText || loading) return;
@@ -91,20 +112,21 @@ export default function AICoach({ trades }) {
 
     const userMsg = { role: 'user', content: userText };
     const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
+    updateCurrentSession(() => newMessages);
     setLoading(true);
 
     // Save user message to DB (non-blocking)
-    api.saveCoachMessage(token, sessionDate, 'user', userText).catch(() => {});
+    api.saveCoachMessage(token, sessionDate, 'user', userText, currentSessionNumber).catch(() => {});
 
     try {
       const data = await api.chat(token, newMessages, mode, buildContext());
-      setMessages(prev => [...prev, { role: 'assistant', content: data.content }]);
+      const assistantMsg = { role: 'assistant', content: data.content };
+      updateCurrentSession(msgs => [...msgs, assistantMsg]);
       // Save assistant message to DB (non-blocking)
-      api.saveCoachMessage(token, sessionDate, 'assistant', data.content).catch(() => {});
+      api.saveCoachMessage(token, sessionDate, 'assistant', data.content, currentSessionNumber).catch(() => {});
     } catch (err) {
       setError(err.message);
-      setMessages(prev => prev.slice(0, -1));
+      updateCurrentSession(msgs => msgs.slice(0, -1));
     } finally {
       setLoading(false);
     }
@@ -117,9 +139,13 @@ export default function AICoach({ trades }) {
     }
   };
 
-  // Clear local state only — DB messages persist
-  const clearChat = () => {
-    setMessages([]);
+  // "Clear" creates a new session tab — DB messages persist
+  const handleNewSession = () => {
+    const nextNumber = sessions.length > 0
+      ? Math.max(...sessions.map(s => s.number)) + 1
+      : 1;
+    setSessions(prev => [...prev, { number: nextNumber, messages: [] }]);
+    setCurrentSessionNumber(nextNumber);
     setError(null);
   };
 
@@ -157,10 +183,9 @@ export default function AICoach({ trades }) {
               Powered by Claude · <span style={{ color: `${G}80` }}>{sessionLabel}</span>
             </div>
           </div>
-          {messages.length > 0 && (
-            <motion.button
+          <motion.button
               whileTap={{ scale: 0.93 }}
-              onClick={clearChat}
+              onClick={handleNewSession}
               style={{
                 fontSize: 12, color: 'rgba(255,255,255,0.5)',
                 background: 'rgba(255,255,255,0.06)',
@@ -169,9 +194,8 @@ export default function AICoach({ trades }) {
                 cursor: 'pointer', fontFamily: 'Barlow',
               }}
             >
-              Clear
+              + New Session
             </motion.button>
-          )}
         </div>
 
         {/* Mode Toggle */}
@@ -212,6 +236,27 @@ export default function AICoach({ trades }) {
           AI Coach provides performance coaching only — not financial advice.
         </div>
       </div>
+
+      {/* Session Tabs */}
+      {sessions.length > 1 && (
+        <div style={{ display: 'flex', gap: 5, padding: '0 16px 8px', flexWrap: 'wrap', flexShrink: 0 }}>
+          {sessions.map(s => (
+            <button
+              key={s.number}
+              onClick={() => setCurrentSessionNumber(s.number)}
+              style={{
+                padding: '3px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                background: currentSessionNumber === s.number ? `${G}18` : 'rgba(255,255,255,0.05)',
+                color: currentSessionNumber === s.number ? G : 'rgba(255,255,255,0.35)',
+                border: `1px solid ${currentSessionNumber === s.number ? `${G}40` : 'rgba(255,255,255,0.08)'}`,
+                cursor: 'pointer', fontFamily: 'Barlow',
+              }}
+            >
+              Session {s.number}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px', scrollbarWidth: 'none' }}>

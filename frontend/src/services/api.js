@@ -43,9 +43,12 @@ export const api = {
     call('/plan-chat', { method: 'POST', body: JSON.stringify({ messages }) }, token),
 
   // AI Coach sessions
+  // Flat (all messages for a date) — used by Calendar
   getCoachSession: (token, date) => call(`/coach/session/${date}`, {}, token),
-  saveCoachMessage: (token, date, role, content) =>
-    call('/coach/session', { method: 'POST', body: JSON.stringify({ date, role, content }) }, token),
+  // Grouped by session_number — used by AI Coach screen
+  getCoachSessions: (token, date) => call(`/coach/sessions/${date}`, {}, token),
+  saveCoachMessage: (token, date, role, content, sessionNumber = 1) =>
+    call('/coach/session', { method: 'POST', body: JSON.stringify({ date, role, content, session_number: sessionNumber }) }, token),
 
   // Stripe
   createCheckoutSession: (token, plan) =>

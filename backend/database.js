@@ -117,6 +117,10 @@ async function initDb() {
       CREATE INDEX IF NOT EXISTS coach_sessions_user_date
       ON coach_sessions (user_id, date)
     `);
+    await pool.query(`
+      ALTER TABLE coach_sessions
+      ADD COLUMN IF NOT EXISTS session_number INTEGER NOT NULL DEFAULT 1
+    `);
     console.log('Database schema ready — all tables OK including trading_plans, coach_sessions');
   } catch (err) {
     console.error('Schema creation failed:', err.message);

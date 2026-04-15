@@ -455,11 +455,14 @@ app.delete('/api/trading-plan', requireAuth, async (req, res) => {
 
 // ─── AI COACH SESSIONS ────────────────────────────────────────────────────
 
+// Flat list for all messages on a date (used by Calendar)
 app.get('/api/coach/session/:date', requireAuth, async (req, res) => {
   const { date } = req.params;
   try {
     const { rows } = await pool.query(
-      `SELECT role, content, created_at FROM coach_sessions WHERE user_id = $1 AND date = $2 ORDER BY created_at ASC`,
+      `SELECT role, content, created_at FROM coach_sessions
+       WHERE user_id = $1 AND date = $2
+       ORDER BY session_number ASC, created_at ASC`,
       [req.userId, date]
     );
     res.json(rows);
@@ -469,13 +472,40 @@ app.get('/api/coach/session/:date', requireAuth, async (req, res) => {
   }
 });
 
+// Grouped by session_number (used by AI Coach screen)
+app.get('/api/coach/sessions/:date', requireAuth, async (req, res) => {
+  const { date } = req.params;
+  try {
+    const { rows } = await pool.query(
+      `SELECT session_number, role, content FROM coach_sessions
+       WHERE user_id = $1 AND date = $2
+       ORDER BY session_number ASC, created_at ASC`,
+      [req.userId, date]
+    );
+    // Group by session_number
+    const map = {};
+    for (const row of rows) {
+      const n = row.session_number;
+      if (!map[n]) map[n] = [];
+      map[n].push({ role: row.role, content: row.content });
+    }
+    const sessions = Object.keys(map)
+      .map(Number).sort((a, b) => a - b)
+      .map(n => ({ session_number: n, messages: map[n] }));
+    res.json(sessions);
+  } catch (err) {
+    console.error('Get coach sessions error:', err.message);
+    res.status(500).json({ error: 'Failed to load sessions' });
+  }
+});
+
 app.post('/api/coach/session', requireAuth, async (req, res) => {
-  const { date, role, content } = req.body;
+  const { date, role, content, session_number = 1 } = req.body;
   if (!date || !role || !content) return res.status(400).json({ error: 'date, role, content required' });
   try {
     await pool.query(
-      `INSERT INTO coach_sessions (user_id, date, role, content) VALUES ($1, $2, $3, $4)`,
-      [req.userId, date, role, content]
+      `INSERT INTO coach_sessions (user_id, date, role, content, session_number) VALUES ($1, $2, $3, $4, $5)`,
+      [req.userId, date, role, content, session_number]
     );
     res.json({ ok: true });
   } catch (err) {
