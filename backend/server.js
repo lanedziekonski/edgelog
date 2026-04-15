@@ -244,7 +244,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
   try {
     const { rows } = await pool.query(`SELECT id FROM users WHERE email = $1`, [email.toLowerCase().trim()]);
     // Always return success to prevent email enumeration
-    if (!rows[0]) return res.json({ message: 'If an account with that email exists, a reset link has been sent.' });
+    if (!rows[0]) return res.status(200).json({ message: 'If an account with that email exists, a reset link has been sent.' });
 
     const crypto = require('crypto');
     const token = crypto.randomBytes(32).toString('hex');
@@ -295,7 +295,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       console.log(`[forgot-password] Reset URL for ${email}: ${resetUrl}`);
     }
 
-    res.json({ message: 'If an account with that email exists, a reset link has been sent.' });
+    res.status(200).json({ message: 'If an account with that email exists, a reset link has been sent.' });
   } catch (err) {
     console.error('Forgot password error:', err);
     res.status(500).json({ error: 'Failed to process request' });
