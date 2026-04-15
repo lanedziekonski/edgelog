@@ -551,88 +551,117 @@ const BROKER_INSTRUCTIONS = {
       'Click the small gear icon ⚙️ to open "Account Reports"',
       'Click the "Orders" tab — do NOT use the Performance tab',
       'Select your date range and click "Go"',
-      'Click "Download Report" to save the CSV to your device',
+      'Click "Download Report" to save the CSV',
       'Upload that file here',
     ],
-    warning: 'Important: Make sure to select the Orders tab, not Performance. Using the wrong tab will cause import errors.',
+    warning: 'Must use the Orders tab — not Performance. Wrong tab will cause import errors.',
   },
   apex: {
-    title: 'Export your trades from Apex Trader Funding',
+    title: 'Export from Apex Trader Funding',
+    info: 'Apex uses Tradovate or NinjaTrader as its trading platform. Export from whichever platform you trade on.',
     steps: [
-      'Log in to your Apex dashboard at apextraderfunding.com',
-      'Click "Accounts" and select your funded account',
-      'Navigate to the "Trade History" tab',
-      'Set the desired date range',
-      'Click "Export to CSV" and save the file to your device',
+      'If you trade on Tradovate → select Tradovate from the broker list and follow those instructions',
+      'If you trade on NinjaTrader → select NinjaTrader from the broker list and follow those instructions',
+      'Upload your exported CSV file here',
     ],
   },
   topstep: {
-    title: 'Export your trades from TopStep',
+    title: 'Export your trades from TopStep (TopstepX)',
     steps: [
-      'Log in at app.topstep.com',
-      'Go to "Account" → "Trade History"',
-      'Select the date range for the trades you want',
-      'Click the CSV export button in the top-right',
-      'Save the file to your device',
+      'Log in to your TopstepX account at topstepx.com',
+      'Click the "Trades" tab at the bottom of the page',
+      'Click the "Export" button at the bottom right corner',
+      'Select your date range and click "Export"',
+      'Save the CSV file to your device',
+      'Upload that file here',
     ],
+    warning: 'Use the Trades tab — NOT the Orders tab. Wrong tab will cause import errors.',
   },
   interactive_brokers: {
     title: 'Export your trades from Interactive Brokers',
     steps: [
-      'Log in to Client Portal at clientportal.ibkr.com',
-      'Go to Reports → Activity (or use Flex Queries for custom exports)',
-      'Select "Trade Confirmation" as the report type',
-      'Set the date range and choose CSV as the output format',
-      'Run the report and download the file',
+      'Log in to Client Portal at ibkr.com',
+      'Go to "Performance & Reports" → "Flex Queries"',
+      'Click the "+" icon next to "Activity Flex Query"',
+      'Name it (e.g. "TradeAscend Export")',
+      'Click "Trades" in the Sections list → click "Select All" → Save',
+      'Set format to CSV → click "Continue" → "Create"',
+      'Find your saved query → click the Run arrow button',
+      'Select your date range → set format to CSV → click "Run"',
+      'Download the file and upload it here',
     ],
+    note: 'IBKR limits exports to 1 year per file. Run multiple exports for longer history.',
   },
   thinkorswim: {
     title: 'Export your trades from ThinkorSwim',
     steps: [
-      'Open thinkorswim desktop and go to the "Monitor" tab',
-      'Click "Account Statement" in the sub-menu',
-      'Set the date range using the calendar controls at the top',
-      'Right-click anywhere in the Trades section',
-      'Select "Export to File…" and choose CSV format',
+      'Open the ThinkorSwim desktop platform',
+      'Click the "Monitor" tab at the top',
+      'Select "Account Statement"',
+      'Set your date range (up to 370 days at a time)',
+      'Click the hamburger menu icon (three lines) in the top right of the statement',
+      'Click "Export to File"',
+      'Save the file as CSV (the file will end in AccountStatement.csv)',
+      'Upload that file here',
     ],
+    note: 'Do not open or re-save the file in Excel — it may change the format.',
   },
   tradestation: {
     title: 'Export your trades from TradeStation',
     steps: [
-      'Log in to your TradeStation account',
-      'Open "Reports" from the top menu and select "Activity & Orders"',
-      'Choose the "Trade History" report type',
-      'Set the desired date range',
-      'Click Export → Download as CSV and save the file',
+      'Log in to TradeStation',
+      'Go to "Reports" in the main menu',
+      'Select "Trade History"',
+      'Set your date range',
+      'Click "Export" → select CSV format',
+      'Save and upload the file here',
     ],
   },
   webull: {
     title: 'Export your trades from Webull',
     steps: [
-      'Log in at webull.com (use the desktop/web version)',
-      'Click your account icon → "Orders" or "Trade History"',
-      'Use the date filter to select your range',
-      'Click the export/download icon in the top-right',
-      'Select CSV format and save the file to your device',
+      'Open Webull desktop app or webull.com',
+      'Go to "Orders" in the top menu',
+      'Click "History"',
+      'Set your date range',
+      'Click the export/download icon',
+      'Select CSV format',
+      'Upload that file here',
     ],
   },
   ninjatrader: {
     title: 'Export your trades from NinjaTrader',
-    steps: [
-      'Open NinjaTrader and go to Control Center',
-      'Click "Account Performance" from the menu',
-      'Set the start and end dates for your export',
-      'Right-click inside the trade history table',
-      'Select "Export" → choose CSV format and save the file',
+    sections: [
+      {
+        label: 'Desktop version',
+        steps: [
+          'Open NinjaTrader Control Center',
+          'Go to "Account Performance" tab',
+          'Switch to the "Executions" tab',
+          'Right-click anywhere in the list',
+          'Select "Export" or "Save As" → save as CSV',
+          'Upload that file here',
+        ],
+      },
+      {
+        label: 'Web version',
+        steps: [
+          'Log in to your NinjaTrader account online',
+          'Click the profile icon top right → "Statements"',
+          'Select date range → choose "Fills" as report type',
+          'Click "Download CSV"',
+          'Upload that file here',
+        ],
+      },
     ],
   },
   generic: {
     title: 'Upload a generic CSV file',
     steps: [
-      'Export trades from your broker as a CSV file',
-      'Ensure your file includes columns for: symbol, date/time, quantity, price, and side (buy/sell)',
+      'Export your trades from your platform as a CSV file',
+      'Make sure the file includes: Date, Symbol, Side (Buy/Sell), Quantity, Entry Price, Exit Price, and P&L',
       'Alternatively, download our CSV template below and fill it in manually',
-      'Upload the CSV file in the next step',
+      'Upload that file here',
     ],
     showTemplate: true,
   },
@@ -908,52 +937,80 @@ export default function BrokerageSync({ onTradesImported, preselectedAccountId =
           )}
 
           {/* Step 2: Export instructions */}
-          {importStep === 2 && selectedBroker && (
-            <div>
-              <button
-                onClick={() => setImportStep(1)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', fontFamily: 'Barlow', padding: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: 4 }}
-              >
-                ← Back
-              </button>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 12 }}>
-                {BROKER_INSTRUCTIONS[selectedBroker].title}
+          {importStep === 2 && selectedBroker && (() => {
+            const instr = BROKER_INSTRUCTIONS[selectedBroker];
+            const StepList = ({ steps }) => steps.map((step, i) => (
+              <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: i < steps.length - 1 ? 12 : 0 }}>
+                <div style={{
+                  width: 22, height: 22, borderRadius: '50%',
+                  background: 'rgba(0,255,65,0.1)', border: '1px solid rgba(0,255,65,0.25)',
+                  color: '#00ff41', fontSize: 11, fontWeight: 700, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>{i + 1}</div>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, paddingTop: 2 }}>{step}</span>
               </div>
-              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '14px 16px', marginBottom: 14 }}>
-                {BROKER_INSTRUCTIONS[selectedBroker].steps.map((step, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: i < BROKER_INSTRUCTIONS[selectedBroker].steps.length - 1 ? 12 : 0 }}>
-                    <div style={{
-                      width: 22, height: 22, borderRadius: '50%',
-                      background: 'rgba(0,255,65,0.1)', border: '1px solid rgba(0,255,65,0.25)',
-                      color: '#00ff41', fontSize: 11, fontWeight: 700, flexShrink: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>{i + 1}</div>
-                    <span style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, paddingTop: 2 }}>{step}</span>
-                  </div>
-                ))}
-              </div>
-              {BROKER_INSTRUCTIONS[selectedBroker].warning && (
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', background: 'rgba(240,165,0,0.08)', border: '1px solid rgba(240,165,0,0.3)', borderRadius: 8, padding: '10px 12px', marginBottom: 14 }}>
-                  <span style={{ fontSize: 14, flexShrink: 0 }}>⚠️</span>
-                  <span style={{ fontSize: 12, color: '#f0a500', lineHeight: 1.5 }}>{BROKER_INSTRUCTIONS[selectedBroker].warning}</span>
-                </div>
-              )}
-              {BROKER_INSTRUCTIONS[selectedBroker].showTemplate && (
+            ));
+            return (
+              <div>
                 <button
-                  onClick={downloadTemplate}
-                  style={{ width: '100%', padding: '9px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', fontFamily: 'Barlow', marginBottom: 10 }}
+                  onClick={() => setImportStep(1)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', fontFamily: 'Barlow', padding: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: 4 }}
                 >
-                  Download CSV Template
+                  ← Back
                 </button>
-              )}
-              <button
-                onClick={() => setImportStep(3)}
-                style={{ width: '100%', padding: '11px', borderRadius: 8, background: '#00ff41', color: '#000', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer', fontFamily: 'Barlow' }}
-              >
-                I'm ready — Upload my CSV →
-              </button>
-            </div>
-          )}
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 12 }}>
+                  {instr.title}
+                </div>
+                {instr.info && (
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 12 }}>
+                    {instr.info}
+                  </div>
+                )}
+                <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '14px 16px', marginBottom: 14 }}>
+                  {instr.sections ? (
+                    instr.sections.map((section, si) => (
+                      <div key={si} style={{ marginBottom: si < instr.sections.length - 1 ? 18 : 0 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#00ff41', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>
+                          {section.label}
+                        </div>
+                        <StepList steps={section.steps} />
+                        {si < instr.sections.length - 1 && (
+                          <div style={{ height: 1, background: 'var(--border)', margin: '18px 0 0 0' }} />
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <StepList steps={instr.steps} />
+                  )}
+                </div>
+                {instr.warning && (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', background: 'rgba(240,165,0,0.08)', border: '1px solid rgba(240,165,0,0.3)', borderRadius: 8, padding: '10px 12px', marginBottom: 14 }}>
+                    <span style={{ fontSize: 14, flexShrink: 0 }}>⚠️</span>
+                    <span style={{ fontSize: 12, color: '#f0a500', lineHeight: 1.5 }}>{instr.warning}</span>
+                  </div>
+                )}
+                {instr.note && (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 14, paddingLeft: 4 }}>
+                    ℹ️ {instr.note}
+                  </div>
+                )}
+                {instr.showTemplate && (
+                  <button
+                    onClick={downloadTemplate}
+                    style={{ width: '100%', padding: '9px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', fontFamily: 'Barlow', marginBottom: 10 }}
+                  >
+                    Download CSV Template
+                  </button>
+                )}
+                <button
+                  onClick={() => setImportStep(3)}
+                  style={{ width: '100%', padding: '11px', borderRadius: 8, background: '#00ff41', color: '#000', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer', fontFamily: 'Barlow' }}
+                >
+                  I'm ready — Upload my CSV →
+                </button>
+              </div>
+            );
+          })()}
 
           {/* Step 3: Drag-and-drop upload */}
           {importStep === 3 && (
