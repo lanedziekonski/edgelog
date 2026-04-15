@@ -15,19 +15,6 @@ function accountColor(name) {
   return `hsl(${hues[h % hues.length]}, 70%, 55%)`;
 }
 
-const COMMISSION_PRESETS = [
-  { label: 'Apex Trader Funding — ES/NQ (Tradovate)',       rate: 5.50 },
-  { label: 'Apex Trader Funding — Micro ES/NQ (Tradovate)', rate: 1.03 },
-  { label: 'Apex Trader Funding — ES/NQ (Rithmic)',         rate: 5.98 },
-  { label: 'TopStep (TopstepX platform)',                   rate: 0.00 },
-  { label: 'TopStep (T4 / Other platform)',                 rate: 6.34 },
-  { label: 'Tradovate (Standard — no membership)',          rate: 4.16 },
-  { label: 'Tradovate (Micro — no membership)',             rate: 1.12 },
-  { label: 'NinjaTrader Brokerage — ES/NQ',                 rate: 3.98 },
-  { label: 'Interactive Brokers — Futures',                 rate: 4.05 },
-  { label: 'Custom — enter manually',                       rate: null },
-];
-
 const ACCOUNT_TYPES = [
   { value: 'prop',  label: 'Prop Firm' },
   { value: 'live',  label: 'Live Brokerage' },
@@ -42,23 +29,21 @@ const emptyForm = () => ({
   dailyLossLimit: '',
   maxDrawdown: '',
   profitTarget: '',
-  commissionPreset: '',
-  commissionPerContract: '0',
-  applyCommission: true,
 });
 
 export default function Accounts({
   trades, accounts, accountsLoading,
-  createAccount, updateAccount, deleteAccount, reloadAccounts,
+  createAccount, updateAccount, updateAccountBalance, deleteAccount, reloadAccounts,
 }) {
   const today = todayStr();
-  const [showCreate, setShowCreate]     = useState(false);
-  const [form, setForm]                 = useState(emptyForm());
-  const [creating, setCreating]         = useState(false);
-  const [createErr, setCreateErr]       = useState('');
-  const [importingFor, setImportingFor] = useState(null); // account.id or null
+  const [showCreate, setShowCreate]       = useState(false);
+  const [form, setForm]                   = useState(emptyForm());
+  const [creating, setCreating]           = useState(false);
+  const [createErr, setCreateErr]         = useState('');
+  const [importingFor, setImportingFor]   = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [editingId, setEditingId]       = useState(null);
+  const [editingId, setEditingId]         = useState(null);
+  const [updateBalanceFor, setUpdateBalanceFor] = useState(null); // account object or null
 
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -68,15 +53,13 @@ export default function Accounts({
     setCreateErr('');
     try {
       await createAccount({
-        name:                  form.name.trim(),
-        type:                  form.type,
-        phase:                 form.type === 'prop' ? form.phase : null,
-        startingBalance:       form.startingBalance       ? parseFloat(form.startingBalance)       : 0,
-        dailyLossLimit:        form.dailyLossLimit        ? parseFloat(form.dailyLossLimit)        : null,
-        maxDrawdown:           form.maxDrawdown           ? parseFloat(form.maxDrawdown)           : null,
-        profitTarget:          form.profitTarget          ? parseFloat(form.profitTarget)          : null,
-        commissionPerContract: form.commissionPerContract ? parseFloat(form.commissionPerContract) : 0,
-        applyCommission:       form.applyCommission,
+        name:            form.name.trim(),
+        type:            form.type,
+        phase:           form.type === 'prop' ? form.phase : null,
+        startingBalance: form.startingBalance ? parseFloat(form.startingBalance) : 0,
+        dailyLossLimit:  form.dailyLossLimit  ? parseFloat(form.dailyLossLimit)  : null,
+        maxDrawdown:     form.maxDrawdown      ? parseFloat(form.maxDrawdown)     : null,
+        profitTarget:    form.profitTarget     ? parseFloat(form.profitTarget)    : null,
       });
       setForm(emptyForm());
       setShowCreate(false);
@@ -90,6 +73,11 @@ export default function Accounts({
   const handleSaveEdit = async (id, data) => {
     await updateAccount(id, data);
     setEditingId(null);
+  };
+
+  const handleSaveBalance = async (id, balance) => {
+    await updateAccountBalance(id, balance);
+    setUpdateBalanceFor(null);
   };
 
   const handleDelete = async (id) => {
@@ -283,9 +271,6 @@ export default function Accounts({
                 ))}
               </div>
 
-              {/* Commission Settings */}
-              <CommissionSettings form={form} setF={setF} />
-
               {createErr && (
                 <div style={{ fontSize: 12, color: R, marginBottom: 10 }}>{createErr}</div>
               )}
@@ -378,6 +363,7 @@ export default function Accounts({
                   onImportDone={handleImportDone}
                   onDeleteRequest={() => setDeleteConfirm(account.id)}
                   onEditRequest={() => setEditingId(account.id)}
+                  onUpdateBalanceRequest={() => setUpdateBalanceFor(account)}
                 />
               )}
             </motion.div>
@@ -417,13 +403,34 @@ export default function Accounts({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Update Balance modal */}
+      <AnimatePresence>
+        {updateBalanceFor && (
+          <UpdateBalanceModal
+            account={updateBalanceFor}
+            onSave={handleSaveBalance}
+            onCancel={() => setUpdateBalanceFor(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
 // ── AccountCard ────────────────────────────────────────────────────────────
 
-function AccountCard({ account, trades, today, importing, onStartImport, onCancelImport, onImportDone, onDeleteRequest, onEditRequest }) {
+function formatBalanceDate(dateStr) {
+  if (!dateStr) return '';
+  const d   = new Date(dateStr);
+  const now = new Date();
+  const diffDays = Math.floor((now - d) / 86400000);
+  if (diffDays === 0) return 'today';
+  if (diffDays === 1) return 'yesterday';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function AccountCard({ account, trades, today, importing, onStartImport, onCancelImport, onImportDone, onDeleteRequest, onEditRequest, onUpdateBalanceRequest }) {
   const color = accountColor(account.name);
 
   // Match trades by account_id (preferred) or account name (backwards compat)
@@ -585,24 +592,55 @@ function AccountCard({ account, trades, today, importing, onStartImport, onCance
         </AnimatePresence>
 
         {/* Balance row if starting balance set */}
-        {account.startingBalance > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>Balance</div>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 700, color: balance >= account.startingBalance ? G : R }}>
-                ${balance.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-              </div>
-            </div>
-            {account.dailyLossLimit && (
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>Daily Limit</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: dailyPct >= 0.9 ? R : dailyPct >= 0.7 ? GOLD : 'rgba(255,255,255,0.6)' }}>
-                  ${account.dailyLossLimit.toLocaleString()}
+        {account.startingBalance > 0 && (() => {
+          const displayBalance  = account.manualBalance != null ? account.manualBalance : balance;
+          const commissionsPaid = account.manualBalance != null
+            ? (account.startingBalance + totalPnl) - account.manualBalance : null;
+          const showFees = commissionsPaid !== null && commissionsPaid > 0.01;
+          return (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>Balance</div>
+                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 700, color: displayBalance >= account.startingBalance ? G : R }}>
+                    ${displayBalance.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </div>
+                  {account.manualBalance != null && account.balanceLastUpdated && (
+                    <div style={{ fontSize: 10, color: `${G}70`, marginTop: 2 }}>
+                      ↑ Updated {formatBalanceDate(account.balanceLastUpdated)}
+                    </div>
+                  )}
+                  {showFees && (
+                    <div style={{ fontSize: 11, color: GOLD, marginTop: 3 }}>
+                      Commissions paid: −${commissionsPaid.toFixed(2)}
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                  {account.dailyLossLimit && (
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>Daily Limit</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: dailyPct >= 0.9 ? R : dailyPct >= 0.7 ? GOLD : 'rgba(255,255,255,0.6)' }}>
+                        ${account.dailyLossLimit.toLocaleString()}
+                      </div>
+                    </div>
+                  )}
+                  <motion.button
+                    whileTap={{ scale: 0.93 }}
+                    onClick={onUpdateBalanceRequest}
+                    style={{
+                      background: 'transparent', border: '1px solid rgba(0,255,65,0.35)',
+                      borderRadius: 6, padding: '4px 10px', cursor: 'pointer',
+                      color: G, fontSize: 11, fontFamily: 'Barlow', fontWeight: 600,
+                    }}
+                  >
+                    Update Balance
+                  </motion.button>
                 </div>
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          );
+        })()}
 
         {/* Eval Progress tracker — prop evaluation accounts */}
         {account.type === 'prop' && account.phase !== 'funded' && (
@@ -790,16 +828,13 @@ function AccountCard({ account, trades, today, importing, onStartImport, onCance
 
 function EditAccountCard({ account, onSave, onCancel }) {
   const [form, setForm] = useState({
-    name:                  account.name,
-    type:                  account.type,
-    phase:                 account.phase || 'evaluation',
-    startingBalance:       account.startingBalance       ? String(account.startingBalance)       : '',
-    dailyLossLimit:        account.dailyLossLimit        ? String(account.dailyLossLimit)        : '',
-    maxDrawdown:           account.maxDrawdown           ? String(account.maxDrawdown)           : '',
-    profitTarget:          account.profitTarget          ? String(account.profitTarget)          : '',
-    commissionPreset:      '',
-    commissionPerContract: account.commissionPerContract ? String(account.commissionPerContract) : '0',
-    applyCommission:       account.applyCommission !== false,
+    name:            account.name,
+    type:            account.type,
+    phase:           account.phase || 'evaluation',
+    startingBalance: account.startingBalance ? String(account.startingBalance) : '',
+    dailyLossLimit:  account.dailyLossLimit  ? String(account.dailyLossLimit)  : '',
+    maxDrawdown:     account.maxDrawdown      ? String(account.maxDrawdown)     : '',
+    profitTarget:    account.profitTarget     ? String(account.profitTarget)    : '',
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr]       = useState('');
@@ -810,15 +845,13 @@ function EditAccountCard({ account, onSave, onCancel }) {
     setSaving(true); setErr('');
     try {
       await onSave(account.id, {
-        name:                  form.name.trim(),
-        type:                  form.type,
-        phase:                 form.type === 'prop' ? form.phase : null,
-        startingBalance:       form.startingBalance       ? parseFloat(form.startingBalance)       : 0,
-        dailyLossLimit:        form.dailyLossLimit        ? parseFloat(form.dailyLossLimit)        : null,
-        maxDrawdown:           form.maxDrawdown           ? parseFloat(form.maxDrawdown)           : null,
-        profitTarget:          form.profitTarget          ? parseFloat(form.profitTarget)          : null,
-        commissionPerContract: form.commissionPerContract ? parseFloat(form.commissionPerContract) : 0,
-        applyCommission:       form.applyCommission,
+        name:            form.name.trim(),
+        type:            form.type,
+        phase:           form.type === 'prop' ? form.phase : null,
+        startingBalance: form.startingBalance ? parseFloat(form.startingBalance) : 0,
+        dailyLossLimit:  form.dailyLossLimit  ? parseFloat(form.dailyLossLimit)  : null,
+        maxDrawdown:     form.maxDrawdown      ? parseFloat(form.maxDrawdown)     : null,
+        profitTarget:    form.profitTarget     ? parseFloat(form.profitTarget)    : null,
       });
     } catch (e) {
       setErr(e.message || 'Failed to save'); setSaving(false);
@@ -929,9 +962,6 @@ function EditAccountCard({ account, onSave, onCancel }) {
         ))}
       </div>
 
-      {/* Commission Settings */}
-      <CommissionSettings form={form} setF={setF} />
-
       {err && <div style={{ fontSize: 12, color: R, marginBottom: 10 }}>{err}</div>}
 
       <div style={{ display: 'flex', gap: 8 }}>
@@ -955,98 +985,93 @@ function EditAccountCard({ account, onSave, onCancel }) {
   );
 }
 
-// ── CommissionSettings (shared by New Account and Edit Account forms) ────────
+// ── UpdateBalanceModal ─────────────────────────────────────────────────────
 
-function CommissionSettings({ form, setF }) {
+function UpdateBalanceModal({ account, onSave, onCancel }) {
+  const calcBalance = account.startingBalance + 0; // will be overridden by trades in parent, pass as prop if needed
+  const initial = account.manualBalance != null
+    ? String(account.manualBalance)
+    : account.startingBalance ? String(account.startingBalance) : '';
+  const [value, setValue]   = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr]       = useState('');
+
+  const handleSave = async () => {
+    const num = parseFloat(value);
+    if (isNaN(num) || value === '') { setErr('Enter a valid balance'); return; }
+    setSaving(true); setErr('');
+    try { await onSave(account.id, num); }
+    catch (e) { setErr(e.message || 'Failed to save'); setSaving(false); }
+  };
+
   return (
-    <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 14, marginBottom: 14 }}>
-      <div style={{ fontSize: 10, color: G, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, marginBottom: 12 }}>
-        Commission Settings
-      </div>
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="modal-overlay" onClick={onCancel}
+    >
+      <motion.div
+        initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+        className="modal-sheet" onClick={e => e.stopPropagation()}
+        style={{ background: '#0d0d0d', border: `1px solid ${G}30` }}
+      >
+        <div className="modal-handle" />
+        <div className="modal-title">Update Account Balance</div>
+        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>
+          Enter your current balance directly from your broker dashboard for the most accurate tracking.
+        </p>
 
-      {/* Preset dropdown */}
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 5 }}>
-          Select your broker/firm to auto-fill rate
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 6 }}>
+            Current Balance ($)
+          </div>
+          <input
+            type="number" placeholder="e.g. 101500"
+            value={value}
+            onChange={e => setValue(e.target.value)}
+            autoFocus
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              background: '#111811', border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: 8, padding: '11px 13px', fontSize: 18,
+              color: '#fff', fontFamily: 'Barlow', outline: 'none',
+              fontWeight: 700,
+            }}
+            onFocus={e => e.target.style.borderColor = `${G}70`}
+            onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.15)'}
+            onKeyDown={e => e.key === 'Enter' && handleSave()}
+          />
         </div>
-        <select
-          value={form.commissionPreset}
-          onChange={e => {
-            const preset = COMMISSION_PRESETS.find(p => p.label === e.target.value);
-            setF('commissionPreset', e.target.value);
-            if (preset && preset.rate !== null) setF('commissionPerContract', String(preset.rate));
-          }}
+
+        {err && <div style={{ fontSize: 12, color: R, marginBottom: 10 }}>{err}</div>}
+
+        {account.balanceLastUpdated && (
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginBottom: 16 }}>
+            Last updated: {new Date(account.balanceLastUpdated).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+          </div>
+        )}
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
           style={{
-            width: '100%', boxSizing: 'border-box',
-            background: '#111811', border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 8, padding: '9px 11px', fontSize: 12,
-            color: form.commissionPreset ? '#fff' : 'rgba(255,255,255,0.35)',
-            fontFamily: 'Barlow', outline: 'none', cursor: 'pointer',
-            appearance: 'none', WebkitAppearance: 'none',
+            width: '100%', padding: '13px', borderRadius: 8, marginBottom: 12,
+            background: G, color: '#000', border: 'none',
+            fontWeight: 700, fontSize: 15, cursor: saving ? 'default' : 'pointer',
+            fontFamily: 'Barlow', opacity: saving ? 0.6 : 1,
+            boxShadow: `0 0 20px ${G}40`,
           }}
-          onFocus={e => e.target.style.borderColor = `${G}70`}
-          onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
         >
-          <option value="" disabled style={{ background: '#111811' }}>— Select platform —</option>
-          {COMMISSION_PRESETS.map(p => (
-            <option key={p.label} value={p.label} style={{ background: '#111811' }}>{p.label}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Rate input */}
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 5 }}>
-          All-in cost per contract (round trip $)
-        </div>
-        <input
-          type="number" min="0" step="0.01" placeholder="0.00"
-          value={form.commissionPerContract}
-          onChange={e => setF('commissionPerContract', e.target.value)}
-          style={{
-            width: '100%', boxSizing: 'border-box',
-            background: '#111811', border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 8, padding: '9px 11px', fontSize: 13,
-            color: '#fff', fontFamily: 'Barlow', outline: 'none',
-          }}
-          onFocus={e => e.target.style.borderColor = `${G}70`}
-          onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
-        />
-      </div>
-
-      {/* Apply toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Apply commission to trades</span>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {[true, false].map(val => (
-            <button
-              key={String(val)}
-              onClick={() => setF('applyCommission', val)}
-              style={{
-                padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 700,
-                fontFamily: 'Barlow', cursor: 'pointer',
-                background: form.applyCommission === val ? (val ? `${G}25` : 'rgba(255,45,45,0.15)') : 'rgba(255,255,255,0.04)',
-                color: form.applyCommission === val ? (val ? G : R) : 'rgba(255,255,255,0.3)',
-                border: form.applyCommission === val
-                  ? `1px solid ${val ? `${G}50` : 'rgba(255,45,45,0.4)'}`
-                  : '1px solid rgba(255,255,255,0.1)',
-                transition: 'all 0.12s',
-              }}
-            >
-              {val ? 'ON' : 'OFF'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Notes */}
-      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', lineHeight: 1.5, marginBottom: 6 }}>
-        Includes broker commission + exchange + NFA fees. To verify your exact rate: check your broker statement or contact your prop firm support.
-      </div>
-      <div style={{ fontSize: 11, color: GOLD, lineHeight: 1.5 }}>
-        ⚠️ Note: Rates vary by instrument. If you trade both standard and micro contracts in the same account, use your most common contract's rate or set a blended average.
-      </div>
-    </div>
+          {saving ? 'Saving…' : 'Save Balance'}
+        </button>
+        <button
+          onClick={onCancel}
+          style={{ width: '100%', background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 14, cursor: 'pointer', fontFamily: 'Barlow', padding: '6px' }}
+        >
+          Cancel
+        </button>
+      </motion.div>
+    </motion.div>
   );
 }
 

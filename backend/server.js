@@ -402,22 +402,19 @@ app.get('/api/accounts', requireAuth, async (req, res) => {
 });
 
 app.post('/api/accounts', requireAuth, async (req, res) => {
-  const { name, type, phase, startingBalance, dailyLossLimit, maxDrawdown, profitTarget,
-          commissionPerContract, applyCommission } = req.body;
+  const { name, type, phase, startingBalance, dailyLossLimit, maxDrawdown, profitTarget } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'Account name is required' });
   const id = `acct-${req.userId}-${Date.now()}`;
   try {
     const { rows } = await pool.query(
-      `INSERT INTO user_accounts (id, user_id, name, type, phase, starting_balance, daily_loss_limit, max_drawdown, profit_target, commission_per_contract, apply_commission)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+      `INSERT INTO user_accounts (id, user_id, name, type, phase, starting_balance, daily_loss_limit, max_drawdown, profit_target)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
       [id, req.userId, name.trim(), type || 'prop',
        (type === 'prop' ? (phase || 'evaluation') : null),
        startingBalance || 0,
        dailyLossLimit  || null,
        maxDrawdown     || null,
-       profitTarget    || null,
-       commissionPerContract != null ? parseFloat(commissionPerContract) : 0,
-       applyCommission !== false]
+       profitTarget    || null]
     );
     res.json(rowToAccount(rows[0]));
   } catch (err) {
@@ -426,15 +423,13 @@ app.post('/api/accounts', requireAuth, async (req, res) => {
 });
 
 app.put('/api/accounts/:id', requireAuth, async (req, res) => {
-  const { name, type, phase, startingBalance, dailyLossLimit, maxDrawdown, profitTarget,
-          commissionPerContract, applyCommission } = req.body;
+  const { name, type, phase, startingBalance, dailyLossLimit, maxDrawdown, profitTarget } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'Account name is required' });
   try {
     const { rows } = await pool.query(
       `UPDATE user_accounts
-       SET name=$1, type=$2, phase=$3, starting_balance=$4, daily_loss_limit=$5, max_drawdown=$6, profit_target=$7,
-           commission_per_contract=$8, apply_commission=$9
-       WHERE id=$10 AND user_id=$11
+       SET name=$1, type=$2, phase=$3, starting_balance=$4, daily_loss_limit=$5, max_drawdown=$6, profit_target=$7
+       WHERE id=$8 AND user_id=$9
        RETURNING *`,
       [name.trim(), type || 'prop',
        (type === 'prop' ? (phase || 'evaluation') : null),
@@ -442,14 +437,32 @@ app.put('/api/accounts/:id', requireAuth, async (req, res) => {
        dailyLossLimit  || null,
        maxDrawdown     || null,
        profitTarget    || null,
-       commissionPerContract != null ? parseFloat(commissionPerContract) : 0,
-       applyCommission !== false,
        req.params.id, req.userId]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'Account not found' });
     res.json(rowToAccount(rows[0]));
   } catch (err) {
     res.status(500).json({ error: 'Failed to update account' });
+  }
+});
+
+app.patch('/api/accounts/:id/balance', requireAuth, async (req, res) => {
+  const { balance } = req.body;
+  if (balance === undefined || balance === null || isNaN(parseFloat(balance))) {
+    return res.status(400).json({ error: 'Valid balance is required' });
+  }
+  try {
+    const { rows } = await pool.query(
+      `UPDATE user_accounts
+       SET manual_balance=$1, balance_last_updated=NOW()
+       WHERE id=$2 AND user_id=$3
+       RETURNING *`,
+      [parseFloat(balance), req.params.id, req.userId]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Account not found' });
+    res.json(rowToAccount(rows[0]));
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update balance' });
   }
 });
 
@@ -870,15 +883,13 @@ app.post('/api/trades/import-csv', requireAuth, requirePlan('trader'), async (re
   if (!Array.isArray(rows) || !rows.length) return res.status(400).json({ error: 'rows array required' });
   if (!accountId) return res.status(400).json({ error: 'accountId required' });
 
-  // Resolve account name + commission settings from DB
+  // Resolve account name from DB
   const { rows: acctRows } = await pool.query(
-    'SELECT name, commission_per_contract, apply_commission FROM user_accounts WHERE id = $1 AND user_id = $2',
+    'SELECT name FROM user_accounts WHERE id = $1 AND user_id = $2',
     [accountId, req.userId]
   );
   if (!acctRows.length) return res.status(404).json({ error: 'Account not found' });
-  const accountName      = acctRows[0].name;
-  const commissionRate   = parseFloat(acctRows[0].commission_per_contract || 0);
-  const applyCommission  = acctRows[0].apply_commission !== false;
+  const accountName = acctRows[0].name;
 
   let imported = 0, skipped = 0;
   const client = await pool.connect();
@@ -890,42 +901,35 @@ app.post('/api/trades/import-csv', requireAuth, requirePlan('trader'), async (re
       const sym       = String(t.symbol).toUpperCase().trim();
       const entryTime = t.entryTime || t.entry_time || '';
       const exitTime  = t.exitTime  || t.exit_time  || '';
-      const grossPnl  = Number(t.pnl);
-      const qty       = t.quantity != null ? parseInt(t.quantity) : null;
+      const pnlNum    = Number(t.pnl);
       const date      = t.date || new Date().toISOString().split('T')[0];
 
-      // Calculate commission deduction
-      const commissionTotal = (applyCommission && commissionRate > 0 && qty)
-        ? commissionRate * qty : 0;
-      const netPnl = grossPnl - commissionTotal;
-
-      // Duplicate detection: same account + date + symbol + times + gross pnl (within $0.01)
+      // Duplicate detection: same account + date + symbol + times + pnl (within $0.01)
       const { rows: dupes } = await client.query(
         `SELECT id FROM trades
          WHERE user_id=$1 AND account_id=$2 AND date=$3 AND symbol=$4
-           AND entry_time=$5 AND exit_time=$6 AND ABS((pnl + commission_total) - $7) < 0.01`,
-        [req.userId, accountId, date, sym, entryTime, exitTime, grossPnl]
+           AND entry_time=$5 AND exit_time=$6 AND ABS(pnl - $7) < 0.01`,
+        [req.userId, accountId, date, sym, entryTime, exitTime, pnlNum]
       );
       if (dupes.length > 0) { skipped++; continue; }
 
       const id = `csv-${req.userId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       await client.query(
-        `INSERT INTO trades (id, user_id, date, symbol, setup, account, account_id, pnl, commission_total,
+        `INSERT INTO trades (id, user_id, date, symbol, setup, account, account_id, pnl,
           entry_time, exit_time, emotion_before, emotion_after, followed_plan, notes, source,
           entry_price, exit_price, quantity, side)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
         [
           id, req.userId, date, sym,
           t.setup || '',
           accountName,
           accountId,
-          netPnl,
-          commissionTotal,
+          pnlNum,
           entryTime, exitTime,
           '', '', true, t.notes || '', 'csv',
           t.entryPrice != null ? Number(t.entryPrice) : null,
           t.exitPrice  != null ? Number(t.exitPrice)  : null,
-          qty,
+          t.quantity   != null ? parseInt(t.quantity) : null,
           t.side       || null,
         ]
       );
