@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { usePlaidLink } from 'react-plaid-link';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 
@@ -527,75 +526,12 @@ function parseCSV(text, account) {
 const CSV_TEMPLATE = `date,symbol,pnl,setup,account,entry_time,exit_time,emotion_before,emotion_after,followed_plan,notes
 `;
 
-// ── Plaid Link wrapper ────────────────────────────────────────────────────
-
-function PlaidLinkButton({ onSuccess, onError }) {
-  const { token: authToken } = useAuth();
-  const [linkToken, setLinkToken] = useState(null);
-  const [loading, setLoading]     = useState(false);
-  const [err, setErr]             = useState('');
-
-  const fetchLinkToken = async () => {
-    setLoading(true); setErr('');
-    try {
-      const res = await api.createLinkToken(authToken);
-      setLinkToken(res.link_token);
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const { open, ready } = usePlaidLink({
-    token: linkToken || '',
-    onSuccess: async (publicToken, metadata) => {
-      try {
-        const data = await api.exchangePlaidToken(authToken, publicToken, metadata.institution, metadata.accounts);
-        onSuccess(data);
-      } catch (e) { onError(e.message); }
-    },
-    onExit: () => setLinkToken(null),
-  });
-
-  useEffect(() => {
-    if (linkToken && ready) open();
-  }, [linkToken, ready, open]);
-
-  if (err) return (
-    <div style={{ fontSize: 12, color: 'var(--red)', padding: '8px 0', lineHeight: 1.5 }}>
-      {err}
-      <button onClick={() => setErr('')} style={{ marginLeft: 8, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontFamily: 'Barlow' }}>Dismiss</button>
-    </div>
-  );
-
-  return (
-    <button
-      onClick={fetchLinkToken}
-      disabled={loading}
-      style={{
-        padding: '10px 16px', borderRadius: 8, border: '1px solid var(--border)',
-        background: 'transparent', color: 'var(--text)', fontSize: 13, fontWeight: 600,
-        cursor: 'pointer', fontFamily: 'Barlow', opacity: loading ? 0.6 : 1,
-        display: 'flex', alignItems: 'center', gap: 8,
-      }}
-    >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="5" width="18" height="14" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/>
-      </svg>
-      {loading ? 'Connecting…' : 'Connect via Plaid'}
-    </button>
-  );
-}
-
 // ── Main component ────────────────────────────────────────────────────────
 
 export default function BrokerageSync({ onTradesImported, preselectedAccountId = null, preselectedAccountName = '' }) {
   const { token } = useAuth();
   const fileRef   = useRef(null);
 
-  const [linkedAccounts, setLinkedAccounts] = useState([]);
-  const [syncing, setSyncing]           = useState(null);
   const [csvRows, setCsvRows]           = useState(null);
   const [csvFormat, setCsvFormat]       = useState('generic');
   const [csvErrors, setCsvErrors]       = useState([]);
@@ -606,12 +542,6 @@ export default function BrokerageSync({ onTradesImported, preselectedAccountId =
   const [importAccount, setImportAccount] = useState(preselectedAccountId || '');
   // Store raw text so we can re-parse when account changes
   const [rawCsvText, setRawCsvText] = useState('');
-
-  useEffect(() => {
-    api.getLinkedAccounts(token)
-      .then(data => { if (Array.isArray(data)) setLinkedAccounts(data); })
-      .catch(() => {});
-  }, [token]);
 
   const doParse = (text, account) => {
     try {
@@ -661,26 +591,6 @@ export default function BrokerageSync({ onTradesImported, preselectedAccountId =
     } finally {
       setImporting(false);
     }
-  };
-
-  const handleSync = async (accountId) => {
-    setSyncing(accountId);
-    setError('');
-    try {
-      const data = await api.syncLinkedAccount(token, accountId);
-      setImportResult({ imported: data.imported });
-      if (data.imported > 0) onTradesImported && onTradesImported();
-      setLinkedAccounts(prev => prev.map(a => a.id === accountId ? { ...a, last_synced: new Date().toISOString() } : a));
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setSyncing(null);
-    }
-  };
-
-  const handleDisconnect = async (accountId) => {
-    try { await api.deleteLinkedAccount(token, accountId); } catch (_) {}
-    setLinkedAccounts(prev => prev.filter(a => a.id !== accountId));
   };
 
   const downloadTemplate = () => {
@@ -849,63 +759,20 @@ export default function BrokerageSync({ onTradesImported, preselectedAccountId =
         </div>
       )}
 
-      {/* Plaid Link */}
+      {/* Live Brokerage Sync — Coming Soon */}
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginBottom: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
-          Live Brokerage Sync
-          <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: '#6c63ff22', color: '#6c63ff', border: '1px solid #6c63ff44' }}>
-            PLAID
-          </span>
-        </div>
-        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.5 }}>
-          Connect a live brokerage for automatic trade sync. Requires Plaid API keys in backend/.env.
-        </div>
-        <PlaidLinkButton
-          onSuccess={(data) => {
-            setLinkedAccounts(data.accounts || []);
-            setImportResult({ imported: data.imported || 0 });
-            if (data.imported > 0) onTradesImported && onTradesImported();
-          }}
-          onError={(msg) => setError(msg)}
-        />
-      </div>
-
-      {/* Connected Accounts */}
-      {linkedAccounts.length > 0 && (
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 8 }}>
-            Connected Accounts
+        <div style={{ border: '1px solid rgba(0,255,65,0.2)', borderRadius: '8px', padding: '16px', marginTop: '16px', textAlign: 'center' }}>
+          <div style={{ fontSize: '20px', marginBottom: '8px' }}>🔗</div>
+          <div style={{ color: '#00ff41', fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>Live Brokerage Sync</div>
+          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px', marginBottom: '12px' }}>
+            Connect your live brokerage account for automatic trade sync. Currently in development.
           </div>
-          {linkedAccounts.map(acct => (
-            <div key={acct.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{acct.institution_name}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{acct.account_name || acct.account_type || 'Investment account'}</div>
-                {acct.last_synced && (
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                    Last synced: {new Date(acct.last_synced).toLocaleDateString()}
-                  </div>
-                )}
-              </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button
-                  onClick={() => handleSync(acct.id)}
-                  disabled={syncing === acct.id}
-                  style={{ padding: '6px 11px', borderRadius: 7, border: '1px solid var(--green)', background: 'var(--green-dim)', color: 'var(--green)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'Barlow', opacity: syncing === acct.id ? 0.6 : 1 }}
-                >
-                  {syncing === acct.id ? '⟳' : 'Sync'}
-                </button>
-                <button
-                  onClick={() => handleDisconnect(acct.id)}
-                  style={{ padding: '6px 11px', borderRadius: 7, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', fontFamily: 'Barlow' }}
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-          ))}
+          <div style={{ backgroundColor: 'rgba(0,255,65,0.1)', border: '1px solid rgba(0,255,65,0.3)', borderRadius: '20px', padding: '4px 12px', display: 'inline-block', color: '#00ff41', fontSize: '11px', letterSpacing: '1px', fontWeight: '700' }}>COMING SOON</div>
+          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', marginTop: '8px' }}>
+            Tradovate · Interactive Brokers · TD Ameritrade · Schwab
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -109,14 +109,4 @@ export const api = {
     return data;
   },
 
-  // Plaid / linked accounts
-  getLinkedAccounts: (token) => call('/plaid/accounts', {}, token),
-  createLinkToken: (token) =>
-    call('/plaid/create-link-token', { method: 'POST' }, token),
-  exchangePlaidToken: (token, public_token, institution, accounts) =>
-    call('/plaid/exchange-token', { method: 'POST', body: JSON.stringify({ public_token, institution, accounts }) }, token),
-  syncLinkedAccount: (token, id) =>
-    call(`/plaid/sync/${id}`, { method: 'POST' }, token),
-  deleteLinkedAccount: (token, id) =>
-    call(`/plaid/accounts/${id}`, { method: 'DELETE' }, token),
 };
