@@ -51,10 +51,17 @@ export const api = {
     call('/coach/session', { method: 'POST', body: JSON.stringify({ date, role, content, session_number: sessionNumber, period }) }, token),
 
   // Stripe
-  createCheckoutSession: (token, plan) =>
-    call('/stripe/create-checkout-session', { method: 'POST', body: JSON.stringify({ plan }) }, token),
+  createCheckoutSession: (token, plan, billing = 'monthly') =>
+    call('/stripe/create-checkout-session', { method: 'POST', body: JSON.stringify({ plan, billing }) }, token),
   createPortalSession: (token) =>
     call('/stripe/create-portal-session', { method: 'POST' }, token),
+
+  // Referrals
+  getMyReferralCode: (token) => call('/referrals/my-code', {}, token),
+  validateReferralCode: (code) => call('/referrals/validate', { method: 'POST', body: JSON.stringify({ code }) }),
+  applyReferralCode: (token, code) =>
+    call('/referrals/apply', { method: 'POST', body: JSON.stringify({ code }) }, token),
+  getReferralEarnings: (token) => call('/referrals/earnings', {}, token),
 
   // CSV import
   importCsv: (token, rows, accountId) =>

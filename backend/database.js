@@ -125,6 +125,26 @@ async function initDb() {
       ALTER TABLE coach_sessions
       ADD COLUMN IF NOT EXISTS period TEXT NOT NULL DEFAULT 'pre_market'
     `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS referral_codes (
+        id         SERIAL PRIMARY KEY,
+        user_id    INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        code       TEXT UNIQUE NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS referral_uses (
+        id               SERIAL PRIMARY KEY,
+        code             TEXT NOT NULL,
+        referrer_user_id INTEGER REFERENCES users(id),
+        referred_user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        discount_percent INTEGER DEFAULT 20,
+        duration_months  INTEGER DEFAULT 3,
+        applied_at       TIMESTAMPTZ DEFAULT NOW(),
+        earnings_amount  NUMERIC DEFAULT 0
+      )
+    `);
     console.log('Database schema ready — all tables OK including trading_plans, coach_sessions');
   } catch (err) {
     console.error('Schema creation failed:', err.message);

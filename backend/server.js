@@ -76,6 +76,35 @@ if (!process.env.ANTHROPIC_API_KEY) {
 }
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// ─── Referral helpers ─────────────────────────────────────────────────────
+function generateReferralCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'TA';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+async function getOrCreateReferralCode(userId) {
+  const { rows } = await pool.query(
+    'SELECT code FROM referral_codes WHERE user_id = $1', [userId]
+  );
+  if (rows[0]) return rows[0].code;
+  let code, attempts = 0;
+  do {
+    code = generateReferralCode();
+    attempts++;
+    if (attempts > 30) throw new Error('Could not generate unique referral code');
+    const { rows: exists } = await pool.query(
+      'SELECT 1 FROM referral_codes WHERE code = $1', [code]
+    );
+    if (exists.length === 0) break;
+  } while (true);
+  await pool.query(
+    'INSERT INTO referral_codes (user_id, code) VALUES ($1, $2)', [userId, code]
+  );
+  return code;
+}
+
 const COACH_SYSTEM_PROMPT = `You are an elite trading performance coach inside TradeAscend. Your sole purpose is to help traders improve their skills, discipline, mindset, and consistency — NOT to give financial advice.
 
 STRICT RULES — never break these:
@@ -158,6 +187,7 @@ app.post('/api/auth/register', async (req, res) => {
       [email.toLowerCase().trim(), hash, name || '']
     );
     const user = rows[0];
+    await getOrCreateReferralCode(user.id).catch(() => {}); // non-blocking — ignore if fails
     const token = signToken({ userId: user.id, plan: user.plan });
     res.json({ token, user: safeUser(user) });
   } catch (err) {
@@ -450,6 +480,77 @@ app.delete('/api/trading-plan', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Reset plan error:', err.message);
     res.status(500).json({ error: 'Failed to reset plan' });
+  }
+});
+
+// ─── REFERRALS ────────────────────────────────────────────────────────────
+
+app.get('/api/referrals/my-code', requireAuth, async (req, res) => {
+  try {
+    const code = await getOrCreateReferralCode(req.userId);
+    res.json({ code });
+  } catch (err) {
+    console.error('Get referral code error:', err.message);
+    res.status(500).json({ error: 'Failed to get referral code' });
+  }
+});
+
+app.post('/api/referrals/validate', async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ error: 'code required' });
+  try {
+    const { rows } = await pool.query(
+      `SELECT rc.code FROM referral_codes rc WHERE rc.code = $1`,
+      [code.trim().toUpperCase()]
+    );
+    if (!rows[0]) return res.json({ valid: false });
+    res.json({ valid: true, discount_percent: 20, duration_months: 3 });
+  } catch (err) {
+    console.error('Validate referral error:', err.message);
+    res.status(500).json({ error: 'Validation failed' });
+  }
+});
+
+app.post('/api/referrals/apply', requireAuth, async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ error: 'code required' });
+  try {
+    const normalized = code.trim().toUpperCase();
+    const { rows: codeRows } = await pool.query(
+      'SELECT user_id FROM referral_codes WHERE code = $1', [normalized]
+    );
+    if (!codeRows[0]) return res.status(404).json({ error: 'Invalid referral code' });
+    if (codeRows[0].user_id === req.userId) {
+      return res.status(400).json({ error: "You can't use your own referral code" });
+    }
+    const { rows: existing } = await pool.query(
+      'SELECT 1 FROM referral_uses WHERE referred_user_id = $1', [req.userId]
+    );
+    if (existing.length > 0) return res.status(400).json({ error: 'You have already used a referral code' });
+    await pool.query(
+      `INSERT INTO referral_uses (code, referrer_user_id, referred_user_id, discount_percent, duration_months)
+       VALUES ($1, $2, $3, 20, 3)`,
+      [normalized, codeRows[0].user_id, req.userId]
+    );
+    res.json({ ok: true, discount_percent: 20, duration_months: 3 });
+  } catch (err) {
+    if (err.code === '23505') return res.status(400).json({ error: 'You have already used a referral code' });
+    console.error('Apply referral error:', err.message);
+    res.status(500).json({ error: 'Failed to apply referral code' });
+  }
+});
+
+app.get('/api/referrals/earnings', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT COALESCE(SUM(earnings_amount), 0) as total, COUNT(*) as referral_count
+       FROM referral_uses WHERE referrer_user_id = $1`,
+      [req.userId]
+    );
+    res.json({ total: parseFloat(rows[0].total), referral_count: parseInt(rows[0].referral_count) });
+  } catch (err) {
+    console.error('Referral earnings error:', err.message);
+    res.status(500).json({ error: 'Failed to get earnings' });
   }
 });
 

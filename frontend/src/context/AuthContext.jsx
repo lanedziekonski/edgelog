@@ -79,8 +79,8 @@ export function hasAccess(userPlan, requiredPlan) {
 }
 
 export const PLANS = {
-  free:   { name: 'Free',   price: 0,     color: '#888' },
-  trader: { name: 'Trader', price: 19.99, color: '#6c63ff' },
-  pro:    { name: 'Pro',    price: 49.99, color: '#f0a500' },
-  elite:  { name: 'Elite',  price: 99.99, color: '#00f07a' },
+  free:   { name: 'Free',   price: 0,     annualPrice: 0,      annualPerMonth: 0,     color: '#888888' },
+  trader: { name: 'Trader', price: 9.99,  annualPrice: 79.99,  annualPerMonth: 6.67,  color: '#6c63ff', annualSavings: 33 },
+  pro:    { name: 'Pro',    price: 24.99, annualPrice: 249.99, annualPerMonth: 20.83, color: '#f0a500', annualSavings: 17 },
+  elite:  { name: 'Elite',  price: 49.99, annualPrice: 499.99, annualPerMonth: 41.67, color: '#00f07a', annualSavings: 17 },
 };

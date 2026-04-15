@@ -9,6 +9,23 @@ export default function Profile({ onNavigate, onSignUp }) {
   const { user, token, logout, refreshUser } = useAuth();
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState('');
+  const [billing, setBilling] = useState('monthly');
+  const [refCode, setRefCode] = useState(null);
+  const [earnings, setEarnings] = useState({ total: 0, referral_count: 0 });
+  const [copied, setCopied] = useState(false);
+
+  React.useEffect(() => {
+    if (!token) return;
+    api.getMyReferralCode(token).then(d => setRefCode(d.code)).catch(() => {});
+    api.getReferralEarnings(token).then(d => setEarnings(d)).catch(() => {});
+  }, [token]);
+
+  const copyCode = () => {
+    if (!refCode) return;
+    navigator.clipboard.writeText(refCode).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const plan = PLANS[user?.plan] || PLANS.free;
   const PLAN_ORDER = ['free', 'trader', 'pro', 'elite'];
@@ -203,13 +220,32 @@ export default function Profile({ onNavigate, onSignUp }) {
             })}
           </div>
 
+          {/* Billing toggle */}
+          {plan.price > 0 && (
+            <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: 2, marginBottom: 14, border: '1px solid rgba(255,255,255,0.07)' }}>
+              {[['monthly', 'Monthly'], ['annual', 'Annual']].map(([val, label]) => (
+                <button key={val} onClick={() => setBilling(val)} style={{
+                  flex: 1, padding: '6px 0', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                  fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px', textTransform: 'uppercase',
+                  background: billing === val ? G : 'transparent',
+                  color: billing === val ? '#000' : 'rgba(255,255,255,0.4)',
+                  border: 'none', cursor: 'pointer', transition: 'background 0.15s, color 0.15s',
+                }}>
+                  {label}{val === 'annual' && billing !== 'annual' && plan.annualSavings ? ` — Save ${plan.annualSavings}%` : ''}
+                </button>
+              ))}
+            </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, color: plan.color }}>
                 {plan.name} Plan
               </div>
               <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
-                {plan.price === 0 ? 'Free forever' : `$${plan.price}/month`}
+                {plan.price === 0 ? 'Free forever'
+                  : billing === 'annual' && plan.annualPrice
+                  ? `$${plan.annualPerMonth}/mo · $${plan.annualPrice}/year`
+                  : `$${plan.price}/month`}
               </div>
             </div>
             <motion.button
@@ -275,6 +311,83 @@ export default function Profile({ onNavigate, onSignUp }) {
               </div>
             );
           })}
+        </motion.div>
+
+        {/* Referral Program */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.17, duration: 0.3 }}
+          style={{
+            background: '#111811', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 14, padding: '14px 16px', marginBottom: 14,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <span style={{ fontSize: 14 }}>🎁</span>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+              Referral Program
+            </div>
+          </div>
+
+          {/* Code box */}
+          <div style={{
+            background: `${G}07`, border: `1px solid ${G}22`,
+            borderRadius: 10, padding: '12px 14px', marginBottom: 12,
+          }}>
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 6 }}>
+              Your Referral Code
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <span style={{
+                fontFamily: "'Barlow Condensed', sans-serif",
+                fontSize: 24, fontWeight: 800, color: G, letterSpacing: '3px',
+              }}>
+                {refCode || '———'}
+              </span>
+              <motion.button
+                whileTap={{ scale: 0.93 }}
+                onClick={copyCode}
+                disabled={!refCode}
+                style={{
+                  padding: '5px 14px', borderRadius: 7,
+                  background: copied ? `${G}20` : 'rgba(255,255,255,0.08)',
+                  color: copied ? G : 'rgba(255,255,255,0.6)',
+                  border: `1px solid ${copied ? G + '40' : 'rgba(255,255,255,0.12)'}`,
+                  fontSize: 12, fontWeight: 700, cursor: refCode ? 'pointer' : 'default',
+                  fontFamily: 'Barlow', transition: 'all 0.15s', flexShrink: 0,
+                }}
+              >
+                {copied ? '✓ Copied!' : 'Copy Code'}
+              </motion.button>
+            </div>
+          </div>
+
+          {/* Earnings row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
+            <div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>Referral Earnings</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>
+                {earnings.referral_count} referral{earnings.referral_count !== 1 ? 's' : ''}
+              </div>
+            </div>
+            <div style={{
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontSize: 26, fontWeight: 800,
+              color: earnings.total > 0 ? G : 'rgba(255,255,255,0.25)',
+            }}>
+              ${earnings.total.toFixed(2)}
+            </div>
+          </div>
+
+          {/* Explainer */}
+          <div style={{
+            fontSize: 12, color: 'rgba(255,255,255,0.3)', lineHeight: 1.65,
+            padding: '9px 11px', background: `${G}05`,
+            borderRadius: 8, border: `1px solid ${G}10`,
+          }}>
+            Share your code — they get <span style={{ color: G, fontWeight: 700 }}>20% off</span> their first 3 months, you earn <span style={{ color: G, fontWeight: 700 }}>15%</span> of their payments for 3 months.
+          </div>
         </motion.div>
 
         {/* Billing */}
