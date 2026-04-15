@@ -101,8 +101,8 @@ function PanelHeader({ label, title, right }) {
 function StatPill({ label, value, color }) {
   return (
     <div>
-      <div style={{ fontSize: 24, color: 'rgba(255,255,255,0.35)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 32 }}>{label}</div>
-      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 44, fontWeight: 700, color: color || '#fff', lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 32 }}>{label}</div>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: color || '#fff', lineHeight: 1 }}>{value}</div>
     </div>
   );
 }
@@ -152,7 +152,7 @@ function HeroSection({ stats, todayPnl, weekPnl, sectionId }) {
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}
       >
-        <div style={{ fontSize: 24, letterSpacing: '3px', textTransform: 'uppercase', color: `${G}99`, fontWeight: 700, marginBottom: 16 }}>
+        <div style={{ fontSize: 12, letterSpacing: '3px', textTransform: 'uppercase', color: `${G}99`, fontWeight: 700, marginBottom: 16 }}>
           Total P&L
         </div>
         <div style={{
