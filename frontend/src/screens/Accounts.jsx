@@ -583,8 +583,66 @@ function AccountCard({ account, trades, today, importing, onStartImport, onCance
           </div>
         )}
 
-        {/* Payout tracker — prop accounts with profit target */}
-        {account.type === 'prop' && profitTarget > 0 && (
+        {/* Eval Progress tracker — prop evaluation accounts */}
+        {account.type === 'prop' && account.phase !== 'funded' && (
+          <div style={{
+            background: '#0d1a0d', borderRadius: 10, padding: '12px 14px', marginBottom: 12,
+            border: '1px solid rgba(255,255,255,0.06)',
+          }}>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>
+              Eval Progress
+            </div>
+            {profitTarget > 0 ? (
+              <>
+                {/* Progress bar */}
+                <div style={{ height: 6, background: 'rgba(255,255,255,0.07)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(payoutPct, 100)}%` }}
+                    transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                    style={{
+                      height: '100%', borderRadius: 3,
+                      background: GOLD,
+                      boxShadow: `0 0 8px ${GOLD}60`,
+                    }}
+                  />
+                </div>
+
+                {/* Amount + percentage */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                    <span style={{ fontWeight: 700, color: totalPnl >= 0 ? GOLD : R }}>
+                      ${Math.max(0, totalPnl).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    </span>
+                    {' '}of ${profitTarget.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: GOLD }}>
+                    {Math.round(Math.max(0, payoutPct))}%
+                  </div>
+                </div>
+
+                {/* Days estimate */}
+                <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(255,255,255,0.35)', lineHeight: 1.4 }}>
+                  {payoutPct >= 100
+                    ? <span style={{ color: GOLD, fontWeight: 600 }}>Eval target reached 🎉</span>
+                    : daysEstimate !== null
+                      ? <>Est. <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>{daysEstimate} trading day{daysEstimate !== 1 ? 's' : ''}</span> to pass</>
+                      : avgDailyPnl <= 0
+                        ? 'Increase daily performance to estimate passing time'
+                        : null
+                  }
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', lineHeight: 1.5 }}>
+                Set a profit target in Edit to track eval progress
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Payout tracker — funded prop accounts with profit target */}
+        {account.type === 'prop' && account.phase === 'funded' && profitTarget > 0 && (
           <div style={{
             background: '#0d1a0d', borderRadius: 10, padding: '12px 14px', marginBottom: 12,
             border: payoutEligible ? `1px solid ${G}50` : '1px solid rgba(255,255,255,0.06)',
