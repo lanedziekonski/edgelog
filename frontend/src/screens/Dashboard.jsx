@@ -101,8 +101,8 @@ function PanelHeader({ label, title, right }) {
 function StatPill({ label, value, color }) {
   return (
     <div>
-      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 16 }}>{label}</div>
-      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 17, fontWeight: 700, color: color || '#fff', lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 16 }}>{label}</div>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: color || '#fff', lineHeight: 1 }}>{value}</div>
     </div>
   );
 }
@@ -137,7 +137,7 @@ function HeroSection({ stats, todayPnl, weekPnl, sectionId }) {
       style={{
         position: 'relative', overflow: 'hidden',
         background: 'radial-gradient(ellipse at 50% 80%, #0f1f0f 0%, #080c08 70%)',
-        padding: '28px 20px 28px',
+        padding: '40px 24px 40px', minHeight: 180,
       }}
     >
       <ParticleCanvas />
@@ -152,12 +152,12 @@ function HeroSection({ stats, todayPnl, weekPnl, sectionId }) {
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}
       >
-        <div style={{ fontSize: 9, letterSpacing: '3px', textTransform: 'uppercase', color: `${G}99`, fontWeight: 700, marginBottom: 6 }}>
+        <div style={{ fontSize: 12, letterSpacing: '3px', textTransform: 'uppercase', color: `${G}99`, fontWeight: 700, marginBottom: 8 }}>
           Total P&L
         </div>
         <div style={{
           fontFamily: "'Barlow Condensed', sans-serif",
-          fontSize: 'clamp(52px, 15vw, 76px)',
+          fontSize: 'clamp(68px, 20vw, 99px)',
           fontWeight: 900, lineHeight: 1, letterSpacing: '-2px',
           color: isPos ? G : R,
           textShadow: `0 0 40px ${isPos ? 'rgba(0,255,65,0.22)' : 'rgba(255,45,45,0.22)'}`,
@@ -165,9 +165,9 @@ function HeroSection({ stats, todayPnl, weekPnl, sectionId }) {
           {isPos ? '+' : '-'}${fmt$(absTotal)}
         </div>
 
-        <div style={{ width: 28, height: 1, background: 'rgba(0,255,65,0.3)', margin: '16px auto' }} />
+        <div style={{ width: 28, height: 1, background: 'rgba(0,255,65,0.3)', margin: '24px auto' }} />
 
-        <div style={{ display: 'flex', gap: 28, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 40, justifyContent: 'center', flexWrap: 'wrap' }}>
           <StatPill label="Today"     value={`${todayPnl >= 0 ? '+' : '-'}$${fmt$(absToday)}`} color={todayPnl >= 0 ? G : R} />
           <StatPill label="This Week" value={`${weekPnl >= 0 ? '+' : '-'}$${fmt$(absWeek)}`}  color={weekPnl >= 0 ? G : R} />
           <StatPill
