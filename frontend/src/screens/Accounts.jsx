@@ -502,8 +502,9 @@ function AccountCard({ account, trades, today, importing, onStartImport, onCance
               whileTap={{ scale: 0.88 }}
               onClick={onEditRequest}
               style={{
-                background: 'none', border: 'none', padding: '0 0 6px', cursor: 'pointer',
-                color: `${G}70`, fontSize: 11, fontFamily: 'Barlow', fontWeight: 600,
+                background: G, border: 'none', borderRadius: 6,
+                padding: '5px 14px', marginBottom: 6, cursor: 'pointer',
+                color: '#000', fontSize: 12, fontFamily: 'Barlow', fontWeight: 700,
                 display: 'flex', alignItems: 'center', gap: 3, alignSelf: 'flex-end',
               }}
             >
