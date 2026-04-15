@@ -18,6 +18,7 @@ import ForgotPassword from './screens/ForgotPassword';
 import ResetPassword from './screens/ResetPassword';
 import PrivacyPolicy from './screens/PrivacyPolicy';
 import TermsOfService from './screens/TermsOfService';
+import TermsAgreementPopup, { needsTermsAgreement } from './components/TermsAgreementPopup';
 import { useTrades } from './hooks/useTrades';
 import { useAccounts } from './hooks/useAccounts';
 
@@ -179,6 +180,7 @@ function AppInner() {
   const [pendingTradeDate, setPendingTradeDate] = useState(null);
   const [showAuth, setShowAuth]               = useState(null); // null | 'login' | 'signup'
   const [showPopup, setShowPopup]             = useState(false);
+  const [showTermsGate, setShowTermsGate]     = useState(() => needsTermsAgreement());
   const tradeContext   = useTrades();
   const accountContext = useAccounts();
   const { selectedAccountId } = useAccountFilter();
@@ -224,6 +226,11 @@ function AppInner() {
     setShowPopup(false);
     localStorage.setItem(POPUP_KEY, '1');
   };
+
+  // Terms gate — must agree before seeing anything
+  if (showTermsGate) {
+    return <TermsAgreementPopup onAccept={() => setShowTermsGate(false)} />;
+  }
 
   if (loading) {
     return (
