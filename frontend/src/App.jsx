@@ -16,6 +16,8 @@ import Profile from './screens/Profile';
 import Pricing from './screens/Pricing';
 import ForgotPassword from './screens/ForgotPassword';
 import ResetPassword from './screens/ResetPassword';
+import PrivacyPolicy from './screens/PrivacyPolicy';
+import TermsOfService from './screens/TermsOfService';
 import { useTrades } from './hooks/useTrades';
 import { useAccounts } from './hooks/useAccounts';
 
@@ -126,6 +128,13 @@ function SignupPopup({ onClose, onSignUp, onLogin }) {
           >
             Already have an account? Sign In
           </button>
+
+          {/* Legal links */}
+          <div style={{ textAlign: 'center', marginTop: 14, fontSize: 11, color: 'rgba(255,255,255,0.22)' }}>
+            <button onClick={() => { window.location.href = '/terms-of-service'; }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontSize: 11, padding: 0, fontFamily: 'Barlow' }}>Terms of Service</button>
+            <span style={{ margin: '0 6px' }}>·</span>
+            <button onClick={() => { window.location.href = '/privacy-policy'; }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontSize: 11, padding: 0, fontFamily: 'Barlow' }}>Privacy Policy</button>
+          </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
@@ -329,8 +338,10 @@ function AppInner() {
 
 export default function App() {
   const path = window.location.pathname;
-  if (path === '/forgot-password') return <ForgotPassword />;
-  if (path === '/reset-password')  return <ResetPassword />;
+  if (path === '/forgot-password')  return <ForgotPassword />;
+  if (path === '/reset-password')   return <ResetPassword />;
+  if (path === '/privacy-policy')   return <PrivacyPolicy />;
+  if (path === '/terms-of-service') return <TermsOfService />;
 
   return (
     <AuthProvider>

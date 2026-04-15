@@ -434,6 +434,45 @@ export default function Profile({ onNavigate, onSignUp, onLogin }) {
           </motion.button>
         </motion.div>
         </>}
+
+        {/* Legal */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.26, duration: 0.3 }}
+          style={{
+            background: '#111811', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 14, padding: '14px 16px', marginTop: 14,
+          }}
+        >
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 12 }}>
+            Legal
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {[
+              { label: 'Terms of Service', href: '/terms-of-service' },
+              { label: 'Privacy Policy', href: '/privacy-policy' },
+            ].map(({ label, href }) => (
+              <button
+                key={href}
+                onClick={() => { window.location.href = href; }}
+                style={{
+                  width: '100%', padding: '11px 0', borderRadius: 8,
+                  background: 'transparent', border: 'none',
+                  color: 'rgba(255,255,255,0.5)', fontWeight: 600, fontSize: 14,
+                  cursor: 'pointer', fontFamily: 'Barlow',
+                  textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  transition: 'color 0.15s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.85)'}
+                onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
+              >
+                <span>{label}</span>
+                <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>›</span>
+              </button>
+            ))}
+          </div>
+        </motion.div>
       </div>
     </div>
   );

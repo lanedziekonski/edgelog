@@ -278,6 +278,11 @@ export default function Auth({ onClose, initialMode = 'login' }) {
               }}>{p.label}</span>
             ))}
           </div>
+          <div style={{ marginTop: 18, fontSize: 11, color: 'rgba(255,255,255,0.22)' }}>
+            <button onClick={() => { window.location.href = '/terms-of-service'; }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontSize: 11, padding: 0, fontFamily: 'Barlow' }}>Terms of Service</button>
+            <span style={{ margin: '0 6px' }}>·</span>
+            <button onClick={() => { window.location.href = '/privacy-policy'; }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontSize: 11, padding: 0, fontFamily: 'Barlow' }}>Privacy Policy</button>
+          </div>
         </motion.div>
     </div>
   );
