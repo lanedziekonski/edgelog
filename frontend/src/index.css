@@ -304,3 +304,8 @@ button {
   background: var(--border);
   margin: 16px 0;
 }
+
+/* Spinner */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

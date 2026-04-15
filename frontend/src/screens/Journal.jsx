@@ -454,8 +454,10 @@ function TradeCard({ trade, onDelete, onUpdate, isFocused, onFocusConsumed }) {
   const [saveErr,   setSaveErr]   = useState('');
   const [highlight, setHighlight] = useState(false);
   const [screenshotUploading, setScreenshotUploading] = useState(false);
-  const [screenshotUrl, setScreenshotUrl] = useState(trade.screenshotUrl || null);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [screenshotDeleting, setScreenshotDeleting]   = useState(false);
+  const [screenshotUrl, setScreenshotUrl]             = useState(trade.screenshotUrl || null);
+  const [screenshotError, setScreenshotError]         = useState('');
+  const [lightboxOpen, setLightboxOpen]               = useState(false);
 
   // R:R calculation
   const rr = useMemo(() => {
@@ -478,20 +480,41 @@ function TradeCard({ trade, onDelete, onUpdate, isFocused, onFocusConsumed }) {
     const file = e.target.files[0];
     if (!file || !token) return;
     setScreenshotUploading(true);
+    setScreenshotError('');
     try {
       const data = await api.uploadScreenshot(token, trade.id, file);
       setScreenshotUrl(data.screenshotUrl);
     } catch (err) {
-      console.error('Screenshot upload failed:', err);
+      setScreenshotError(err.message || 'Upload failed — please try again');
     } finally {
       setScreenshotUploading(false);
       e.target.value = '';
     }
   };
 
-  // screenshot URL base (dev vs prod)
+  const handleScreenshotDelete = async () => {
+    if (!token) return;
+    setScreenshotDeleting(true);
+    setScreenshotError('');
+    try {
+      await api.deleteScreenshot(token, trade.id);
+      setScreenshotUrl(null);
+      setLightboxOpen(false);
+    } catch (err) {
+      setScreenshotError(err.message || 'Delete failed — please try again');
+    } finally {
+      setScreenshotDeleting(false);
+    }
+  };
+
+  // Cloudinary URLs are absolute (https://res.cloudinary.com/...); legacy local
+  // uploads start with /uploads/ and need the base URL prepended.
   const screenshotFullUrl = screenshotUrl
-    ? (import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}${screenshotUrl}` : `https://edgelog.onrender.com${screenshotUrl}`)
+    ? (screenshotUrl.startsWith('http')
+        ? screenshotUrl
+        : (import.meta.env.VITE_API_URL
+            ? `${import.meta.env.VITE_API_URL}${screenshotUrl}`
+            : `https://edgelog.onrender.com${screenshotUrl}`))
     : null;
 
   // Editable copies — sync when trade object updates (e.g. after save)
@@ -782,39 +805,94 @@ function TradeCard({ trade, onDelete, onUpdate, isFocused, onFocusConsumed }) {
                   {/* Screenshot */}
                   <div style={{ marginBottom: 14 }}>
                     <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Screenshot</div>
+
+                    {/* Thumbnail */}
                     {screenshotUrl && (
                       <div
-                        onClick={() => setLightboxOpen(true)}
-                        style={{ marginBottom: 8, cursor: 'zoom-in', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', display: 'inline-block' }}
+                        onClick={() => !screenshotUploading && setLightboxOpen(true)}
+                        style={{
+                          marginBottom: 8, cursor: screenshotUploading ? 'default' : 'zoom-in',
+                          borderRadius: 8, overflow: 'hidden',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          position: 'relative', width: '100%',
+                        }}
                       >
                         <img
                           src={screenshotFullUrl}
                           alt="Trade screenshot"
-                          style={{ display: 'block', maxWidth: '100%', maxHeight: 160, objectFit: 'cover' }}
+                          style={{ display: 'block', width: '100%', maxHeight: 200, objectFit: 'cover' }}
                         />
+                        {/* Uploading overlay spinner */}
+                        {screenshotUploading && (
+                          <div style={{
+                            position: 'absolute', inset: 0,
+                            background: 'rgba(0,0,0,0.65)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            borderRadius: 8,
+                          }}>
+                            <div style={{
+                              width: 28, height: 28,
+                              border: `3px solid ${G}40`,
+                              borderTopColor: G,
+                              borderRadius: '50%',
+                              animation: 'spin 0.7s linear infinite',
+                            }} />
+                          </div>
+                        )}
                       </div>
                     )}
+
+                    {/* Upload spinner (no existing screenshot yet) */}
+                    {!screenshotUrl && screenshotUploading && (
+                      <div style={{
+                        width: '100%', height: 80, borderRadius: 8,
+                        border: `1px dashed ${G}40`, marginBottom: 8,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                      }}>
+                        <div style={{
+                          width: 20, height: 20,
+                          border: `2px solid ${G}40`, borderTopColor: G,
+                          borderRadius: '50%', animation: 'spin 0.7s linear infinite',
+                        }} />
+                        <span style={{ fontSize: 12, color: G }}>Uploading…</span>
+                      </div>
+                    )}
+
+                    {/* Error message */}
+                    {screenshotError && (
+                      <div style={{
+                        fontSize: 12, color: '#ff2d2d',
+                        background: 'rgba(255,45,45,0.08)',
+                        border: '1px solid rgba(255,45,45,0.2)',
+                        borderRadius: 6, padding: '6px 10px', marginBottom: 8,
+                      }}>
+                        {screenshotError}
+                      </div>
+                    )}
+
+                    {/* Add / Replace button */}
                     <div>
                       <input
                         ref={screenshotRef}
                         type="file"
                         accept="image/*"
+                        capture="environment"
                         style={{ display: 'none' }}
                         onChange={handleScreenshotUpload}
                       />
                       <motion.button
                         whileTap={{ scale: 0.94 }}
-                        onClick={() => screenshotRef.current?.click()}
-                        disabled={screenshotUploading}
+                        onClick={() => { setScreenshotError(''); screenshotRef.current?.click(); }}
+                        disabled={screenshotUploading || screenshotDeleting}
                         style={{
                           fontSize: 12, fontWeight: 700,
                           color: 'rgba(255,255,255,0.55)',
                           background: 'rgba(255,255,255,0.05)',
                           border: '1px solid rgba(255,255,255,0.12)',
                           borderRadius: 7, padding: '5px 12px',
-                          cursor: screenshotUploading ? 'default' : 'pointer',
+                          cursor: (screenshotUploading || screenshotDeleting) ? 'default' : 'pointer',
                           fontFamily: "'Barlow', sans-serif",
-                          opacity: screenshotUploading ? 0.5 : 1,
+                          opacity: (screenshotUploading || screenshotDeleting) ? 0.4 : 1,
                           display: 'flex', alignItems: 'center', gap: 5,
                         }}
                       >
@@ -822,7 +900,7 @@ function TradeCard({ trade, onDelete, onUpdate, isFocused, onFocusConsumed }) {
                           <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
                           <circle cx="12" cy="13" r="4"/>
                         </svg>
-                        {screenshotUploading ? 'Uploading…' : screenshotUrl ? 'Replace Screenshot' : 'Add Screenshot'}
+                        {screenshotUrl ? 'Replace' : 'Add Screenshot'}
                       </motion.button>
                     </div>
                   </div>
@@ -837,7 +915,7 @@ function TradeCard({ trade, onDelete, onUpdate, isFocused, onFocusConsumed }) {
                         onClick={() => setLightboxOpen(false)}
                         style={{
                           position: 'fixed', inset: 0, zIndex: 9999,
-                          background: 'rgba(0,0,0,0.92)',
+                          background: 'rgba(0,0,0,0.94)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           padding: 16,
                         }}
@@ -848,9 +926,10 @@ function TradeCard({ trade, onDelete, onUpdate, isFocused, onFocusConsumed }) {
                           exit={{ scale: 0.85, opacity: 0 }}
                           src={screenshotFullUrl}
                           alt="Trade screenshot"
-                          style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: 8, objectFit: 'contain' }}
+                          style={{ maxWidth: '100%', maxHeight: '85vh', borderRadius: 8, objectFit: 'contain' }}
                           onClick={e => e.stopPropagation()}
                         />
+                        {/* Close button */}
                         <button
                           onClick={() => setLightboxOpen(false)}
                           style={{
@@ -860,8 +939,43 @@ function TradeCard({ trade, onDelete, onUpdate, isFocused, onFocusConsumed }) {
                             color: '#fff', fontSize: 18, cursor: 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                           }}
+                        >×</button>
+                        {/* Delete button */}
+                        <button
+                          onClick={e => { e.stopPropagation(); handleScreenshotDelete(); }}
+                          disabled={screenshotDeleting}
+                          style={{
+                            position: 'absolute', bottom: 32, left: '50%',
+                            transform: 'translateX(-50%)',
+                            background: 'rgba(255,45,45,0.15)',
+                            border: '1px solid rgba(255,45,45,0.4)',
+                            color: '#ff2d2d', borderRadius: 8,
+                            padding: '9px 24px', fontSize: 13, fontWeight: 700,
+                            cursor: screenshotDeleting ? 'default' : 'pointer',
+                            fontFamily: "'Barlow', sans-serif",
+                            display: 'flex', alignItems: 'center', gap: 7,
+                            opacity: screenshotDeleting ? 0.5 : 1,
+                          }}
                         >
-                          ×
+                          {screenshotDeleting ? (
+                            <>
+                              <div style={{
+                                width: 14, height: 14,
+                                border: '2px solid rgba(255,45,45,0.3)',
+                                borderTopColor: '#ff2d2d',
+                                borderRadius: '50%',
+                                animation: 'spin 0.7s linear infinite',
+                              }} />
+                              Deleting…
+                            </>
+                          ) : (
+                            <>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                              </svg>
+                              Remove Screenshot
+                            </>
+                          )}
                         </button>
                       </motion.div>
                     )}

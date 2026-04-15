@@ -94,6 +94,10 @@ export const api = {
   resetTradingPlan: (token) =>
     call('/trading-plan', { method: 'DELETE' }, token),
 
+  // Screenshot delete
+  deleteScreenshot: (token, tradeId) =>
+    call(`/trades/${tradeId}/screenshot`, { method: 'DELETE' }, token),
+
   // Screenshot upload (uses FormData, not JSON)
   uploadScreenshot: async (token, tradeId, file) => {
     const BASE_URL = import.meta.env.VITE_API_URL

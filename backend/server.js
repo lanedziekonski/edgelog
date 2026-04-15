@@ -6,15 +6,11 @@ const path    = require('path');
 const multer  = require('multer');
 const Anthropic = require('@anthropic-ai/sdk');
 
-// Multer: store screenshots in uploads/ with unique names
-const storage = multer.diskStorage({
-  destination: path.join(__dirname, 'uploads'),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.jpg';
-    cb(null, `screenshot-${req.userId || 'u'}-${Date.now()}${ext}`);
-  },
-});
-const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+// Multer: memory storage — files are streamed to Cloudinary, not saved to disk
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+// Cloudinary config (lazy — only fails at request time if env vars are missing)
+const cloudinary = require('./config/cloudinary');
 
 const { pool, initDb, rowToTrade, rowToAccount } = require('./database');
 const { signToken, requireAuth, requirePlan } = require('./middleware/auth');
@@ -35,9 +31,6 @@ app.use(cors({
   },
   credentials: true,
 }));
-
-// Serve uploaded screenshots as static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Raw body for Stripe webhooks — must come before express.json()
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
@@ -949,6 +942,21 @@ app.post('/api/trades/import-csv', requireAuth, requirePlan('trader'), async (re
 
 // ─── SCREENSHOT UPLOAD ────────────────────────────────────────────────────
 
+// Helper: upload a buffer to Cloudinary via upload_stream
+function uploadToCloudinary(buffer, options) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(options, (err, result) => {
+      if (err) return reject(err);
+      resolve(result);
+    });
+    const { Readable } = require('stream');
+    const readable = new Readable();
+    readable.push(buffer);
+    readable.push(null);
+    readable.pipe(stream);
+  });
+}
+
 app.post('/api/trades/:id/screenshot', requireAuth, (req, res, next) => {
   upload.single('screenshot')(req, res, (err) => {
     if (err) return res.status(400).json({ error: err.message });
@@ -956,16 +964,57 @@ app.post('/api/trades/:id/screenshot', requireAuth, (req, res, next) => {
   });
 }, async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  const url = `/uploads/${req.file.filename}`;
+  if (!process.env.CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME === 'your_cloud_name') {
+    return res.status(503).json({ error: 'Screenshot uploads are not configured on this server yet' });
+  }
   try {
-    const result = await pool.query(
-      `UPDATE trades SET screenshot_url = $1 WHERE id = $2 AND user_id = $3`,
-      [url, req.params.id, req.userId]
+    // Delete old screenshot from Cloudinary if one exists
+    const { rows: existing } = await pool.query(
+      `SELECT screenshot_public_id FROM trades WHERE id = $1 AND user_id = $2`,
+      [req.params.id, req.userId]
     );
-    if (result.rowCount === 0) return res.status(404).json({ error: 'Trade not found' });
-    res.json({ screenshotUrl: url });
+    if (!existing[0]) return res.status(404).json({ error: 'Trade not found' });
+    if (existing[0].screenshot_public_id) {
+      await cloudinary.uploader.destroy(existing[0].screenshot_public_id).catch(() => {});
+    }
+
+    // Upload new screenshot to Cloudinary
+    const result = await uploadToCloudinary(req.file.buffer, {
+      folder: 'tradeascend/screenshots',
+      resource_type: 'image',
+      transformation: [{ quality: 'auto', fetch_format: 'auto' }],
+    });
+
+    // Save URL + public_id to the trade
+    await pool.query(
+      `UPDATE trades SET screenshot_url = $1, screenshot_public_id = $2 WHERE id = $3 AND user_id = $4`,
+      [result.secure_url, result.public_id, req.params.id, req.userId]
+    );
+    res.json({ screenshotUrl: result.secure_url });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to save screenshot' });
+    console.error('Screenshot upload error:', err);
+    res.status(500).json({ error: 'Upload failed — check Cloudinary credentials' });
+  }
+});
+
+app.delete('/api/trades/:id/screenshot', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT screenshot_public_id FROM trades WHERE id = $1 AND user_id = $2`,
+      [req.params.id, req.userId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Trade not found' });
+    if (rows[0].screenshot_public_id) {
+      await cloudinary.uploader.destroy(rows[0].screenshot_public_id).catch(() => {});
+    }
+    await pool.query(
+      `UPDATE trades SET screenshot_url = NULL, screenshot_public_id = NULL WHERE id = $1 AND user_id = $2`,
+      [req.params.id, req.userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Screenshot delete error:', err);
+    res.status(500).json({ error: 'Failed to delete screenshot' });
   }
 });
 

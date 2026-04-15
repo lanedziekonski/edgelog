@@ -76,6 +76,7 @@ async function initDb() {
     await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS side TEXT`);
     await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS stop_price NUMERIC`);
     await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS screenshot_url TEXT`);
+    await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS screenshot_public_id TEXT`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS daily_journal (
         id          SERIAL PRIMARY KEY,
