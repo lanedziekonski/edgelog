@@ -6,6 +6,7 @@ import Features from './pages/Features';
 import Pricing from './pages/Pricing';
 import About from './pages/About';
 import HowItWorks from './pages/HowItWorks';
+import Dashboard from './pages/Dashboard';
 
 function PageWrap({ children }) {
   return (
@@ -25,6 +26,7 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
+        <Route path="dashboard" element={<PageWrap><Dashboard /></PageWrap>} />
         <Route element={<Layout />}>
           <Route index element={<PageWrap><Home /></PageWrap>} />
           <Route path="features" element={<PageWrap><Features /></PageWrap>} />

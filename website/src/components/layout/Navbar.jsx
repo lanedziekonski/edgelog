@@ -49,15 +49,24 @@ export default function Navbar() {
                   to={link.to}
                   end={link.to === '/'}
                   className={({ isActive }) =>
-                    `relative px-3 py-2 text-sm transition-colors ${
-                      isActive ? 'text-neon' : 'text-ink/80 hover:text-ink'
-                    }`
+                    link.highlight
+                      ? `relative ml-2 px-3.5 py-1.5 text-sm rounded-full border transition-all ${
+                          isActive
+                            ? 'border-neon text-neon bg-neon/10 shadow-neon-soft'
+                            : 'border-neon/40 text-neon hover:bg-neon/10 hover:shadow-neon-soft'
+                        }`
+                      : `relative px-3 py-2 text-sm transition-colors ${
+                          isActive ? 'text-neon' : 'text-ink/80 hover:text-ink'
+                        }`
                   }
                 >
                   {({ isActive }) => (
                     <>
+                      {link.highlight && (
+                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-neon animate-pulseSlow mr-2" />
+                      )}
                       {link.label}
-                      {isActive && (
+                      {isActive && !link.highlight && (
                         <motion.span
                           layoutId="nav-underline"
                           className="absolute left-3 right-3 -bottom-0.5 h-px bg-neon shadow-neon-soft"
