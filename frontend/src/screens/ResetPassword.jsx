@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { api } from '../services/api';
-import logo from '../assets/logo.jpg';
 
 const G    = '#00ff41';
 const BG   = '#080c08';
@@ -95,16 +94,19 @@ export default function ResetPassword() {
         transition={{ duration: 0.45, ease: 'easeOut' }}
         style={{ marginBottom: 32, textAlign: 'center', position: 'relative', zIndex: 1 }}
       >
-        <img
-          src={logo}
-          alt="TraderAscend"
-          style={{
-            width: 140, height: 100,
-            objectFit: 'cover', objectPosition: 'top',
-            mixBlendMode: 'screen',
-            display: 'block', margin: '0 auto',
-          }}
-        />
+        <div style={{ background: 'transparent', border: 'none', padding: 0, margin: 0 }}>
+          <img
+            src="/assets/logo.jpg"
+            alt="TraderAscend"
+            style={{
+              width: '160px',
+              height: 'auto',
+              display: 'block',
+              mixBlendMode: 'screen',
+              margin: '0 auto 16px auto',
+            }}
+          />
+        </div>
       </motion.div>
 
       {/* Card */}

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import logo from '../assets/logo.jpg';
 
 const G    = '#00ff41';
 const BG   = '#080c08';
@@ -121,16 +120,19 @@ export default function Auth({ onClose, initialMode = 'login' }) {
         transition={{ duration: 0.45, ease: 'easeOut' }}
         style={{ marginBottom: 32, textAlign: 'center', position: 'relative', zIndex: 1 }}
       >
-        <img
-          src={logo}
-          alt="TraderAscend"
-          style={{
-            width: 140, height: 100,
-            objectFit: 'cover', objectPosition: 'top',
-            mixBlendMode: 'screen',
-            display: 'block', margin: '0 auto 8px',
-          }}
-        />
+        <div style={{ background: 'transparent', border: 'none', padding: 0, margin: 0 }}>
+          <img
+            src="/assets/logo.jpg"
+            alt="TraderAscend"
+            style={{
+              width: '160px',
+              height: 'auto',
+              display: 'block',
+              mixBlendMode: 'screen',
+              margin: '0 auto 16px auto',
+            }}
+          />
+        </div>
         <div style={{
           fontFamily: "'Barlow Condensed', sans-serif",
           fontSize: 46, fontWeight: 900, letterSpacing: '3px',

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import logo from '../assets/logo.jpg';
 
 const G        = '#00ff41';
 const STORAGE_KEY = 'tradeascend_terms_v1_accepted';
@@ -48,15 +47,16 @@ export default function TermsAgreementPopup({ onAccept }) {
         }}
       >
         {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 10 }}>
+        <div style={{ background: 'transparent', border: 'none', padding: 0, margin: 0 }}>
           <img
-            src={logo}
+            src="/assets/logo.jpg"
             alt="TraderAscend"
             style={{
-              width: 100, height: 72,
-              objectFit: 'cover', objectPosition: 'top',
+              width: '160px',
+              height: 'auto',
+              display: 'block',
               mixBlendMode: 'screen',
-              display: 'inline-block',
+              margin: '0 auto 16px auto',
             }}
           />
         </div>
