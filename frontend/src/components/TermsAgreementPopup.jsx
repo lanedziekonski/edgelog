@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import taLogo from '../assets/ta-mark.png';
 
 const G        = '#00ff41';
 const STORAGE_KEY = 'tradeascend_terms_v1_accepted';
@@ -48,15 +49,13 @@ export default function TermsAgreementPopup({ onAccept }) {
       >
         {/* Logo */}
         <img
-          src="/icon.png"
+          src={taLogo}
           alt="TraderAscend"
           style={{
-            width: '90px',
-            height: '90px',
+            width: '120px',
+            height: 'auto',
             display: 'block',
             margin: '0 auto 24px auto',
-            mixBlendMode: 'screen',
-            borderRadius: '20px',
           }}
         />
 

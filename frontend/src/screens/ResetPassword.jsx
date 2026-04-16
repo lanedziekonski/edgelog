@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { api } from '../services/api';
+import taLogo from '../assets/ta-mark.png';
 
 const G    = '#00ff41';
 const BG   = '#080c08';
@@ -95,15 +96,13 @@ export default function ResetPassword() {
         style={{ marginBottom: 32, textAlign: 'center', position: 'relative', zIndex: 1 }}
       >
         <img
-          src="/icon.png"
+          src={taLogo}
           alt="TraderAscend"
           style={{
-            width: '90px',
-            height: '90px',
+            width: '120px',
+            height: 'auto',
             display: 'block',
             margin: '0 auto 24px auto',
-            mixBlendMode: 'screen',
-            borderRadius: '20px',
           }}
         />
       </motion.div>
