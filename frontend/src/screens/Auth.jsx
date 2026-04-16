@@ -120,19 +120,18 @@ export default function Auth({ onClose, initialMode = 'login' }) {
         transition={{ duration: 0.45, ease: 'easeOut' }}
         style={{ marginBottom: 32, textAlign: 'center', position: 'relative', zIndex: 1 }}
       >
-        <div style={{ background: 'transparent', border: 'none', padding: 0, margin: 0 }}>
-          <img
-            src="/assets/logo.jpg"
-            alt="TraderAscend"
-            style={{
-              width: '160px',
-              height: 'auto',
-              display: 'block',
-              mixBlendMode: 'screen',
-              margin: '0 auto 16px auto',
-            }}
-          />
-        </div>
+        <img
+          src="/icon.png"
+          alt="TraderAscend"
+          style={{
+            width: '90px',
+            height: '90px',
+            display: 'block',
+            margin: '0 auto 24px auto',
+            mixBlendMode: 'screen',
+            borderRadius: '20px',
+          }}
+        />
         <div style={{
           fontFamily: "'Barlow Condensed', sans-serif",
           fontSize: 46, fontWeight: 900, letterSpacing: '3px',
