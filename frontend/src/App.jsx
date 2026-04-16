@@ -69,31 +69,7 @@ function AppInner() {
   // Determine initial auth mode from hash (/#/login, /#/signup, /#/forgot-password)
   const initialAuthMode = window.location.hash === '#/signup' ? 'signup' : 'login';
 
-  // Journal scroll persistence — dashboard always resets, journal restores position
-  const journalScrollPos = useRef(0);
-
-  useEffect(() => {
-    const el = document.querySelector('.screen');
-    if (!el) return;
-    if (activeTab === 'dashboard') {
-      el.scrollTop = 0;
-    } else if (activeTab === 'journal') {
-      setTimeout(() => {
-        const el2 = document.querySelector('.screen');
-        if (el2) el2.scrollTop = journalScrollPos.current;
-      }, 50);
-    }
-  }, [activeTab]);
-
-  useEffect(() => {
-    const el = document.querySelector('.screen');
-    if (!el) return;
-    const save = () => {
-      if (activeTab === 'journal') journalScrollPos.current = el.scrollTop;
-    };
-    el.addEventListener('scroll', save, { passive: true });
-    return () => el.removeEventListener('scroll', save);
-  }, [activeTab]);
+  const screenRef = useRef(null);
 
   // Handle Stripe payment-success redirect
   useEffect(() => {
@@ -167,6 +143,9 @@ function AppInner() {
   const handleNavigate = (tab, tradeId) => {
     setActiveTab(tab);
     if (tradeId) setFocusTradeId(tradeId);
+    setTimeout(() => {
+      if (screenRef.current) screenRef.current.scrollTop = 0;
+    }, 0);
   };
 
   const renderScreen = () => {
@@ -201,7 +180,7 @@ function AppInner() {
 
   return (
     <div className="app-shell">
-      <div className="screen">
+      <div className="screen" ref={screenRef}>
         {renderScreen()}
       </div>
       <BottomNav active={activeTab} onNavigate={handleNavigate} />
