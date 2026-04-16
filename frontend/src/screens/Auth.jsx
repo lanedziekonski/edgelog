@@ -125,7 +125,7 @@ export default function Auth({ onClose, initialMode = 'login' }) {
           fontSize: 46, fontWeight: 900, letterSpacing: '3px',
           textTransform: 'uppercase', color: '#fff', lineHeight: 1,
         }}>
-          Trade<span style={{ color: G, textShadow: `0 0 24px ${G}70` }}>Ascend</span>
+          Trader<span style={{ color: G, textShadow: `0 0 24px ${G}70` }}>Ascend</span>
         </div>
         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', marginTop: 8, letterSpacing: '3px', textTransform: 'uppercase' }}>
           Your trading edge, tracked.

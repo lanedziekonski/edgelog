@@ -78,7 +78,7 @@ function SignupPopup({ onClose, onSignUp, onLogin }) {
             fontSize: 28, fontWeight: 700, letterSpacing: '2px',
             textTransform: 'uppercase', marginBottom: 6,
           }}>
-            Trade<span style={{ color: G }}>Ascend</span>
+            Trader<span style={{ color: G }}>Ascend</span>
           </div>
           <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 22, lineHeight: 1.4 }}>
             Your AI-powered trading journal. Track every trade, spot every pattern.
@@ -251,7 +251,7 @@ function AppInner() {
           letterSpacing: '2px',
           color: 'var(--text)',
         }}>
-          Trade<span style={{ color: 'var(--green)' }}>Ascend</span>
+          Trader<span style={{ color: 'var(--green)' }}>Ascend</span>
         </div>
         <div style={{
           width: 32,

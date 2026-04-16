@@ -1,7 +1,7 @@
 {
   "name": "tradeascend-frontend",
   "version": "1.0.0",
-  "description": "TradeAscend trading journal frontend",
+  "description": "TraderAscend trading journal frontend",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

@@ -106,7 +106,7 @@ function AdminLogin({ onLogin }) {
           fontSize: 24, fontWeight: 700, letterSpacing: '2px',
           color: '#fff', marginBottom: 4,
         }}>
-          Trade<span style={{ color: G }}>Ascend</span>
+          Trader<span style={{ color: G }}>Ascend</span>
         </div>
         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginBottom: 28, letterSpacing: '2px', textTransform: 'uppercase' }}>
           Admin Access
@@ -433,7 +433,7 @@ function AdminDashboard({ token, onLogout }) {
             fontFamily: "'Barlow Condensed', sans-serif",
             fontSize: 20, fontWeight: 700, letterSpacing: '2px',
           }}>
-            Trade<span style={{ color: G }}>Ascend</span>
+            Trader<span style={{ color: G }}>Ascend</span>
           </div>
           <span style={{
             fontSize: 10, letterSpacing: '2px', textTransform: 'uppercase',

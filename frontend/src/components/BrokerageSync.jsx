@@ -583,7 +583,7 @@ const BROKER_INSTRUCTIONS = {
       'Log in to Client Portal at ibkr.com',
       'Go to "Performance & Reports" → "Flex Queries"',
       'Click the "+" icon next to "Activity Flex Query"',
-      'Name it (e.g. "TradeAscend Export")',
+      'Name it (e.g. "TraderAscend Export")',
       'Click "Trades" in the Sections list → click "Select All" → Save',
       'Set format to CSV → click "Continue" → "Create"',
       'Find your saved query → click the Run arrow button',
@@ -754,7 +754,7 @@ export default function BrokerageSync({ onTradesImported, preselectedAccountId =
     const blob = new Blob([CSV_TEMPLATE], { type: 'text/csv' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'tradeascend-import-template.csv';
+    a.download = 'traderascend-import-template.csv';
     a.click();
   };
 

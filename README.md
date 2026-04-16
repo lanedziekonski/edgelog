@@ -1,4 +1,4 @@
-# TradeAscend
+# TraderAscend
 
 A personal trading journal web app. Dark-themed, mobile-first, AI-powered.
 
@@ -104,7 +104,7 @@ Optional (only if using Stripe payments):
 Railway deploys automatically on every push to `main`. Watch the deploy logs — it should show:
 
 ```
-TradeAscend backend running on http://localhost:XXXX
+TraderAscend backend running on http://localhost:XXXX
 ```
 
 ### Step 8 — Get your backend URL

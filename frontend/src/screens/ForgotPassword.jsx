@@ -117,7 +117,7 @@ export default function ForgotPassword() {
           fontSize: 46, fontWeight: 900, letterSpacing: '3px',
           textTransform: 'uppercase', color: '#fff', lineHeight: 1,
         }}>
-          Trade<span style={{ color: G, textShadow: `0 0 24px ${G}70` }}>Ascend</span>
+          Trader<span style={{ color: G, textShadow: `0 0 24px ${G}70` }}>Ascend</span>
         </div>
         <div style={{
           fontSize: 11, color: 'rgba(255,255,255,0.28)',
@@ -155,7 +155,7 @@ export default function ForgotPassword() {
               borderRadius: 10, padding: '14px 16px', marginBottom: 22,
               fontSize: 13, color: G, lineHeight: 1.6, textAlign: 'left',
             }}>
-              A reset link is on its way if that email is registered with TradeAscend.
+              A reset link is on its way if that email is registered with TraderAscend.
             </div>
             <button
               onClick={() => { window.location.href = '/'; }}

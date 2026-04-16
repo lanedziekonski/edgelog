@@ -71,7 +71,7 @@ export default function TermsOfService() {
           fontSize: 16, fontWeight: 700, letterSpacing: '1.5px',
           color: G, textTransform: 'uppercase',
         }}>
-          Trade<span style={{ color: '#fff' }}>Ascend</span>
+          Trader<span style={{ color: '#fff' }}>Ascend</span>
         </div>
       </div>
 
@@ -91,12 +91,12 @@ export default function TermsOfService() {
         </div>
 
         <Section title="1. Acceptance of Terms">
-          <P>By accessing or using TradeAscend ("the Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use the Service.</P>
-          <P>These Terms constitute a legally binding agreement between you and TradeAscend. We may update these Terms from time to time; continued use of the Service after changes constitutes acceptance.</P>
+          <P>By accessing or using TraderAscend ("the Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use the Service.</P>
+          <P>These Terms constitute a legally binding agreement between you and TraderAscend. We may update these Terms from time to time; continued use of the Service after changes constitutes acceptance.</P>
         </Section>
 
         <Section title="2. Service Description">
-          <P>TradeAscend is a trading journal, analytics, and performance coaching tool. The Service allows users to:</P>
+          <P>TraderAscend is a trading journal, analytics, and performance coaching tool. The Service allows users to:</P>
           <Ul items={[
             'Log and track trades, P&L, and performance metrics',
             'View analytics dashboards and calendars',
@@ -122,13 +122,13 @@ export default function TermsOfService() {
               <br /><br />
               Trading financial instruments involves <strong style={{ color: '#fff' }}>substantial risk of loss</strong> and is not suitable for all investors. You should consult a qualified licensed financial advisor before making any investment or trading decisions.
               <br /><br />
-              TradeAscend, its owners, employees, and affiliates are <strong style={{ color: '#fff' }}>not responsible for any trading or investment losses</strong> incurred by users of this platform.
+              TraderAscend, its owners, employees, and affiliates are <strong style={{ color: '#fff' }}>not responsible for any trading or investment losses</strong> incurred by users of this platform.
             </div>
           </DisclaimerBox>
         </Section>
 
         <Section title="4. Eligibility">
-          <P>You must be at least 18 years of age to use TradeAscend. By using the Service, you represent and warrant that you are 18 or older and have the legal capacity to enter into these Terms.</P>
+          <P>You must be at least 18 years of age to use TraderAscend. By using the Service, you represent and warrant that you are 18 or older and have the legal capacity to enter into these Terms.</P>
           <P>If you are using the Service on behalf of an organization, you represent that you have authority to bind that organization to these Terms.</P>
         </Section>
 
@@ -144,7 +144,7 @@ export default function TermsOfService() {
         </Section>
 
         <Section title="6. Subscriptions and Billing">
-          <P>TradeAscend offers the following plan tiers: Free, Trader, Pro, and Elite. Paid plans are billed on a monthly or annual basis through Stripe.</P>
+          <P>TraderAscend offers the following plan tiers: Free, Trader, Pro, and Elite. Paid plans are billed on a monthly or annual basis through Stripe.</P>
           <Ul items={[
             'Subscriptions automatically renew at the end of each billing period unless cancelled',
             'You may cancel your subscription at any time through the billing portal in your Profile',
@@ -157,7 +157,7 @@ export default function TermsOfService() {
         </Section>
 
         <Section title="7. Acceptable Use Policy">
-          <P>You agree not to use TradeAscend to:</P>
+          <P>You agree not to use TraderAscend to:</P>
           <Ul items={[
             'Violate any applicable laws or regulations',
             'Attempt to hack, penetrate, or compromise the security of the platform',
@@ -172,12 +172,12 @@ export default function TermsOfService() {
         </Section>
 
         <Section title="8. Intellectual Property">
-          <P>TradeAscend owns all rights, title, and interest in and to the Service, including all software, design, trademarks, logos, and content created by us. These Terms do not grant you any ownership rights in the Service.</P>
+          <P>TraderAscend owns all rights, title, and interest in and to the Service, including all software, design, trademarks, logos, and content created by us. These Terms do not grant you any ownership rights in the Service.</P>
           <P><strong style={{ color: '#fff' }}>Your data is yours.</strong> You retain full ownership of your trading data, journal entries, screenshots, and trading plans. We do not claim ownership of any content you create on the platform.</P>
         </Section>
 
         <Section title="9. User Content and License">
-          <P>By uploading trade data, journal entries, screenshots, or other content to TradeAscend, you grant us a limited, non-exclusive, royalty-free license to store, process, and use that content solely for the purpose of providing the Service to you — including generating AI coaching responses and analytics.</P>
+          <P>By uploading trade data, journal entries, screenshots, or other content to TraderAscend, you grant us a limited, non-exclusive, royalty-free license to store, process, and use that content solely for the purpose of providing the Service to you — including generating AI coaching responses and analytics.</P>
           <P>We do not use your trading data to train AI models for third parties, sell it, or use it for any purpose beyond operating the Service for you.</P>
         </Section>
 
@@ -194,7 +194,7 @@ export default function TermsOfService() {
         <Section title="11. Limitation of Liability">
           <DisclaimerBox>
             <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', lineHeight: 1.8 }}>
-              To the maximum extent permitted by law, TradeAscend and its affiliates, officers, employees, agents, and licensors shall not be liable for any <strong style={{ color: '#fff' }}>indirect, incidental, special, consequential, or punitive damages</strong>, including but not limited to loss of profits, loss of data, or trading losses, arising from your use of or inability to use the Service, even if we have been advised of the possibility of such damages.
+              To the maximum extent permitted by law, TraderAscend and its affiliates, officers, employees, agents, and licensors shall not be liable for any <strong style={{ color: '#fff' }}>indirect, incidental, special, consequential, or punitive damages</strong>, including but not limited to loss of profits, loss of data, or trading losses, arising from your use of or inability to use the Service, even if we have been advised of the possibility of such damages.
               <br /><br />
               Our <strong style={{ color: '#fff' }}>total liability</strong> to you for any claims arising from or related to these Terms or the Service shall not exceed the <strong style={{ color: '#fff' }}>total amount you paid us in the three (3) months immediately preceding the claim</strong>.
             </div>
@@ -202,7 +202,7 @@ export default function TermsOfService() {
         </Section>
 
         <Section title="12. Indemnification">
-          <P>You agree to indemnify, defend, and hold harmless TradeAscend and its affiliates, officers, directors, employees, and agents from and against any claims, liabilities, damages, losses, costs, or expenses (including reasonable legal fees) arising from:</P>
+          <P>You agree to indemnify, defend, and hold harmless TraderAscend and its affiliates, officers, directors, employees, and agents from and against any claims, liabilities, damages, losses, costs, or expenses (including reasonable legal fees) arising from:</P>
           <Ul items={[
             'Your use of or access to the Service',
             'Your violation of these Terms',
@@ -224,7 +224,7 @@ export default function TermsOfService() {
 
         <Section title="15. Termination">
           <P>We reserve the right to suspend or terminate your account and access to the Service at our discretion, without notice, for conduct that we determine violates these Terms, is harmful to other users, or is otherwise objectionable.</P>
-          <P>You may terminate your account at any time by contacting us at <span style={{ color: G }}>support@tradeascend.com</span>. Upon termination, your right to use the Service ceases immediately.</P>
+          <P>You may terminate your account at any time by contacting us at <span style={{ color: G }}>support@traderascend.com</span>. Upon termination, your right to use the Service ceases immediately.</P>
           <P>Sections covering intellectual property, disclaimers, limitation of liability, indemnification, and governing law survive termination.</P>
         </Section>
 
@@ -234,7 +234,7 @@ export default function TermsOfService() {
 
         <Section title="17. Contact">
           <P>Questions about these Terms? Contact us:</P>
-          <P>Email: <span style={{ color: G }}>support@tradeascend.com</span></P>
+          <P>Email: <span style={{ color: G }}>support@traderascend.com</span></P>
         </Section>
 
         <div style={{
@@ -242,7 +242,7 @@ export default function TermsOfService() {
           borderTop: `1px solid rgba(255,255,255,0.07)`,
           fontSize: 12, color: 'rgba(255,255,255,0.25)', textAlign: 'center',
         }}>
-          © 2026 TradeAscend · <button onClick={() => { window.location.href = '/privacy-policy'; }} style={{ background: 'none', border: 'none', color: G, cursor: 'pointer', fontSize: 12, padding: 0, fontFamily: 'Barlow' }}>Privacy Policy</button>
+          © 2026 TraderAscend · <button onClick={() => { window.location.href = '/privacy-policy'; }} style={{ background: 'none', border: 'none', color: G, cursor: 'pointer', fontSize: 12, padding: 0, fontFamily: 'Barlow' }}>Privacy Policy</button>
         </div>
       </div>
     </div>

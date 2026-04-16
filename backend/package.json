@@ -1,7 +1,7 @@
 {
   "name": "tradeascend-backend",
   "version": "1.0.0",
-  "description": "TradeAscend trading journal backend",
+  "description": "TraderAscend trading journal backend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

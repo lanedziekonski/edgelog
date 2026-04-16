@@ -97,7 +97,7 @@ export default function Profile({ onNavigate, onSignUp, onLogin }) {
               fontSize: 22, fontWeight: 700, letterSpacing: '1px',
               color: '#fff', marginBottom: 6,
             }}>
-              Trade<span style={{ color: G }}>Ascend</span>
+              Trader<span style={{ color: G }}>Ascend</span>
             </div>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 18, lineHeight: 1.5 }}>
               Create a free account to save your trades,<br />unlock AI tools, and track your progress.

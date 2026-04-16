@@ -87,7 +87,7 @@ async function getOrCreateReferralCode(userId) {
   return code;
 }
 
-const COACH_SYSTEM_PROMPT = `You are an elite trading performance coach inside TradeAscend. Your sole purpose is to help traders improve their skills, discipline, mindset, and consistency — NOT to give financial advice.
+const COACH_SYSTEM_PROMPT = `You are an elite trading performance coach inside TraderAscend. Your sole purpose is to help traders improve their skills, discipline, mindset, and consistency — NOT to give financial advice.
 
 STRICT RULES — never break these:
 - NEVER tell the user to buy, sell, hold, or exit any specific trade or asset
@@ -229,9 +229,9 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
     await resend.emails.send({
-      from: 'TradeAscend <onboarding@resend.dev>',
+      from: 'TraderAscend <onboarding@resend.dev>',
       to: email,
-      subject: 'Reset your TradeAscend password',
+      subject: 'Reset your TraderAscend password',
       html: `<div style="background:#0a0a0a;color:#fff;padding:40px;font-family:sans-serif;"><h2 style="color:#00ff41">Reset Your Password</h2><p>Click the link below to reset your password. It expires in 1 hour.</p><a href="${resetUrl}" style="background:#00ff41;color:#000;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block;margin-top:16px">Reset Password</a></div>`,
     });
     console.log(`[forgot-password] Reset email sent to ${email}`);
@@ -1267,7 +1267,7 @@ const PORT = process.env.PORT || 3001;
 
 initDb()
   .then(() => {
-    app.listen(PORT, () => console.log(`TradeAscend backend running on port ${PORT}`));
+    app.listen(PORT, () => console.log(`TraderAscend backend running on port ${PORT}`));
   })
   .catch(err => {
     console.error('Failed to initialize database:', err.message);

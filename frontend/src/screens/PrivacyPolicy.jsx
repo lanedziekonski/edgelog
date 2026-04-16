@@ -58,7 +58,7 @@ export default function PrivacyPolicy() {
           fontSize: 16, fontWeight: 700, letterSpacing: '1.5px',
           color: G, textTransform: 'uppercase',
         }}>
-          Trade<span style={{ color: '#fff' }}>Ascend</span>
+          Trader<span style={{ color: '#fff' }}>Ascend</span>
         </div>
       </div>
 
@@ -78,9 +78,9 @@ export default function PrivacyPolicy() {
         </div>
 
         <Section title="1. Introduction">
-          <P>Welcome to TradeAscend. We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our trading journal and analytics platform.</P>
-          <P>TradeAscend ("we," "us," or "our") operates the TradeAscend web application. By using our service, you agree to the collection and use of information in accordance with this policy.</P>
-          <P>If you have questions about this policy, please contact us at <span style={{ color: G }}>support@tradeascend.com</span>.</P>
+          <P>Welcome to TraderAscend. We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our trading journal and analytics platform.</P>
+          <P>TraderAscend ("we," "us," or "our") operates the TraderAscend web application. By using our service, you agree to the collection and use of information in accordance with this policy.</P>
+          <P>If you have questions about this policy, please contact us at <span style={{ color: G }}>support@traderascend.com</span>.</P>
         </Section>
 
         <Section title="2. Data We Collect">
@@ -112,7 +112,7 @@ export default function PrivacyPolicy() {
 
         <Section title="3. How We Use Your Data">
           <Ul items={[
-            'To provide and operate the TradeAscend service',
+            'To provide and operate the TraderAscend service',
             'To power AI coaching features using your trading journal data',
             'To calculate statistics, analytics, and performance metrics displayed in your dashboard',
             'To send transactional emails (e.g., password reset links)',
@@ -124,15 +124,15 @@ export default function PrivacyPolicy() {
         </Section>
 
         <Section title="4. We Never Sell Your Data">
-          <P>We do not sell, rent, trade, or otherwise transfer your personal information or trading data to third parties for their marketing or commercial purposes. Your data is used solely to provide and improve the TradeAscend service for you.</P>
+          <P>We do not sell, rent, trade, or otherwise transfer your personal information or trading data to third parties for their marketing or commercial purposes. Your data is used solely to provide and improve the TraderAscend service for you.</P>
         </Section>
 
         <Section title="5. Third-Party Services">
-          <P>We use the following third-party services to operate TradeAscend. Each has its own privacy policy governing how they handle data:</P>
+          <P>We use the following third-party services to operate TraderAscend. Each has its own privacy policy governing how they handle data:</P>
           <Ul items={[
             'Stripe (payment processing) — handles all subscription billing and payment information',
             'Anthropic (AI) — processes your trading journal messages to generate AI coaching responses',
-            'Render (cloud hosting) — hosts the TradeAscend backend servers and database',
+            'Render (cloud hosting) — hosts the TraderAscend backend servers and database',
             'Resend (transactional email) — sends password reset and notification emails',
           ]} />
           <P>We only share the minimum data necessary with each provider to perform their specific function. We do not authorize these providers to use your data for their own independent purposes beyond providing services to us.</P>
@@ -152,7 +152,7 @@ export default function PrivacyPolicy() {
             'Portability: request an export of your trading data in a machine-readable format',
             'Objection: object to certain types of data processing',
           ]} />
-          <P>To exercise any of these rights, contact us at <span style={{ color: G }}>support@tradeascend.com</span>. We will respond to verified requests within 30 days.</P>
+          <P>To exercise any of these rights, contact us at <span style={{ color: G }}>support@traderascend.com</span>. We will respond to verified requests within 30 days.</P>
         </Section>
 
         <Section title="8. Security">
@@ -168,16 +168,16 @@ export default function PrivacyPolicy() {
         </Section>
 
         <Section title="9. Children's Privacy">
-          <P>TradeAscend is not intended for users under the age of 18. We do not knowingly collect personal information from anyone under 18. If you believe a minor has provided us with personal information, please contact us at <span style={{ color: G }}>support@tradeascend.com</span> and we will promptly delete it.</P>
+          <P>TraderAscend is not intended for users under the age of 18. We do not knowingly collect personal information from anyone under 18. If you believe a minor has provided us with personal information, please contact us at <span style={{ color: G }}>support@traderascend.com</span> and we will promptly delete it.</P>
         </Section>
 
         <Section title="10. Changes to This Policy">
-          <P>We may update this Privacy Policy from time to time. We will notify you of significant changes by updating the effective date at the top of this page and, where appropriate, by sending a notification to your registered email address. Your continued use of TradeAscend after any changes constitutes acceptance of the updated policy.</P>
+          <P>We may update this Privacy Policy from time to time. We will notify you of significant changes by updating the effective date at the top of this page and, where appropriate, by sending a notification to your registered email address. Your continued use of TraderAscend after any changes constitutes acceptance of the updated policy.</P>
         </Section>
 
         <Section title="11. Contact Us">
           <P>If you have questions, concerns, or requests regarding this Privacy Policy, please contact us:</P>
-          <P>Email: <span style={{ color: G }}>support@tradeascend.com</span></P>
+          <P>Email: <span style={{ color: G }}>support@traderascend.com</span></P>
         </Section>
 
         <div style={{
@@ -185,7 +185,7 @@ export default function PrivacyPolicy() {
           borderTop: `1px solid rgba(255,255,255,0.07)`,
           fontSize: 12, color: 'rgba(255,255,255,0.25)', textAlign: 'center',
         }}>
-          © 2026 TradeAscend · <button onClick={() => { window.location.href = '/terms-of-service'; }} style={{ background: 'none', border: 'none', color: G, cursor: 'pointer', fontSize: 12, padding: 0, fontFamily: 'Barlow' }}>Terms of Service</button>
+          © 2026 TraderAscend · <button onClick={() => { window.location.href = '/terms-of-service'; }} style={{ background: 'none', border: 'none', color: G, cursor: 'pointer', fontSize: 12, padding: 0, fontFamily: 'Barlow' }}>Terms of Service</button>
         </div>
       </div>
     </div>

@@ -53,7 +53,7 @@ export default function TermsAgreementPopup({ onAccept }) {
           textTransform: 'uppercase', color: '#fff',
           marginBottom: 6,
         }}>
-          Trade<span style={{ color: G, textShadow: `0 0 18px ${G}60` }}>Ascend</span>
+          Trader<span style={{ color: G, textShadow: `0 0 18px ${G}60` }}>Ascend</span>
         </div>
 
         {/* Subtext */}

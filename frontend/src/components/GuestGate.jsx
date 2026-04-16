@@ -46,7 +46,7 @@ export default function GuestGate({ onSignUp, onLogin }) {
           fontSize: 22, fontWeight: 900, letterSpacing: '2px',
           textTransform: 'uppercase', color: '#fff', marginBottom: 28,
         }}>
-          Trade<span style={{ color: G }}>Ascend</span>
+          Trader<span style={{ color: G }}>Ascend</span>
         </div>
 
         {/* Lock icon */}
