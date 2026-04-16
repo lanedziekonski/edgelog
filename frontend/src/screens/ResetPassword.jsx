@@ -89,23 +89,9 @@ export default function ResetPassword() {
       >ASCEND</motion.div>
 
       {/* Logo */}
-      <motion.div
-        initial={{ opacity: 0, y: -18 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: 'easeOut' }}
-        style={{ marginBottom: 32, textAlign: 'center', position: 'relative', zIndex: 1 }}
-      >
-        <img
-          src={taLogo}
-          alt="TraderAscend"
-          style={{
-            width: '160px',
-            height: 'auto',
-            display: 'block',
-            margin: '0 auto 24px auto',
-          }}
-        />
-      </motion.div>
+      <div style={{ textAlign: 'center', marginBottom: '28px', paddingTop: '8px', position: 'relative', zIndex: 1 }}>
+        <img src={taLogo} alt="TraderAscend" style={{ width: '160px', height: 'auto' }} />
+      </div>
 
       {/* Card */}
       <motion.div

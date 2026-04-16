@@ -115,33 +115,9 @@ export default function Auth({ onClose, initialMode = 'login' }) {
       )}
 
       {/* Logo */}
-      <motion.div
-        initial={{ opacity: 0, y: -18 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: 'easeOut' }}
-        style={{ marginBottom: 32, textAlign: 'center', position: 'relative', zIndex: 1 }}
-      >
-        <img
-          src={taLogo}
-          alt="TraderAscend"
-          style={{
-            width: '160px',
-            height: 'auto',
-            display: 'block',
-            margin: '0 auto 24px auto',
-          }}
-        />
-        <div style={{
-          fontFamily: "'Barlow Condensed', sans-serif",
-          fontSize: 46, fontWeight: 900, letterSpacing: '3px',
-          textTransform: 'uppercase', color: '#fff', lineHeight: 1,
-        }}>
-          Trader<span style={{ color: G, textShadow: `0 0 24px ${G}70` }}>Ascend</span>
-        </div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', marginTop: 8, letterSpacing: '3px', textTransform: 'uppercase' }}>
-          Your trading edge, tracked.
-        </div>
-      </motion.div>
+      <div style={{ textAlign: 'center', marginBottom: '28px', paddingTop: '8px', position: 'relative', zIndex: 1 }}>
+        <img src={taLogo} alt="TraderAscend" style={{ width: '160px', height: 'auto' }} />
+      </div>
 
       {/* Card */}
       <motion.div
