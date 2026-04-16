@@ -1,19 +1,22 @@
-import SectionHeading from '../components/ui/SectionHeading';
+import PageHeading from '../components/ui/PageHeading';
 import StepRow from '../components/how-it-works/StepRow';
 import CTABanner from '../components/ui/CTABanner';
 import GridBackground from '../components/effects/GridBackground';
+import AmbientOrbs from '../components/effects/AmbientOrbs';
 import { steps } from '../data/steps';
 
 export default function HowItWorks() {
   return (
     <>
-      <section className="relative pt-20 md:pt-28 pb-16 overflow-hidden border-b border-border">
+      <section className="relative overflow-hidden border-b border-border">
         <GridBackground intensity={0.05} />
+        <AmbientOrbs />
         <div className="relative max-w-7xl mx-auto px-6">
-          <SectionHeading
+          <PageHeading
             eyebrow="How It Works"
-            title="Six steps from signup to consistent edge"
+            title="Six steps from signup to consistent edge."
             subtitle="No setup wizards. No 30-minute onboarding. Be journaling your first trade in five minutes."
+            watermark="PROCESS"
           />
         </div>
       </section>

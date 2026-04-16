@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import PageHeading from '../components/ui/PageHeading';
 import SectionHeading from '../components/ui/SectionHeading';
 import BillingToggle from '../components/pricing/BillingToggle';
 import PricingCard from '../components/pricing/PricingCard';
 import PricingFAQ from '../components/pricing/PricingFAQ';
 import CTABanner from '../components/ui/CTABanner';
 import GridBackground from '../components/effects/GridBackground';
+import AmbientOrbs from '../components/effects/AmbientOrbs';
 import FadeUp from '../components/effects/FadeUp';
 import { tiers } from '../data/pricing';
 
@@ -13,15 +15,17 @@ export default function Pricing() {
 
   return (
     <>
-      <section className="relative pt-20 md:pt-28 pb-12 overflow-hidden border-b border-border">
+      <section className="relative overflow-hidden border-b border-border">
         <GridBackground intensity={0.05} />
+        <AmbientOrbs />
         <div className="relative max-w-7xl mx-auto px-6">
-          <SectionHeading
+          <PageHeading
             eyebrow="Pricing"
-            title="Pick a plan that fits your edge"
+            title="Pick a plan that fits your edge."
             subtitle="Free forever for manual journaling. Unlock broker linking, AI plans, and the AI Coach when you're ready."
+            watermark="PRICING"
           />
-          <FadeUp delay={0.2} className="mt-10 flex justify-center">
+          <FadeUp delay={0.2} className="mt-4 pb-10 flex justify-center">
             <BillingToggle value={billing} onChange={setBilling} />
           </FadeUp>
         </div>

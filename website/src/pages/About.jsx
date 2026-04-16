@@ -1,6 +1,8 @@
+import PageHeading from '../components/ui/PageHeading';
 import SectionHeading from '../components/ui/SectionHeading';
 import FadeUp from '../components/effects/FadeUp';
 import GridBackground from '../components/effects/GridBackground';
+import AmbientOrbs from '../components/effects/AmbientOrbs';
 import CTABanner from '../components/ui/CTABanner';
 import Icon from '../components/ui/Icon';
 import { VALUES, TEAM } from '../data/site';
@@ -9,29 +11,16 @@ export default function About() {
   return (
     <>
       {/* Mission hero */}
-      <section className="relative pt-20 md:pt-32 pb-20 md:pb-28 overflow-hidden border-b border-border">
+      <section className="relative overflow-hidden border-b border-border">
         <GridBackground intensity={0.05} />
-        <div className="relative max-w-4xl mx-auto px-6 text-center">
-          <FadeUp>
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-panel/50 text-xs font-mono uppercase tracking-[0.2em] text-muted">
-              <span className="w-1 h-1 rounded-full bg-neon animate-pulseSlow" />
-              Our mission
-            </span>
-          </FadeUp>
-          <FadeUp delay={0.1}>
-            <h1 className="mt-6 text-4xl md:text-6xl font-bold tracking-tight text-balance leading-tight">
-              We built TradeAscend because we were{' '}
-              <span className="text-neon glow-text">traders</span> who couldn't find a
-              journal that kept up with us.
-            </h1>
-          </FadeUp>
-          <FadeUp delay={0.2}>
-            <p className="mt-8 text-lg md:text-xl text-muted text-balance">
-              Generic journals are bloated, slow, and built for a different generation of
-              trader. TradeAscend is fast, opinionated, and powered by AI that actually
-              reads your trades.
-            </p>
-          </FadeUp>
+        <AmbientOrbs />
+        <div className="relative max-w-7xl mx-auto px-6">
+          <PageHeading
+            eyebrow="Our Mission"
+            title={<>Built by traders who refused to <span className="text-neon glow-text">settle</span>.</>}
+            subtitle="Generic journals are bloated, slow, and built for a different generation of trader. TradeAscend is fast, opinionated, and powered by AI that actually reads your trades."
+            watermark="ABOUT"
+          />
         </div>
       </section>
 
