@@ -290,6 +290,11 @@ function RecentTradesSection({ trades, sectionId }) {
             ))}
           </div>
 
+          {recent.length === 0 && (
+            <div style={{ padding: '20px', color: 'rgba(255,255,255,0.2)', fontSize: 13, textAlign: 'center' }}>
+              No trades logged yet — head to the Journal tab to add your first trade
+            </div>
+          )}
           {recent.map((t, i) => (
             <motion.div
               key={t.id}
@@ -378,32 +383,38 @@ function EquitySection({ curve, stats, sectionId }) {
           transition={{ delay: 0.15, duration: 0.7 }}
           style={{ filter: `drop-shadow(0 0 8px rgba(0,255,65,0.2))`, margin: '0 -4px' }}
         >
-          <ResponsiveContainer width="100%" height={180}>
-            <AreaChart data={curve} margin={{ top: 6, right: 4, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"   stopColor={isPos ? G : R} stopOpacity={0.35} />
-                  <stop offset="40%"  stopColor={isPos ? G : R} stopOpacity={0.16} />
-                  <stop offset="100%" stopColor={isPos ? G : R} stopOpacity={0.01} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="label" tick={{ fill: '#2a3a2a', fontSize: 9, fontFamily: 'Barlow' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-              <YAxis tick={{ fill: '#2a3a2a', fontSize: 9, fontFamily: 'Barlow' }} axisLine={false} tickLine={false} width={42}
-                tickFormatter={v => `${v < 0 ? '-' : ''}$${Math.abs(v) >= 1000 ? `${(Math.abs(v)/1000).toFixed(1)}k` : Math.abs(v)}`}
-              />
-              <ReferenceLine y={0} stroke="rgba(255,255,255,0.07)" strokeDasharray="3 3" />
-              <Tooltip
-                contentStyle={{ background: '#111', border: `1px solid rgba(0,255,65,0.2)`, borderRadius: 8, fontFamily: 'Barlow', fontSize: 12 }}
-                labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}
-                formatter={(v) => [fmtPnl(v), 'Equity']}
-              />
-              <Area type="monotone" dataKey="value" stroke={isPos ? G : R} strokeWidth={2}
-                fill="url(#eqGrad)" dot={false}
-                activeDot={{ r: 4, fill: isPos ? G : R, strokeWidth: 0 }}
-                isAnimationActive={inV} animationDuration={1800} animationEasing="ease-out"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          {curve.length > 1 ? (
+            <ResponsiveContainer width="100%" height={180}>
+              <AreaChart data={curve} margin={{ top: 6, right: 4, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%"   stopColor={isPos ? G : R} stopOpacity={0.35} />
+                    <stop offset="40%"  stopColor={isPos ? G : R} stopOpacity={0.16} />
+                    <stop offset="100%" stopColor={isPos ? G : R} stopOpacity={0.01} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="label" tick={{ fill: '#2a3a2a', fontSize: 9, fontFamily: 'Barlow' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                <YAxis tick={{ fill: '#2a3a2a', fontSize: 9, fontFamily: 'Barlow' }} axisLine={false} tickLine={false} width={42}
+                  tickFormatter={v => `${v < 0 ? '-' : ''}$${Math.abs(v) >= 1000 ? `${(Math.abs(v)/1000).toFixed(1)}k` : Math.abs(v)}`}
+                />
+                <ReferenceLine y={0} stroke="rgba(255,255,255,0.07)" strokeDasharray="3 3" />
+                <Tooltip
+                  contentStyle={{ background: '#111', border: `1px solid rgba(0,255,65,0.2)`, borderRadius: 8, fontFamily: 'Barlow', fontSize: 12 }}
+                  labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}
+                  formatter={(v) => [fmtPnl(v), 'Equity']}
+                />
+                <Area type="monotone" dataKey="value" stroke={isPos ? G : R} strokeWidth={2}
+                  fill="url(#eqGrad)" dot={false}
+                  activeDot={{ r: 4, fill: isPos ? G : R, strokeWidth: 0 }}
+                  isAnimationActive={inV} animationDuration={1800} animationEasing="ease-out"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>
+              Equity curve will appear once trades are logged
+            </div>
+          )}
         </motion.div>
 
         <motion.div
@@ -615,35 +626,6 @@ function MonthlyPnLSection({ trades, sectionId }) {
   );
 }
 
-// ── Empty state ───────────────────────────────────────────────────────────
-function EmptyState() {
-  return (
-    <div style={{ background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 32px', minHeight: '60vh' }}>
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        style={{ textAlign: 'center', maxWidth: 260 }}
-      >
-        <div style={{
-          width: 56, height: 56, borderRadius: 14, marginBottom: 20, margin: '0 auto 20px',
-          background: 'rgba(0,255,65,0.06)', border: '1px solid rgba(0,255,65,0.15)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={G} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-          </svg>
-        </div>
-        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 26, fontWeight: 900, color: '#fff', marginBottom: 10, letterSpacing: '-0.5px' }}>
-          No trades yet
-        </div>
-        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', lineHeight: 1.65 }}>
-          Head to the <span style={{ color: '#fff', fontWeight: 600 }}>Journal</span> tab and log your first trade — your stats will appear here.
-        </div>
-      </motion.div>
-    </div>
-  );
-}
 
 // ── Main Dashboard ────────────────────────────────────────────────────────
 const SECTION_IDS = ['dash-overview', 'dash-winrate', 'dash-trades', 'dash-equity', 'dash-playbook', 'dash-monthly'];
@@ -693,7 +675,6 @@ export default function Dashboard({ trades, tradesLoading, accounts = [] }) {
     return alerts.sort((a, b) => (a.level === 'critical' ? -1 : 1) - (b.level === 'critical' ? -1 : 1));
   }, [accounts, filteredTrades, today, selectedAccountId]);
 
-  const isEmpty     = filteredTrades.length === 0 && trades.length === 0;
   const todayTrades = filteredTrades.filter(t => t.date === today);
 
   const now      = new Date();
@@ -754,18 +735,14 @@ export default function Dashboard({ trades, tradesLoading, accounts = [] }) {
         </AnimatePresence>
       </div>
 
-      {isEmpty ? (
-        <EmptyState />
-      ) : (
-        <>
-          <HeroSection stats={stats} todayPnl={todayPnl} weekPnl={weekPnl} sectionId={SECTION_IDS[0]} />
-          <WinRateSection stats={stats} sectionId={SECTION_IDS[1]} />
-          <RecentTradesSection trades={filteredTrades} sectionId={SECTION_IDS[2]} />
-          {curve.length > 1 && <EquitySection curve={curve} stats={stats} sectionId={SECTION_IDS[3]} />}
-          {Object.values(stats.bySetup).some(v => v.total > 0) && <PlaybookSection stats={stats} sectionId={SECTION_IDS[4]} />}
-          <MonthlyPnLSection trades={filteredTrades} sectionId={SECTION_IDS[5]} />
-        </>
-      )}
+      <>
+        <HeroSection stats={stats} todayPnl={todayPnl} weekPnl={weekPnl} sectionId={SECTION_IDS[0]} />
+        <WinRateSection stats={stats} sectionId={SECTION_IDS[1]} />
+        <RecentTradesSection trades={filteredTrades} sectionId={SECTION_IDS[2]} />
+        <EquitySection curve={curve} stats={stats} sectionId={SECTION_IDS[3]} />
+        <PlaybookSection stats={stats} sectionId={SECTION_IDS[4]} />
+        <MonthlyPnLSection trades={filteredTrades} sectionId={SECTION_IDS[5]} />
+      </>
     </div>
   );
 }
