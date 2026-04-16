@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import taLogo from './assets/ta-mark.png';
 import { AuthProvider, useAuth, hasAccess } from './context/AuthContext';
@@ -69,9 +69,25 @@ function AppInner() {
   // Determine initial auth mode from hash (/#/login, /#/signup, /#/forgot-password)
   const initialAuthMode = window.location.hash === '#/signup' ? 'signup' : 'login';
 
-  // Reset scroll to top on tab change
+  // Journal scroll persistence — dashboard always resets, journal restores position
+  const journalScrollPos = useRef(0);
+
   useEffect(() => {
-    window.scrollTo(0, 0);
+    if (activeTab === 'dashboard') {
+      window.scrollTo(0, 0);
+    } else if (activeTab === 'journal') {
+      setTimeout(() => window.scrollTo(0, journalScrollPos.current), 0);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (activeTab === 'journal') {
+        journalScrollPos.current = window.scrollY;
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, [activeTab]);
 
   // Handle Stripe payment-success redirect
