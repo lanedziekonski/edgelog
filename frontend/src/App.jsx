@@ -248,7 +248,12 @@ function AppInner() {
         <img
           src={logo}
           alt="TraderAscend"
-          style={{ width: 120, display: 'block' }}
+          style={{
+            width: 160, height: 200,
+            objectFit: 'cover', objectPosition: 'top',
+            mixBlendMode: 'screen',
+            display: 'block',
+          }}
         />
         <div style={{
           width: 32,

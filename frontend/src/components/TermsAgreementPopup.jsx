@@ -52,7 +52,12 @@ export default function TermsAgreementPopup({ onAccept }) {
           <img
             src={logo}
             alt="TraderAscend"
-            style={{ width: 80, display: 'inline-block' }}
+            style={{
+              width: 120, height: 150,
+              objectFit: 'cover', objectPosition: 'top',
+              mixBlendMode: 'screen',
+              display: 'inline-block',
+            }}
           />
         </div>
 

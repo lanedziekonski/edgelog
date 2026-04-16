@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { api } from '../services/api';
+import logo from '../assets/logo.jpg';
 
 const G    = '#00ff41';
 const BG   = '#080c08';
@@ -94,19 +95,16 @@ export default function ResetPassword() {
         transition={{ duration: 0.45, ease: 'easeOut' }}
         style={{ marginBottom: 32, textAlign: 'center', position: 'relative', zIndex: 1 }}
       >
-        <div style={{
-          fontFamily: "'Barlow Condensed', sans-serif",
-          fontSize: 46, fontWeight: 900, letterSpacing: '3px',
-          textTransform: 'uppercase', color: '#fff', lineHeight: 1,
-        }}>
-          Trader<span style={{ color: G, textShadow: `0 0 24px ${G}70` }}>Ascend</span>
-        </div>
-        <div style={{
-          fontSize: 11, color: 'rgba(255,255,255,0.28)',
-          marginTop: 8, letterSpacing: '3px', textTransform: 'uppercase',
-        }}>
-          Your trading edge, tracked.
-        </div>
+        <img
+          src={logo}
+          alt="TraderAscend"
+          style={{
+            width: 160, height: 200,
+            objectFit: 'cover', objectPosition: 'top',
+            mixBlendMode: 'screen',
+            display: 'block', margin: '0 auto',
+          }}
+        />
       </motion.div>
 
       {/* Card */}

@@ -124,7 +124,12 @@ export default function Auth({ onClose, initialMode = 'login' }) {
         <img
           src={logo}
           alt="TraderAscend"
-          style={{ width: 120, maxWidth: '100%', marginBottom: 12, display: 'block', margin: '0 auto 12px' }}
+          style={{
+            width: 180, height: 220,
+            objectFit: 'cover', objectPosition: 'top',
+            mixBlendMode: 'screen',
+            display: 'block', margin: '0 auto 16px',
+          }}
         />
         <div style={{
           fontFamily: "'Barlow Condensed', sans-serif",
