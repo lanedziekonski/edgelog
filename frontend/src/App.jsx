@@ -69,6 +69,11 @@ function AppInner() {
   // Determine initial auth mode from hash (/#/login, /#/signup, /#/forgot-password)
   const initialAuthMode = window.location.hash === '#/signup' ? 'signup' : 'login';
 
+  // Reset scroll to top on tab change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [activeTab]);
+
   // Handle Stripe payment-success redirect
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
