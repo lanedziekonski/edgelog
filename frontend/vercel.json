@@ -1,0 +1,10 @@
+{
+  "redirects": [
+    { "source": "/login", "destination": "/#/login", "permanent": false },
+    { "source": "/signup", "destination": "/#/signup", "permanent": false },
+    { "source": "/forgot-password", "destination": "/#/forgot-password", "permanent": false }
+  ],
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
