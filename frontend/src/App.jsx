@@ -95,30 +95,25 @@ function AppInner() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'var(--bg)',
+        background: '#080c08',
         flexDirection: 'column',
         gap: 16,
       }}>
-        <img
-          src={taLogo}
-          alt="TraderAscend"
-          style={{
-            width: 100,
-            height: 'auto',
-            display: 'block',
-          }}
-        />
-        <div style={{
-          width: 32,
-          height: 3,
-          borderRadius: 2,
-          background: 'var(--border)',
-          overflow: 'hidden',
+        <h1 style={{
+          margin: 0,
+          fontSize: '56px',
+          fontWeight: '800',
+          letterSpacing: '2px',
+          lineHeight: 1,
+          filter: 'drop-shadow(0 0 6px rgba(0,255,65,0.6))'
         }}>
+          <span style={{ color: '#ffffff' }}>TRADER</span><span style={{ color: '#00ff41' }}>ASCEND</span>
+        </h1>
+        <div style={{ width: 32, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
           <div style={{
             width: '60%',
             height: '100%',
-            background: 'var(--green)',
+            background: '#00ff41',
             animation: 'slide 1s ease-in-out infinite',
             borderRadius: 2,
           }} />
