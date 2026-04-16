@@ -71,29 +71,28 @@ function AppInner() {
 
   // Journal scroll persistence — dashboard always resets, journal restores position
   const journalScrollPos = useRef(0);
-  const screenRef = useRef(null);
 
   useEffect(() => {
-    if (!screenRef.current) return;
+    const el = document.querySelector('.screen');
+    if (!el) return;
     if (activeTab === 'dashboard') {
-      screenRef.current.scrollTop = 0;
+      el.scrollTop = 0;
     } else if (activeTab === 'journal') {
       setTimeout(() => {
-        if (screenRef.current) screenRef.current.scrollTop = journalScrollPos.current;
-      }, 0);
+        const el2 = document.querySelector('.screen');
+        if (el2) el2.scrollTop = journalScrollPos.current;
+      }, 50);
     }
   }, [activeTab]);
 
   useEffect(() => {
-    const el = screenRef.current;
+    const el = document.querySelector('.screen');
     if (!el) return;
-    const handleScroll = () => {
-      if (activeTab === 'journal') {
-        journalScrollPos.current = el.scrollTop;
-      }
+    const save = () => {
+      if (activeTab === 'journal') journalScrollPos.current = el.scrollTop;
     };
-    el.addEventListener('scroll', handleScroll, { passive: true });
-    return () => el.removeEventListener('scroll', handleScroll);
+    el.addEventListener('scroll', save, { passive: true });
+    return () => el.removeEventListener('scroll', save);
   }, [activeTab]);
 
   // Handle Stripe payment-success redirect
@@ -202,7 +201,7 @@ function AppInner() {
 
   return (
     <div className="app-shell">
-      <div className="screen" ref={screenRef}>
+      <div className="screen">
         {renderScreen()}
       </div>
       <BottomNav active={activeTab} onNavigate={handleNavigate} />
