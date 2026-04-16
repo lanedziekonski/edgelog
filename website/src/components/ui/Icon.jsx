@@ -1,0 +1,63 @@
+import {
+  BookOpen,
+  Brain,
+  Map,
+  CalendarDays,
+  Wallet,
+  Image as ImageIcon,
+  FileSpreadsheet,
+  Link2,
+  LayoutDashboard,
+  Users,
+  UserPlus,
+  Tag,
+  TrendingUp,
+  Shield,
+  Eye,
+  Zap,
+  Activity,
+  Twitter,
+  MessageCircle,
+  Mail,
+  ArrowRight,
+  Check,
+  Plus,
+  Minus,
+  Sparkles,
+  Star,
+} from 'lucide-react';
+
+const REGISTRY = {
+  BookOpen,
+  Brain,
+  Map,
+  CalendarDays,
+  Wallet,
+  Image: ImageIcon,
+  FileSpreadsheet,
+  Link2,
+  LayoutDashboard,
+  Users,
+  UserPlus,
+  Tag,
+  TrendingUp,
+  Shield,
+  Eye,
+  Zap,
+  Activity,
+  Twitter,
+  MessageCircle,
+  Mail,
+  ArrowRight,
+  Check,
+  Plus,
+  Minus,
+  Sparkles,
+  Star,
+};
+
+export default function Icon({ name, className = 'w-5 h-5', strokeWidth = 1.75 }) {
+  const Cmp = REGISTRY[name];
+  if (!Cmp) return null;
+  return <Cmp className={className} strokeWidth={strokeWidth} />;
+}
