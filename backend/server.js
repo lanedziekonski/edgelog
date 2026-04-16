@@ -21,6 +21,9 @@ const app = express();
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:4173',
+  'https://traderascend.com',
+  'https://www.traderascend.com',
+  'https://edgelog-mu.vercel.app',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
@@ -225,7 +228,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
     const frontendUrl = process.env.FRONTEND_URL && !process.env.FRONTEND_URL.includes('localhost')
       ? process.env.FRONTEND_URL
-      : 'https://edgelog-mu.vercel.app';
+      : 'https://traderascend.com';
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
     await resend.emails.send({
