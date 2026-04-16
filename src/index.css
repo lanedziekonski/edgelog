@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-color: #000000;
+    color: #ffffff;
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background-color: #00ff41;
+    color: #000000;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #000000;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1a1a1a;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #00ff41;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .gradient-fade-bottom {
+    -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+            mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+  }
+
+  .glow-text {
+    text-shadow: 0 0 18px rgba(0, 255, 65, 0.55);
+  }
+
+  .neon-divider {
+    background: linear-gradient(90deg, transparent, #00ff41, transparent);
+  }
+}
+
+/* Hero grid background animation */
+@keyframes gridShift {
+  from { background-position: 0 0; }
+  to { background-position: 48px 48px; }
+}
+
+/* Subtle scanline for cinematic effect */
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+/* Marquee for stat ticker */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.marquee {
+  animation: marquee 40s linear infinite;
+}
