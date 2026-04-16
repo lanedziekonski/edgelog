@@ -30,15 +30,16 @@ export default function DashHeader() {
       className="sticky top-0 z-30 flex items-center justify-between gap-4 px-4 md:px-6 py-4 border-b border-border bg-black/70 backdrop-blur-md"
     >
       <div className="flex flex-col">
-        <span className="text-neon font-bold text-lg md:text-xl tracking-tight glow-text">
-          TRADEASCEND
-        </span>
-        <span className="text-[11px] text-muted font-mono uppercase tracking-wider mt-0.5 flex items-center gap-2">
+        <span className="text-[11px] text-muted font-mono uppercase tracking-[0.18em] flex items-center gap-2">
           {FORMAT_DATE(now)}
           <span className="w-1 h-1 rounded-full bg-muted" />
-          <span className={marketOpen ? 'text-neon' : 'text-muted'}>
+          <span className={marketOpen ? 'text-neon inline-flex items-center gap-1.5' : 'text-muted inline-flex items-center gap-1.5'}>
+            {marketOpen && <span className="w-1.5 h-1.5 rounded-full bg-neon animate-pulseSlow" />}
             {marketOpen ? 'Market Hours' : 'Market Closed'}
           </span>
+        </span>
+        <span className="mt-0.5 font-bold text-lg md:text-xl tracking-tight">
+          Welcome back, <span className="text-neon">Demo</span>
         </span>
       </div>
 
