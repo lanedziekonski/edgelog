@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import logo from './assets/logo.jpg';
 import { AuthProvider, useAuth, hasAccess } from './context/AuthContext';
 import { AccountFilterProvider, useAccountFilter } from './context/AccountFilterContext';
 import BottomNav from './components/BottomNav';
@@ -242,17 +243,13 @@ function AppInner() {
         justifyContent: 'center',
         background: 'var(--bg)',
         flexDirection: 'column',
-        gap: 14,
+        gap: 16,
       }}>
-        <div style={{
-          fontFamily: "'Barlow Condensed', sans-serif",
-          fontSize: 32,
-          fontWeight: 700,
-          letterSpacing: '2px',
-          color: 'var(--text)',
-        }}>
-          Trader<span style={{ color: 'var(--green)' }}>Ascend</span>
-        </div>
+        <img
+          src={logo}
+          alt="TraderAscend"
+          style={{ width: 120, display: 'block' }}
+        />
         <div style={{
           width: 32,
           height: 3,
