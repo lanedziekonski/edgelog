@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import taLogo from '../assets/ta-mark.png';
 
 const G    = '#00ff41';
 const BG   = '#080c08';
@@ -115,8 +114,10 @@ export default function Auth({ onClose, initialMode = 'login' }) {
       )}
 
       {/* Logo */}
-      <div style={{ textAlign: 'center', marginBottom: '28px', paddingTop: '8px', position: 'relative', zIndex: 1 }}>
-        <img src={taLogo} alt="TraderAscend" style={{ width: '160px', height: 'auto' }} />
+      <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+        <h1 style={{ color: '#00ff41', fontSize: '28px', fontWeight: '700', letterSpacing: '2px', margin: 0 }}>
+          TraderAscend
+        </h1>
       </div>
 
       {/* Card */}
