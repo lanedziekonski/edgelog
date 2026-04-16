@@ -115,8 +115,8 @@ export default function Auth({ onClose, initialMode = 'login' }) {
 
       {/* Logo */}
       <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-        <h1 style={{ color: '#00ff41', fontSize: '28px', fontWeight: '700', letterSpacing: '2px', margin: 0 }}>
-          TraderAscend
+        <h1 style={{ margin: 0, fontSize: '56px', fontWeight: '800', letterSpacing: '2px', lineHeight: 1 }}>
+          <span style={{ color: '#ffffff' }}>TRADER</span><span style={{ color: '#00ff41' }}>ASCEND</span>
         </h1>
       </div>
 
