@@ -53,7 +53,7 @@ export default function TermsAgreementPopup({ onAccept }) {
             src={logo}
             alt="TraderAscend"
             style={{
-              width: 120, height: 150,
+              width: 100, height: 72,
               objectFit: 'cover', objectPosition: 'top',
               mixBlendMode: 'screen',
               display: 'inline-block',

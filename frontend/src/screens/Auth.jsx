@@ -125,10 +125,10 @@ export default function Auth({ onClose, initialMode = 'login' }) {
           src={logo}
           alt="TraderAscend"
           style={{
-            width: 180, height: 220,
+            width: 140, height: 100,
             objectFit: 'cover', objectPosition: 'top',
             mixBlendMode: 'screen',
-            display: 'block', margin: '0 auto 16px',
+            display: 'block', margin: '0 auto 8px',
           }}
         />
         <div style={{

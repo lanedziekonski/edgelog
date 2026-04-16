@@ -117,7 +117,7 @@ export default function ForgotPassword() {
           src={logo}
           alt="TraderAscend"
           style={{
-            width: 160, height: 200,
+            width: 140, height: 100,
             objectFit: 'cover', objectPosition: 'top',
             mixBlendMode: 'screen',
             display: 'block', margin: '0 auto',
