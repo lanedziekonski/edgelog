@@ -20,7 +20,17 @@ export default function AppTradingPlan() {
 
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 
-  useEffect(() => { fetchPlan(); fetchMessages(); }, []);
+  useEffect(() => {
+    fetchPlan();
+    fetchMessages().then((msgs) => {
+      if (!msgs || msgs.length === 0) {
+        setMessages([{
+          role: 'assistant',
+          content: "Welcome! Let's build your personalized trading plan. Start by telling me about your trading strategy — what markets do you trade, and what is your overall approach?"
+        }]);
+      }
+    });
+  }, []);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const fetchPlan = async () => {
@@ -37,8 +47,10 @@ export default function AppTradingPlan() {
     try {
       const res = await fetch(`${API}/trading-plan/messages`, { headers });
       const data = await res.json();
-      setMessages(data.messages || []);
-    } catch (e) { console.error(e); }
+      const msgs = data.messages || [];
+      setMessages(msgs);
+      return msgs;
+    } catch (e) { console.error(e); return []; }
   };
 
   const sendMessage = async () => {
@@ -185,10 +197,19 @@ export default function AppTradingPlan() {
             {messages.length === 0 && (
               <div className="text-center pt-16">
                 <p className="text-2xl font-bold mb-2">Build Your Trading Plan</p>
-                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                <p className="text-sm mb-8" style={{ color: 'rgba(255,255,255,0.4)' }}>
                   Answer a few questions and the AI will create your personalized trading plan.
                 </p>
-                <p className="text-xs mt-4 font-mono" style={{ color: G }}>Start by telling me what markets you trade...</p>
+                <button
+                  onClick={() => {
+                    setInput("Start by telling me about your strategy");
+                    setTimeout(() => sendMessage(), 100);
+                  }}
+                  className="px-5 py-3 rounded-xl text-sm font-mono font-bold transition-colors"
+                  style={{ background: 'rgba(0,255,65,0.1)', color: G, border: '1px solid rgba(0,255,65,0.25)' }}
+                >
+                  Start by telling me about your strategy →
+                </button>
               </div>
             )}
             {messages.map((msg, i) => (
