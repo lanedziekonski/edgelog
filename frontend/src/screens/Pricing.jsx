@@ -436,7 +436,7 @@ export default function Pricing({ onClose }) {
             </div>
           </div>
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginBottom: 12, lineHeight: 1.5 }}>
-            Get 20% off your first 3 months when you use a friend's code.
+            {billing === 'annual' ? "Get 20% off your first year when you use a friend's code." : "Get 20% off your first 3 months when you use a friend's code."}
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: refStatus ? 10 : 0 }}>
             <input
