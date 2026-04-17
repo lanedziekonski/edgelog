@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Trash2, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useTrades, fmtPnl } from '../hooks/useTrades';
@@ -23,6 +24,15 @@ export default function AppJournal() {
   const [saving, setSaving]   = useState(false);
   const [expanded, setExpanded] = useState(null);
   const [err, setErr]         = useState('');
+
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('addTrade') === '1') {
+      const date = searchParams.get('date');
+      if (date) setForm(f => ({ ...f, date }));
+      setAddOpen(true);
+    }
+  }, []);
 
   const filtered = useMemo(() => {
     const sorted = [...trades].sort((a, b) => b.date?.localeCompare(a.date) || 0);
