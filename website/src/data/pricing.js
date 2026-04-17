@@ -1,5 +1,6 @@
-// Annual = 20% off monthly, displayed as monthly equivalent
-const annual = (monthly) => Number((monthly * 0.8).toFixed(2));
+// Annual = 25% off monthly (9 months for 12), displayed as monthly equivalent
+const annual = (monthly) => Number((monthly * 0.75).toFixed(2));
+const annualTotal = (monthly) => Number((monthly * 9).toFixed(2));
 
 export const tiers = [
   {
@@ -8,6 +9,7 @@ export const tiers = [
     tagline: 'Manual trade journal only',
     monthly: 0,
     annual: 0,
+    annualTotal: 0,
     cta: 'Get Started Free',
     popular: false,
     features: [
@@ -22,8 +24,9 @@ export const tiers = [
     id: 'trader',
     name: 'Trader',
     tagline: 'Broker linking & CSV import',
-    monthly: 19.99,
-    annual: annual(19.99),
+    monthly: 9.99,
+    annual: annual(9.99),
+    annualTotal: annualTotal(9.99),
     cta: 'Start Trader',
     popular: false,
     features: [
@@ -39,8 +42,9 @@ export const tiers = [
     id: 'pro',
     name: 'Pro',
     tagline: 'AI Trading Plan Builder',
-    monthly: 49.99,
-    annual: annual(49.99),
+    monthly: 24.99,
+    annual: annual(24.99),
+    annualTotal: annualTotal(24.99),
     cta: 'Go Pro',
     popular: true,
     features: [
@@ -56,8 +60,9 @@ export const tiers = [
     id: 'elite',
     name: 'Elite',
     tagline: 'Full AI Coaching Suite',
-    monthly: 99.99,
-    annual: annual(99.99),
+    monthly: 49.99,
+    annual: annual(49.99),
+    annualTotal: annualTotal(49.99),
     cta: 'Go Elite',
     popular: false,
     features: [
