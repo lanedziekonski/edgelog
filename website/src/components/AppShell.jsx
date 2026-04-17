@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import CandlestickBackground from './CandlestickBackground';
+import GridBackground from './effects/GridBackground';
+import AmbientOrbs from './effects/AmbientOrbs';
 
 const NAV = [
   { to: '/dashboard', label: 'Dashboard',    Icon: LayoutDashboard },
@@ -97,6 +99,8 @@ export default function AppShell() {
 
   return (
     <div style={{ position: 'relative', overflow: 'hidden', minHeight: '100vh', background: '#080c08', color: '#fff' }}>
+      <GridBackground />
+      <AmbientOrbs />
       <CandlestickBackground />
       <div className="flex min-h-screen" style={{ position: 'relative', zIndex: 1 }}>
       {/* Desktop sidebar */}
