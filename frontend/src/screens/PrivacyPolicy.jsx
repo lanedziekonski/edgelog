@@ -53,12 +53,17 @@ export default function PrivacyPolicy() {
         >
           ‹ Back to App
         </button>
-        <div style={{
-          fontFamily: "'Barlow Condensed', sans-serif",
-          fontSize: 16, fontWeight: 700, letterSpacing: '1.5px',
-          color: G, textTransform: 'uppercase',
-        }}>
-          Trader<span style={{ color: '#fff' }}>Ascend</span>
+        <div style={{ textAlign: 'center', marginBottom: '24px', paddingTop: '16px' }}>
+          <h1 style={{
+            margin: 0,
+            fontSize: '32px',
+            fontWeight: '800',
+            letterSpacing: '2px',
+            lineHeight: 1,
+            filter: 'drop-shadow(0 0 6px rgba(0,255,65,0.6))'
+          }}>
+            <span style={{ color: '#ffffff' }}>TRADER</span><span style={{ color: '#00ff41' }}>ASCEND</span>
+          </h1>
         </div>
       </div>
 
