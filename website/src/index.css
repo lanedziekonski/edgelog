@@ -37,6 +37,31 @@
   }
 }
 
+@layer components {
+  .input-field {
+    @apply w-full px-3 py-2.5 rounded-lg text-sm outline-none transition-all;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+  }
+  .input-field:focus {
+    border-color: rgba(0,255,65,0.4);
+  }
+  .modal-input {
+    @apply w-full px-3 py-2.5 rounded-lg text-sm outline-none transition-all;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+  }
+  .modal-input:focus {
+    border-color: rgba(0,255,65,0.4);
+  }
+  select option {
+    background: #1a1a1a;
+    color: #fff;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

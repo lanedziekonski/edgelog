@@ -82,7 +82,8 @@ export default function Navbar() {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <Button to="/preview" variant="primary" size="sm">
+            <Button to="/login" variant="dark" size="sm">Log In</Button>
+            <Button to="/signup" variant="primary" size="sm">
               Get Started <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
@@ -132,8 +133,11 @@ export default function Navbar() {
                 transition={{ delay: 0.3, duration: 0.3 }}
                 className="pt-8"
               >
-                <Button to="/preview" variant="primary" size="lg" className="w-full">
+                <Button to="/signup" variant="primary" size="lg" className="w-full">
                   Get Started <ArrowRight className="w-5 h-5" />
+                </Button>
+                <Button to="/login" variant="ghost" size="lg" className="w-full">
+                  Log In
                 </Button>
               </motion.div>
             </div>

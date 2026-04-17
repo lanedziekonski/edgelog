@@ -77,7 +77,7 @@ export default function Hero() {
           custom={3}
           className="mt-10 flex flex-wrap justify-center gap-4"
         >
-          <Button to="/preview" variant="primary" size="lg">
+          <Button to="/signup" variant="primary" size="lg">
             Start Free <ArrowRight className="w-5 h-5" />
           </Button>
           <Button to="/how-it-works" variant="ghost" size="lg">

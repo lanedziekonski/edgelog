@@ -60,7 +60,7 @@ export default function PricingCard({ tier, billing }) {
 
       <div className="mt-8">
         <Button
-          to="/preview"
+          to="/signup"
           variant={tier.popular ? 'primary' : 'ghost'}
           size="md"
           className="w-full"
