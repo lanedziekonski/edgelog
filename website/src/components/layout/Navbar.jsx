@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ArrowRight } from 'lucide-react';
 import Button from '../ui/Button';
 import Logo from '../ui/Logo';
-import { NAV_LINKS, APP_URL } from '../../data/site';
+import { NAV_LINKS } from '../../data/site';
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -49,15 +49,24 @@ export default function Navbar() {
                   to={link.to}
                   end={link.to === '/'}
                   className={({ isActive }) =>
-                    `relative px-3 py-2 text-sm transition-colors ${
-                      isActive ? 'text-neon' : 'text-ink/80 hover:text-ink'
-                    }`
+                    link.highlight
+                      ? `relative ml-2 px-3.5 py-1.5 text-sm rounded-full border transition-all ${
+                          isActive
+                            ? 'border-neon text-neon bg-neon/10 shadow-neon-soft'
+                            : 'border-neon/40 text-neon hover:bg-neon/10 hover:shadow-neon-soft'
+                        }`
+                      : `relative px-3 py-2 text-sm transition-colors ${
+                          isActive ? 'text-neon' : 'text-ink/80 hover:text-ink'
+                        }`
                   }
                 >
                   {({ isActive }) => (
                     <>
+                      {link.highlight && (
+                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-neon animate-pulseSlow mr-2" />
+                      )}
                       {link.label}
-                      {isActive && (
+                      {isActive && !link.highlight && (
                         <motion.span
                           layoutId="nav-underline"
                           className="absolute left-3 right-3 -bottom-0.5 h-px bg-neon shadow-neon-soft"
@@ -73,7 +82,7 @@ export default function Navbar() {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <Button href={APP_URL} variant="primary" size="sm" external>
+            <Button to="/preview" variant="primary" size="sm">
               Get Started <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
@@ -123,7 +132,7 @@ export default function Navbar() {
                 transition={{ delay: 0.3, duration: 0.3 }}
                 className="pt-8"
               >
-                <Button href={APP_URL} variant="primary" size="lg" external className="w-full">
+                <Button to="/preview" variant="primary" size="lg" className="w-full">
                   Get Started <ArrowRight className="w-5 h-5" />
                 </Button>
               </motion.div>

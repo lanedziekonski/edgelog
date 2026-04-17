@@ -4,7 +4,6 @@ import Button from '../ui/Button';
 import GridBackground from '../effects/GridBackground';
 import AmbientOrbs from '../effects/AmbientOrbs';
 import MockDashboard from '../ui/MockDashboard';
-import { APP_URL } from '../../data/site';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -78,7 +77,7 @@ export default function Hero() {
           custom={3}
           className="mt-10 flex flex-wrap justify-center gap-4"
         >
-          <Button href={APP_URL} variant="primary" size="lg" external>
+          <Button to="/preview" variant="primary" size="lg">
             Start Free <ArrowRight className="w-5 h-5" />
           </Button>
           <Button to="/how-it-works" variant="ghost" size="lg">

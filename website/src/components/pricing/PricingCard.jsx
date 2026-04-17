@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion';
 import { Check, ArrowRight } from 'lucide-react';
 import Button from '../ui/Button';
-import { APP_URL } from '../../data/site';
 
 export default function PricingCard({ tier, billing }) {
   const price = billing === 'annual' ? tier.annual : tier.monthly;
@@ -61,10 +60,9 @@ export default function PricingCard({ tier, billing }) {
 
       <div className="mt-8">
         <Button
-          href={APP_URL}
+          to="/preview"
           variant={tier.popular ? 'primary' : 'ghost'}
           size="md"
-          external
           className="w-full"
         >
           {tier.cta} <ArrowRight className="w-4 h-4" />
