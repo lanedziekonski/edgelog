@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Wallet, Trash2, X } from 'lucide-react';
+import { Plus, Wallet, Trash2, X, Upload } from 'lucide-react';
 import { useAccounts } from '../hooks/useAccounts';
 
 const G = '#00ff41';
 const ACCOUNT_TYPES = ['Funded', 'Evaluation', 'Live', 'Paper'];
 const EMPTY_FORM = { name: '', accountType: 'Live', balance: '', startingBalance: '' };
+const BROKERS = ['tradovate', 'ibkr', 'thinkorswim', 'tradestation', 'webull'];
 
 export default function AppAccounts() {
   const { accounts, loading, createAccount, deleteAccount } = useAccounts();
@@ -13,6 +14,8 @@ export default function AppAccounts() {
   const [form, setForm]       = useState(EMPTY_FORM);
   const [saving, setSaving]   = useState(false);
   const [err, setErr]         = useState('');
+  const [csvFile, setCsvFile] = useState(null);
+  const [csvBroker, setCsvBroker] = useState('tradovate');
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -26,6 +29,19 @@ export default function AppAccounts() {
         balance: parseFloat(form.balance) || 0,
         startingBalance: parseFloat(form.startingBalance) || parseFloat(form.balance) || 0,
       });
+      if (csvFile) {
+        try {
+          const formData = new FormData();
+          formData.append('file', csvFile);
+          formData.append('broker', csvBroker);
+          const token = localStorage.getItem('tradeascend_token');
+          await fetch(`${import.meta.env.VITE_API_URL || 'https://edgelog.onrender.com'}/trades/import`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
+          });
+        } catch (e) { console.error('CSV import failed', e); }
+      }
       setAddOpen(false);
       setForm(EMPTY_FORM);
     } catch (e) {
@@ -169,6 +185,21 @@ export default function AppAccounts() {
                   <ModalField label="Current Balance ($)">
                     <input type="number" step="0.01" value={form.balance} onChange={e => setForm(f => ({ ...f, balance: e.target.value }))} placeholder="100000" className="modal-input" />
                   </ModalField>
+                </div>
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 16, marginTop: 4 }}>
+                  <p className="text-xs font-mono uppercase tracking-wider mb-3" style={{ color: 'rgba(255,255,255,0.35)' }}>Import Trades from CSV (optional)</p>
+                  <ModalField label="Broker">
+                    <select value={csvBroker} onChange={e => setCsvBroker(e.target.value)} className="modal-input appearance-none">
+                      {BROKERS.map(b => <option key={b} value={b}>{b.charAt(0).toUpperCase() + b.slice(1)}</option>)}
+                    </select>
+                  </ModalField>
+                  <div className="mt-3">
+                    <label className="flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors" style={{ border: '1px dashed rgba(0,255,65,0.3)', color: 'rgba(255,255,255,0.5)' }}>
+                      <Upload className="w-4 h-4 flex-shrink-0" style={{ color: G }} />
+                      <span className="text-sm">{csvFile ? csvFile.name : 'Choose CSV file…'}</span>
+                      <input type="file" accept=".csv" className="hidden" onChange={e => setCsvFile(e.target.files[0])} />
+                    </label>
+                  </div>
                 </div>
                 <div className="flex gap-3 pt-1">
                   <button type="button" onClick={() => setAddOpen(false)} className="flex-1 py-2.5 rounded-lg text-sm border" style={{ border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)' }}>Cancel</button>
