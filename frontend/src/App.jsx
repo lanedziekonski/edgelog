@@ -175,7 +175,7 @@ function AppInner() {
   };
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" style={{ position: 'relative', overflow: 'hidden' }}>
       <CandlestickBackground />
       <div className="screen" ref={screenRef}>
         {renderScreen()}
