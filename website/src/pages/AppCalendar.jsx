@@ -146,65 +146,69 @@ export default function AppCalendar() {
         </div>
       </div>
 
-      {/* Selected day panel */}
+      {/* Selected day modal */}
       {selectedDay && selectedIso && (
-        <div className="rounded-xl p-5" style={{ background: 'rgba(10,10,10,0.9)', border: '1px solid rgba(0,255,65,0.15)', backdropFilter: 'blur(12px)' }}>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-xs font-mono uppercase tracking-widest" style={{ color: G }}>
-                {MONTHS[month]} {selectedDay}, {year}
-              </p>
-              {selectedData && (
-                <p className="text-2xl font-mono font-bold mt-1" style={{ color: selectedData.pnl >= 0 ? G : '#ff4d4d' }}>
-                  {selectedData.pnl >= 0 ? '+' : '-'}${Math.abs(selectedData.pnl).toFixed(2)}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)' }}>
+          <div className="rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto" style={{ background: '#0d0d0d', border: '1px solid rgba(0,255,65,0.2)' }}>
+            <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+              <div>
+                <p className="text-xs font-mono uppercase tracking-widest" style={{ color: G }}>
+                  {MONTHS[month]} {selectedDay}, {year}
                 </p>
+                {selectedData && (
+                  <p className="text-2xl font-mono font-bold mt-1" style={{ color: selectedData.pnl >= 0 ? G : '#ff4d4d' }}>
+                    {selectedData.pnl >= 0 ? '+' : '-'}${Math.abs(selectedData.pnl).toFixed(2)}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowAddTrade(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors"
+                  style={{ background: 'rgba(0,255,65,0.1)', color: G, border: '1px solid rgba(0,255,65,0.2)' }}
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Trade
+                </button>
+                <button onClick={() => setSelectedDay(null)} className="p-1.5 rounded-lg hover:bg-white/[0.06]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-5">
+              {selectedData?.trades?.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-5 pb-2 border-b border-white/[0.06]" style={{ gap: 12 }}>
+                    {['Symbol', 'Setup', 'Account', 'Side', 'P&L'].map(h => (
+                      <p key={h} className="text-[10px] font-mono uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>{h}</p>
+                    ))}
+                  </div>
+                  {selectedData.trades.map(t => (
+                    <div key={t.id} className="grid grid-cols-5 py-3 border-b border-white/[0.04]" style={{ gap: 12 }}>
+                      <p className="text-sm font-mono font-bold text-white">{t.symbol}</p>
+                      <p className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.5)' }}>{t.setup || '—'}</p>
+                      <p className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.4)' }}>{t.account || '—'}</p>
+                      <p className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.4)' }}>{t.side || '—'}</p>
+                      <p className="text-sm font-mono font-bold" style={{ color: t.pnl >= 0 ? G : '#ff4d4d' }}>
+                        {t.pnl >= 0 ? '+' : ''}{fmtPnl(t.pnl)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10">
+                  <p className="text-sm font-mono" style={{ color: 'rgba(255,255,255,0.25)' }}>No trades on this day</p>
+                  <button
+                    onClick={() => setShowAddTrade(true)}
+                    className="mt-3 text-xs font-mono underline"
+                    style={{ color: G }}
+                  >
+                    Add a trade
+                  </button>
+                </div>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowAddTrade(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors"
-                style={{ background: 'rgba(0,255,65,0.1)', color: G, border: '1px solid rgba(0,255,65,0.2)' }}
-              >
-                <Plus className="w-3.5 h-3.5" /> Add Trade
-              </button>
-              <button onClick={() => setSelectedDay(null)} style={{ color: 'rgba(255,255,255,0.3)' }}>
-                <X className="w-4 h-4" />
-              </button>
-            </div>
           </div>
-
-          {selectedData?.trades?.length > 0 ? (
-            <div className="space-y-2">
-              <div className="grid grid-cols-5 pb-2 border-b border-white/[0.06]" style={{ gap: 12 }}>
-                {['Symbol', 'Setup', 'Account', 'Side', 'P&L'].map(h => (
-                  <p key={h} className="text-[10px] font-mono uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>{h}</p>
-                ))}
-              </div>
-              {selectedData.trades.map(t => (
-                <div key={t.id} className="grid grid-cols-5 py-2 border-b border-white/[0.04]" style={{ gap: 12 }}>
-                  <p className="text-sm font-mono font-bold text-white">{t.symbol}</p>
-                  <p className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.5)' }}>{t.setup || '—'}</p>
-                  <p className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.4)' }}>{t.account || '—'}</p>
-                  <p className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.4)' }}>{t.direction || '—'}</p>
-                  <p className="text-sm font-mono font-bold" style={{ color: t.pnl >= 0 ? G : '#ff4d4d' }}>
-                    {fmtPnl(t.pnl)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-sm font-mono" style={{ color: 'rgba(255,255,255,0.25)' }}>No trades on this day</p>
-              <button
-                onClick={() => setShowAddTrade(true)}
-                className="mt-3 text-xs font-mono underline"
-                style={{ color: G }}
-              >
-                Add a trade
-              </button>
-            </div>
-          )}
         </div>
       )}
 
