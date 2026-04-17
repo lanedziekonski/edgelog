@@ -84,7 +84,7 @@ export default function AppCalendar() {
         {/* Cells */}
         <div className="grid grid-cols-7">
           {calDays.map((day, i) => {
-            if (!day) return <div key={`empty-${i}`} className="border-b border-r border-white/[0.04]" style={{ minHeight: 100 }} />;
+            if (!day) return <div key={`empty-${i}`} className="border-b border-r border-white/[0.04]" style={{ minHeight: 130 }} />;
             const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const data = byDate[iso];
             const isToday = iso === new Date().toISOString().split('T')[0];
@@ -97,7 +97,7 @@ export default function AppCalendar() {
                 onClick={() => { setSelectedDay(day === selectedDay ? null : day); }}
                 className="border-b border-r border-white/[0.04] flex flex-col cursor-pointer transition-all hover:bg-white/[0.04]"
                 style={{
-                  minHeight: 100,
+                  minHeight: 130,
                   padding: '10px',
                   background: isSelected
                     ? `rgba(0,255,65,0.08)`
@@ -109,7 +109,7 @@ export default function AppCalendar() {
               >
                 <div className="flex items-start justify-between">
                   <span
-                    className="text-xs font-mono w-6 h-6 flex items-center justify-center rounded-full leading-none"
+                    className="text-sm font-mono w-7 h-7 flex items-center justify-center rounded-full leading-none"
                     style={{
                       color: isToday ? '#000' : 'rgba(255,255,255,0.5)',
                       background: isToday ? G : 'transparent',
@@ -129,7 +129,7 @@ export default function AppCalendar() {
                 </div>
                 {data && (
                   <div className="mt-auto pt-2">
-                    <p className="font-mono font-bold leading-none" style={{ fontSize: 16, color: green ? G : '#ff4d4d' }}>
+                    <p className="font-mono font-bold leading-none" style={{ fontSize: 20, color: green ? G : '#ff4d4d' }}>
                       {data.pnl >= 0 ? '+' : '-'}${Math.abs(data.pnl).toFixed(0)}
                     </p>
                     <p className="text-[9px] font-mono mt-1" style={{ color: 'rgba(255,255,255,0.25)' }}>{data.count} trade{data.count !== 1 ? 's' : ''}</p>
