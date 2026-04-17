@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import taLogo from '../assets/ta-mark.png';
 
 const G        = '#00ff41';
 const STORAGE_KEY = 'tradeascend_terms_v1_accepted';
@@ -48,16 +47,18 @@ export default function TermsAgreementPopup({ onAccept }) {
         }}
       >
         {/* Logo */}
-        <img
-          src={taLogo}
-          alt="TraderAscend"
-          style={{
-            width: '160px',
-            height: 'auto',
-            display: 'block',
-            margin: '0 auto 24px auto',
-          }}
-        />
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <h1 style={{
+            margin: 0,
+            fontSize: '56px',
+            fontWeight: '800',
+            letterSpacing: '2px',
+            lineHeight: 1,
+            filter: 'drop-shadow(0 0 6px rgba(0,255,65,0.6))',
+          }}>
+            <span style={{ color: '#ffffff' }}>TRADER</span><span style={{ color: '#00ff41' }}>ASCEND</span>
+          </h1>
+        </div>
 
         {/* Subtext */}
         <div style={{
