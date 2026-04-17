@@ -15,12 +15,16 @@ export function useAccounts() {
       .then(r => r.json())
       .then(data => setAccounts(Array.isArray(data) ? data.map(a => ({
         ...a,
-        balance: a.manual_balance ?? a.starting_balance ?? 0,
-        startingBalance: a.starting_balance ?? 0,
+        id: a.id,
+        name: a.name,
         accountType: a.type || 'Live',
-        dailyLossLimit: a.daily_loss_limit ?? null,
-        maxDrawdown: a.max_drawdown ?? null,
-        profitTarget: a.profit_target ?? null,
+        phase: a.phase || 'evaluation',
+        startingBalance: parseFloat(a.starting_balance) || 0,
+        balance: a.manual_balance != null ? parseFloat(a.manual_balance) : parseFloat(a.starting_balance) || 0,
+        dailyLossLimit: a.daily_loss_limit != null ? parseFloat(a.daily_loss_limit) : null,
+        maxDrawdown: a.max_drawdown != null ? parseFloat(a.max_drawdown) : null,
+        profitTarget: a.profit_target != null ? parseFloat(a.profit_target) : null,
+        balanceLastUpdated: a.balance_last_updated || null,
       })) : []))
       .catch(() => setAccounts([]))
       .finally(() => setLoading(false));

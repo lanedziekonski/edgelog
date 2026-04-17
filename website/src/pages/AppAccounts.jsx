@@ -5,7 +5,7 @@ import { useAccounts } from '../hooks/useAccounts';
 
 const G = '#00ff41';
 const ACCOUNT_TYPES = ['Funded', 'Evaluation', 'Live', 'Paper'];
-const EMPTY_FORM = { name: '', accountType: 'Live', balance: '', startingBalance: '' };
+const EMPTY_FORM = { name: '', accountType: 'Live', balance: '', startingBalance: '', profitTarget: '', maxDrawdown: '', dailyLossLimit: '', phase: 'evaluation' };
 const BROKERS = ['tradovate', 'ibkr', 'thinkorswim', 'tradestation', 'webull'];
 
 export default function AppAccounts() {
@@ -28,6 +28,10 @@ export default function AppAccounts() {
         accountType: form.accountType,
         balance: parseFloat(form.balance) || 0,
         startingBalance: parseFloat(form.startingBalance) || parseFloat(form.balance) || 0,
+        profit_target: parseFloat(form.profitTarget) || null,
+        max_drawdown: parseFloat(form.maxDrawdown) || null,
+        daily_loss_limit: parseFloat(form.dailyLossLimit) || null,
+        phase: form.phase || 'evaluation',
       });
       if (csvFile) {
         try {
@@ -92,8 +96,17 @@ export default function AppAccounts() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {accounts.map((acc, i) => {
-            const pl = (acc.balance || 0) - (acc.startingBalance || acc.balance || 0);
-            const plPct = acc.startingBalance ? (pl / acc.startingBalance) * 100 : 0;
+            const balance = acc.balance || 0;
+            const starting = acc.startingBalance || balance;
+            const pl = balance - starting;
+            const plPct = starting > 0 ? (pl / starting) * 100 : 0;
+
+            const profitGain = balance - starting;
+            const profitPct = acc.profitTarget > 0 ? Math.min((profitGain / acc.profitTarget) * 100, 100) : 0;
+
+            const drawdownUsed = Math.max(0, starting - balance);
+            const drawdownPct = acc.maxDrawdown > 0 ? Math.min((drawdownUsed / acc.maxDrawdown) * 100, 100) : 0;
+
             return (
               <motion.div
                 key={acc.id}
@@ -101,49 +114,86 @@ export default function AppAccounts() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
                 className="rounded-xl p-5 flex flex-col gap-4"
-                style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.08)' }}
+                style={{ background: 'rgba(10,10,10,0.85)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}
               >
+                {/* Header */}
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-semibold text-base leading-tight">{acc.name}</p>
-                    <span
-                      className="inline-block mt-1.5 text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full"
-                      style={{
-                        background: acc.accountType === 'Funded' ? `${G}18` : 'rgba(255,255,255,0.07)',
-                        color: acc.accountType === 'Funded' ? G : 'rgba(255,255,255,0.5)',
-                      }}
-                    >
-                      {acc.accountType || 'Live'}
-                    </span>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full"
+                        style={{ background: acc.accountType === 'Funded' ? `${G}18` : 'rgba(255,255,255,0.07)', color: acc.accountType === 'Funded' ? G : 'rgba(255,255,255,0.5)' }}>
+                        {acc.accountType || 'Live'}
+                      </span>
+                      <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full"
+                        style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}>
+                        {acc.phase || 'Evaluation'}
+                      </span>
+                    </div>
                   </div>
-                  <button onClick={() => deleteAccount(acc.id)} className="p-1.5 rounded-lg transition-colors hover:text-red-400 hover:bg-red-500/[0.06]" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                  <button onClick={() => deleteAccount(acc.id)}
+                    className="p-1.5 rounded-lg transition-colors hover:text-red-400 hover:bg-red-500/[0.06]"
+                    style={{ color: 'rgba(255,255,255,0.25)' }}>
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
 
+                {/* Balance */}
                 <div>
-                  <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>Balance</p>
-                  <p className="text-2xl font-bold">
-                    ${(acc.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>Current Balance</p>
+                  <p className="text-3xl font-bold font-mono" style={{ color: pl >= 0 ? G : '#ff4d4d' }}>
+                    ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-xs font-mono mt-1" style={{ color: pl >= 0 ? G : '#ff4d4d' }}>
+                    {pl >= 0 ? '+' : ''}${Math.abs(pl).toLocaleString('en-US', { minimumFractionDigits: 2 })} ({plPct >= 0 ? '+' : ''}{plPct.toFixed(2)}%)
+                    <span className="ml-2" style={{ color: 'rgba(255,255,255,0.3)' }}>from ${starting.toLocaleString('en-US', { maximumFractionDigits: 0 })} start</span>
                   </p>
                 </div>
 
-                {acc.startingBalance ? (
-                  <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                    <div>
-                      <p className="text-[10px] font-mono uppercase tracking-widest mb-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>P&L</p>
-                      <p className="font-mono font-bold" style={{ color: pl >= 0 ? G : '#ff4d4d' }}>
-                        {pl >= 0 ? '+' : ''}${Math.abs(pl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {/* Profit Target tracker */}
+                {acc.profitTarget > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-[10px] font-mono uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>Profit Target</p>
+                      <p className="text-xs font-mono font-bold" style={{ color: profitPct >= 100 ? G : 'rgba(255,255,255,0.6)' }}>
+                        ${profitGain.toLocaleString('en-US', { maximumFractionDigits: 0 })} / ${acc.profitTarget.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[10px] font-mono uppercase tracking-widest mb-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>Return</p>
-                      <p className="font-mono font-bold" style={{ color: plPct >= 0 ? G : '#ff4d4d' }}>
-                        {plPct >= 0 ? '+' : ''}{plPct.toFixed(2)}%
-                      </p>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                      <div className="h-full rounded-full transition-all" style={{ width: `${profitPct}%`, background: G }} />
                     </div>
+                    <p className="text-[10px] font-mono mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>{profitPct.toFixed(1)}% to target</p>
                   </div>
-                ) : null}
+                )}
+
+                {/* Max Drawdown tracker */}
+                {acc.maxDrawdown > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-[10px] font-mono uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>Max Drawdown</p>
+                      <p className="text-xs font-mono font-bold" style={{ color: drawdownPct >= 90 ? '#ff4d4d' : drawdownPct >= 70 ? '#ffaa33' : 'rgba(255,255,255,0.6)' }}>
+                        ${drawdownUsed.toLocaleString('en-US', { maximumFractionDigits: 0 })} / ${acc.maxDrawdown.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                      <div className="h-full rounded-full transition-all" style={{ width: `${drawdownPct}%`, background: drawdownPct >= 90 ? '#ff4d4d' : drawdownPct >= 70 ? '#ffaa33' : G }} />
+                    </div>
+                    <p className="text-[10px] font-mono mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                      ${(acc.maxDrawdown - drawdownUsed).toLocaleString('en-US', { maximumFractionDigits: 0 })} remaining
+                    </p>
+                  </div>
+                )}
+
+                {/* Daily Loss Limit */}
+                {acc.dailyLossLimit > 0 && (
+                  <div className="rounded-lg px-3 py-2.5 flex items-center justify-between"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <p className="text-[10px] font-mono uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>Daily Loss Limit</p>
+                    <p className="text-sm font-mono font-bold" style={{ color: '#ffaa33' }}>
+                      ${acc.dailyLossLimit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    </p>
+                  </div>
+                )}
               </motion.div>
             );
           })}
@@ -186,6 +236,15 @@ export default function AppAccounts() {
                     <input type="number" step="0.01" value={form.balance} onChange={e => setForm(f => ({ ...f, balance: e.target.value }))} placeholder="100000" className="modal-input" />
                   </ModalField>
                 </div>
+                <ModalField label="Profit Target ($)">
+                  <input type="number" step="0.01" value={form.profitTarget || ''} onChange={e => setForm(f => ({ ...f, profitTarget: e.target.value }))} placeholder="10000" className="modal-input" />
+                </ModalField>
+                <ModalField label="Max Drawdown ($)">
+                  <input type="number" step="0.01" value={form.maxDrawdown || ''} onChange={e => setForm(f => ({ ...f, maxDrawdown: e.target.value }))} placeholder="5000" className="modal-input" />
+                </ModalField>
+                <ModalField label="Daily Loss Limit ($)">
+                  <input type="number" step="0.01" value={form.dailyLossLimit || ''} onChange={e => setForm(f => ({ ...f, dailyLossLimit: e.target.value }))} placeholder="1000" className="modal-input" />
+                </ModalField>
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 16, marginTop: 4 }}>
                   <p className="text-xs font-mono uppercase tracking-wider mb-3" style={{ color: 'rgba(255,255,255,0.35)' }}>Import Trades from CSV (optional)</p>
                   <ModalField label="Broker">
