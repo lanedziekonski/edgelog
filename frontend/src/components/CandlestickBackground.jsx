@@ -47,8 +47,8 @@ export default function CandlestickBackground() {
         c.low = Math.max(c.open, c.close) + 0.03 + 0.05 * Math.abs(Math.cos(t * c.speed * 0.7 + i));
 
         const isGreen = c.close < c.open;
-        const bodyColor = isGreen ? 'rgba(0,255,65,0.09)' : 'rgba(255,45,45,0.08)';
-        const wickColor = isGreen ? 'rgba(0,255,65,0.05)' : 'rgba(255,45,45,0.05)';
+        const bodyColor = isGreen ? 'rgba(0,255,65,0.04)' : 'rgba(255,45,45,0.035)';
+        const wickColor = isGreen ? 'rgba(0,255,65,0.02)' : 'rgba(255,45,45,0.02)';
 
         const x = (i / CANDLE_COUNT) * W + W / CANDLE_COUNT / 2;
         const openY = c.open * H;
