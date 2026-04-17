@@ -23,6 +23,7 @@ const ALLOWED_ORIGINS = [
   'http://localhost:4173',
   'https://traderascend.com',
   'https://www.traderascend.com',
+  'https://app.traderascend.com',
   'https://edgelog-mu.vercel.app',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
