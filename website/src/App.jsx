@@ -26,7 +26,7 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="dashboard" element={<PageWrap><Dashboard /></PageWrap>} />
+        <Route path="preview" element={<PageWrap><Dashboard /></PageWrap>} />
         <Route element={<Layout />}>
           <Route index element={<PageWrap><Home /></PageWrap>} />
           <Route path="features" element={<PageWrap><Features /></PageWrap>} />

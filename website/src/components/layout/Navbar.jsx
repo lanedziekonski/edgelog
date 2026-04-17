@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ArrowRight } from 'lucide-react';
 import Button from '../ui/Button';
 import Logo from '../ui/Logo';
-import { NAV_LINKS, APP_URL } from '../../data/site';
+import { NAV_LINKS } from '../../data/site';
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -82,7 +82,7 @@ export default function Navbar() {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <Button href={APP_URL} variant="primary" size="sm" external>
+            <Button to="/preview" variant="primary" size="sm">
               Get Started <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
@@ -132,7 +132,7 @@ export default function Navbar() {
                 transition={{ delay: 0.3, duration: 0.3 }}
                 className="pt-8"
               >
-                <Button href={APP_URL} variant="primary" size="lg" external className="w-full">
+                <Button to="/preview" variant="primary" size="lg" className="w-full">
                   Get Started <ArrowRight className="w-5 h-5" />
                 </Button>
               </motion.div>

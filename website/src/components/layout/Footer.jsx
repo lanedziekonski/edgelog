@@ -59,14 +59,12 @@ export default function Footer() {
           </h4>
           <ul className="flex flex-col gap-2 text-sm">
             <li>
-              <a
-                href="https://edgelog-mu.vercel.app"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                to="/dashboard"
                 className="text-ink/70 hover:text-neon transition-colors"
               >
-                Launch App
-              </a>
+                Open Dashboard
+              </Link>
             </li>
             <li>
               <a href="#" className="text-ink/70 hover:text-neon transition-colors">

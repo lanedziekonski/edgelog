@@ -39,7 +39,7 @@ export default function DashHeader() {
           </span>
         </span>
         <span className="mt-0.5 font-bold text-lg md:text-xl tracking-tight">
-          Welcome back, <span className="text-neon">Demo</span>
+          Welcome back, <span className="text-neon">Trader</span>
         </span>
       </div>
 

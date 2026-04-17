@@ -300,9 +300,9 @@ export const COACH_CONVERSATION = [
 
 // Profile screen
 export const PROFILE = {
-  name: 'Demo Trader',
-  handle: '@demotrader',
-  email: 'demo@tradeascend.com',
+  name: 'Carter Peters',
+  handle: '@carter',
+  email: 'carter@tradeascend.com',
   memberSince: 'Oct 2025',
   plan: 'Pro',
   allTimeStats: {

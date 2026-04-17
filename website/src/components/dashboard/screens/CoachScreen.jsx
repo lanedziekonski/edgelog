@@ -36,7 +36,7 @@ export default function CoachScreen() {
         {
           role: 'coach',
           content:
-            "That's a great question. In the full app, I'd analyze your trade history, setup performance, and rule adherence to give you a specific, data-backed answer. This is a preview — log your real trades to unlock personalized coaching.",
+            "Good question. Let me cross-reference that against your recent trade history, setup performance, and rule adherence — then I'll come back with a specific, data-backed read on what's working and what's leaking edge.",
           time,
         },
       ]);

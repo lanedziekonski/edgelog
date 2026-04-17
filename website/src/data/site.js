@@ -1,11 +1,9 @@
-export const APP_URL = 'https://edgelog-mu.vercel.app';
-
 export const NAV_LINKS = [
   { to: '/', label: 'Home' },
   { to: '/features', label: 'Features' },
   { to: '/how-it-works', label: 'How It Works' },
   { to: '/pricing', label: 'Pricing' },
-  { to: '/dashboard', label: 'Demo', highlight: true },
+  { to: '/preview', label: 'Dashboard', highlight: true },
 ];
 
 export const SOCIAL = {
