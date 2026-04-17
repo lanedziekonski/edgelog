@@ -37,7 +37,7 @@ export default function PricingCard({ tier, billing }) {
         <span className="text-sm text-muted font-mono">/mo</span>
       </div>
       <div className="mt-1 h-5 text-xs text-muted font-mono">
-        {billing === 'annual' && isPaid && 'billed annually'}
+        {billing === 'annual' && isPaid && `billed $${tier.annualTotal}/yr`}
         {billing === 'monthly' && isPaid && 'billed monthly'}
       </div>
 
