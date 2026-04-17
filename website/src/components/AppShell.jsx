@@ -6,6 +6,7 @@ import {
   ClipboardCheck, MessageSquare, User, LogOut, ChevronLeft, Menu, X,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import CandlestickBackground from './CandlestickBackground';
 
 const NAV = [
   { to: '/dashboard', label: 'Dashboard',    Icon: LayoutDashboard },
@@ -95,7 +96,9 @@ export default function AppShell() {
   );
 
   return (
-    <div className="flex min-h-screen" style={{ background: '#0a0a0a', color: '#fff' }}>
+    <div style={{ position: 'relative', overflow: 'hidden', minHeight: '100vh', background: '#080c08', color: '#fff' }}>
+      <CandlestickBackground />
+      <div className="flex min-h-screen" style={{ position: 'relative', zIndex: 1 }}>
       {/* Desktop sidebar */}
       <motion.aside
         animate={{ width: collapsed ? 72 : 224 }}
@@ -157,6 +160,7 @@ export default function AppShell() {
             <Outlet />
           </div>
         </main>
+      </div>
       </div>
     </div>
   );
