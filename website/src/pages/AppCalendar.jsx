@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, X, Plus } from 'lucide-react';
 import { useTrades, fmtPnl } from '../hooks/useTrades';
 
@@ -12,7 +13,7 @@ export default function AppCalendar() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [selectedDay, setSelectedDay] = useState(null);
-  const [showAddTrade, setShowAddTrade] = useState(false);
+  const navigate = useNavigate();
 
   const byDate = useMemo(() => {
     const map = {};
@@ -119,7 +120,7 @@ export default function AppCalendar() {
                     {day}
                   </span>
                   <button
-                    onClick={e => { e.stopPropagation(); setSelectedDay(day); setShowAddTrade(true); }}
+                    onClick={e => { e.stopPropagation(); navigate(`/journal?addTrade=1&date=${iso}`); }}
                     className="opacity-0 hover:opacity-100 w-5 h-5 rounded flex items-center justify-center transition-opacity"
                     style={{ color: G, background: 'rgba(0,255,65,0.1)' }}
                     title="Add trade"
@@ -163,7 +164,7 @@ export default function AppCalendar() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setShowAddTrade(true)}
+                  onClick={() => navigate(`/journal?addTrade=1&date=${selectedIso}`)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors"
                   style={{ background: 'rgba(0,255,65,0.1)', color: G, border: '1px solid rgba(0,255,65,0.2)' }}
                 >
@@ -199,7 +200,7 @@ export default function AppCalendar() {
                 <div className="text-center py-10">
                   <p className="text-sm font-mono" style={{ color: 'rgba(255,255,255,0.25)' }}>No trades on this day</p>
                   <button
-                    onClick={() => setShowAddTrade(true)}
+                    onClick={() => navigate(`/journal?addTrade=1&date=${selectedIso}`)}
                     className="mt-3 text-xs font-mono underline"
                     style={{ color: G }}
                   >
@@ -208,28 +209,6 @@ export default function AppCalendar() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Trade modal - redirects to journal */}
-      {showAddTrade && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.8)' }}>
-          <div className="rounded-2xl p-6 w-full max-w-sm mx-4" style={{ background: '#111', border: '1px solid rgba(0,255,65,0.2)' }}>
-            <div className="flex items-center justify-between mb-4">
-              <p className="font-mono font-bold" style={{ color: G }}>Add Trade</p>
-              <button onClick={() => setShowAddTrade(false)} style={{ color: 'rgba(255,255,255,0.4)' }}><X className="w-4 h-4" /></button>
-            </div>
-            <p className="text-sm mb-4" style={{ color: 'rgba(255,255,255,0.5)' }}>
-              To add a trade for {selectedIso ? `${MONTHS[month]} ${selectedDay}` : 'this day'}, go to the Journal and log it with this date.
-            </p>
-            <a
-              href="/journal"
-              className="block w-full text-center py-2.5 rounded-lg font-mono font-bold text-sm transition-colors"
-              style={{ background: G, color: '#000' }}
-            >
-              Go to Journal
-            </a>
           </div>
         </div>
       )}
