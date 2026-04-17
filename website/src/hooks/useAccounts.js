@@ -30,7 +30,11 @@ export function useAccounts() {
       .finally(() => setLoading(false));
   }, [token]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    const interval = setInterval(load, 30000);
+    return () => clearInterval(interval);
+  }, [load]);
 
   const createAccount = useCallback(async (data) => {
     const res = await fetch(`${API}/accounts`, {
