@@ -10,10 +10,26 @@ const DIRECTIONS = ['LONG', 'SHORT'];
 const FILTERS = ['all', 'wins', 'losses', 'rule breaks'];
 
 const EMPTY_FORM = {
-  symbol: '', date: new Date().toISOString().split('T')[0],
-  direction: 'LONG', setup: 'ORB', pnl: '', quantity: '1',
-  account: '', notes: '', followedPlan: true,
+  symbol: '',
+  date: new Date().toISOString().split('T')[0],
+  direction: 'LONG',
+  setup: 'ORB',
+  pnl: '',
+  quantity: '1',
+  account: '',
+  entryPrice: '',
+  exitPrice: '',
+  stopPrice: '',
+  entryTime: '',
+  exitTime: '',
+  emotionBefore: 'Calm',
+  emotionAfter: 'Neutral',
+  notes: '',
+  followedPlan: true,
 };
+
+const EMOTIONS_BEFORE = ['Calm', 'Confident', 'Anxious', 'Excited', 'Frustrated', 'Tired', 'Focused', 'Distracted'];
+const EMOTIONS_AFTER = ['Neutral', 'Satisfied', 'Disappointed', 'Relieved', 'Angry', 'Happy', 'Regretful', 'Proud'];
 
 export default function AppJournal() {
   const { trades, loading, addTrade, deleteTrade } = useTrades();
@@ -62,7 +78,20 @@ export default function AppJournal() {
     if (isNaN(pnlNum)) { setErr('P&L must be a number'); return; }
     setSaving(true);
     try {
-      await addTrade({ ...form, symbol: form.symbol.toUpperCase(), pnl: pnlNum, quantity: Number(form.quantity) || 1 });
+      await addTrade({
+        ...form,
+        symbol: form.symbol.toUpperCase(),
+        pnl: pnlNum,
+        quantity: Number(form.quantity) || 1,
+        entry_price: form.entryPrice ? parseFloat(form.entryPrice) : null,
+        exit_price: form.exitPrice ? parseFloat(form.exitPrice) : null,
+        stop_price: form.stopPrice ? parseFloat(form.stopPrice) : null,
+        entry_time: form.entryTime || '',
+        exit_time: form.exitTime || '',
+        emotion_before: form.emotionBefore,
+        emotion_after: form.emotionAfter,
+        side: form.direction,
+      });
       setAddOpen(false);
       setForm(EMPTY_FORM);
     } catch (e) {
@@ -198,6 +227,33 @@ export default function AppJournal() {
                   </Field>
                   <Field label="Account (optional)" className="col-span-2">
                     <input value={form.account} onChange={e => setForm(f => ({ ...f, account: e.target.value }))} placeholder="Apex, FTMO…" className="input-field" />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <Field label="Entry Price ($)">
+                    <input type="number" step="0.01" value={form.entryPrice} onChange={e => setForm(f => ({ ...f, entryPrice: e.target.value }))} placeholder="4285.00" className="input-field" />
+                  </Field>
+                  <Field label="Exit Price ($)">
+                    <input type="number" step="0.01" value={form.exitPrice} onChange={e => setForm(f => ({ ...f, exitPrice: e.target.value }))} placeholder="4310.00" className="input-field" />
+                  </Field>
+                  <Field label="Stop Price ($)">
+                    <input type="number" step="0.01" value={form.stopPrice} onChange={e => setForm(f => ({ ...f, stopPrice: e.target.value }))} placeholder="4270.00" className="input-field" />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Entry Time">
+                    <input type="time" value={form.entryTime} onChange={e => setForm(f => ({ ...f, entryTime: e.target.value }))} className="input-field" />
+                  </Field>
+                  <Field label="Exit Time">
+                    <input type="time" value={form.exitTime} onChange={e => setForm(f => ({ ...f, exitTime: e.target.value }))} className="input-field" />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Emotion Before">
+                    <Select value={form.emotionBefore} onChange={v => setForm(f => ({ ...f, emotionBefore: v }))} options={EMOTIONS_BEFORE} />
+                  </Field>
+                  <Field label="Emotion After">
+                    <Select value={form.emotionAfter} onChange={v => setForm(f => ({ ...f, emotionAfter: v }))} options={EMOTIONS_AFTER} />
                   </Field>
                 </div>
                 <Field label="Notes (optional)">
