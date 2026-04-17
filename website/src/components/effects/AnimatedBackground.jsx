@@ -7,16 +7,16 @@ const VIEW_HEIGHT = 400;
 const TICK_MS = 850;
 
 function makeCandle(prevClose) {
-  const bigMove = Math.random() < 0.08;
-  const volatility = bigMove ? 14 : 4.5;
-  const drift = (50 - prevClose) * 0.014;
+  const bigMove = Math.random() < 0.1;
+  const volatility = bigMove ? 24 : 9;
+  const drift = (50 - prevClose) * 0.012;
   const direction = Math.random() < 0.5 ? -1 : 1;
   const open = prevClose;
   const close = Math.max(
-    10,
-    Math.min(90, open + direction * Math.random() * volatility + drift),
+    5,
+    Math.min(95, open + direction * Math.random() * volatility + drift),
   );
-  const wickExtra = volatility * (0.25 + Math.random() * 0.65);
+  const wickExtra = volatility * (0.45 + Math.random() * 0.9);
   const high = Math.max(open, close) + Math.random() * wickExtra;
   const low = Math.min(open, close) - Math.random() * wickExtra;
   return { open, high, low, close };
@@ -34,9 +34,9 @@ function buildInitialCandles() {
 }
 
 function priceToY(p) {
-  const padTop = VIEW_HEIGHT * 0.12;
-  const usable = VIEW_HEIGHT * 0.76;
-  return padTop + (1 - (p - 5) / 90) * usable;
+  const padTop = VIEW_HEIGHT * 0.05;
+  const usable = VIEW_HEIGHT * 0.9;
+  return padTop + (1 - p / 100) * usable;
 }
 
 /**
