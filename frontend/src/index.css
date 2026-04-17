@@ -47,6 +47,7 @@ body {
   margin: 0 auto;
   position: relative;
   background: var(--bg);
+  overflow: hidden;
 }
 
 .screen {
