@@ -13,7 +13,15 @@ export function useAccounts() {
     setLoading(true);
     fetch(`${API}/accounts`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
-      .then(data => setAccounts(Array.isArray(data) ? data : []))
+      .then(data => setAccounts(Array.isArray(data) ? data.map(a => ({
+        ...a,
+        balance: a.manual_balance ?? a.starting_balance ?? 0,
+        startingBalance: a.starting_balance ?? 0,
+        accountType: a.type || 'Live',
+        dailyLossLimit: a.daily_loss_limit ?? null,
+        maxDrawdown: a.max_drawdown ?? null,
+        profitTarget: a.profit_target ?? null,
+      })) : []))
       .catch(() => setAccounts([]))
       .finally(() => setLoading(false));
   }, [token]);
