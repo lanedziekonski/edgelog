@@ -53,7 +53,21 @@ export function useTrades() {
     return data;
   }, [token]);
 
-  return { trades, loading, reload: load, addTrade, deleteTrade, updateTrade };
+  const importCsv = useCallback(async (file) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(`${API}/trades/import`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Import failed');
+    load(false);
+    return data;
+  }, [token, load]);
+
+  return { trades, loading, reload: load, addTrade, deleteTrade, updateTrade, importCsv };
 }
 
 export function calcStats(trades) {

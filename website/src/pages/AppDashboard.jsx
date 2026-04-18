@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, BarChart2, Target, Zap, Clock } from 'lucide-react';
@@ -66,12 +66,36 @@ function EquityChart({ curve }) {
 export default function AppDashboard() {
   const navigate = useNavigate();
   const { trades, loading } = useTrades();
-  const stats = useMemo(() => calcStats(trades), [trades]);
-  const curve = useMemo(() => buildEquityCurve(trades), [trades]);
+  const [selectedAccount, setSelectedAccount] = useState('all');
+
+  const accountNames = useMemo(() => [...new Set(trades.map(t => t.account).filter(Boolean))], [trades]);
+
+  const filteredTrades = useMemo(() =>
+    selectedAccount === 'all' ? trades : trades.filter(t => t.account === selectedAccount),
+  [trades, selectedAccount]);
+
+  const stats = useMemo(() => calcStats(filteredTrades), [filteredTrades]);
+  const curve = useMemo(() => buildEquityCurve(filteredTrades), [filteredTrades]);
+
+  const monthlyData = useMemo(() => {
+    const byMonth = {};
+    filteredTrades.forEach(t => {
+      const month = t.date?.slice(0, 7);
+      if (!month) return;
+      byMonth[month] = (byMonth[month] || 0) + t.pnl;
+    });
+    return Object.entries(byMonth)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, pnl]) => {
+        const [y, m] = month.split('-');
+        const label = new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        return { month, label, pnl: Math.round(pnl) };
+      });
+  }, [filteredTrades]);
 
   const recent = useMemo(() =>
-    [...trades].sort((a, b) => b.date?.localeCompare(a.date) || 0).slice(0, 8),
-  [trades]);
+    [...filteredTrades].sort((a, b) => b.date?.localeCompare(a.date) || 0).slice(0, 8),
+  [filteredTrades]);
 
   const setupRows = useMemo(() =>
     Object.entries(stats.bySetup || {})
@@ -86,7 +110,20 @@ export default function AppDashboard() {
     <div className="space-y-8">
       {/* Hero stats */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-5">Dashboard</h1>
+        <div className="flex items-end justify-between gap-4 flex-wrap mb-5">
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          {accountNames.length > 0 && (
+            <select
+              value={selectedAccount}
+              onChange={e => setSelectedAccount(e.target.value)}
+              className="text-xs px-3 py-1.5 rounded-lg outline-none"
+              style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.1)', color: selectedAccount === 'all' ? 'rgba(255,255,255,0.5)' : G }}
+            >
+              <option value="all">All Accounts</option>
+              {accountNames.map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+          )}
+        </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatCard
             label="Total P&L"
@@ -127,6 +164,14 @@ export default function AppDashboard() {
         <EquityChart curve={curve} />
       </div>
 
+      {/* Monthly P&L */}
+      <div className="rounded-xl p-5" style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <p className="text-xs font-mono uppercase tracking-widest mb-4" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          Monthly P&amp;L
+        </p>
+        <MonthlyChart data={monthlyData} />
+      </div>
+
       {/* Stats row 2 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Rule Score" value={`${stats.ruleScore?.toFixed(0) ?? 0}%`} sub="plan adherence" positive={stats.ruleScore >= 80} Icon={Target} />
@@ -149,7 +194,7 @@ export default function AppDashboard() {
             {stats.streak}-trade {stats.streakType} streak
           </p>
           <p className="text-xs ml-auto" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            {stats.streakType === 'win' ? 'Keep it up!' : 'Stay disciplined'}
+            {stats.streakType === 'win' ? 'Keep it up! 🔥' : 'Bounce back 💪'}
           </p>
         </div>
       )}
@@ -226,6 +271,51 @@ export default function AppDashboard() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function MonthlyChart({ data }) {
+  if (!data.length) return (
+    <div className="flex items-center justify-center h-32 text-sm" style={{ color: 'rgba(255,255,255,0.25)' }}>
+      Log more trades to see monthly P&L
+    </div>
+  );
+  const recent = data.slice(-12);
+  const maxAbs = Math.max(...recent.map(d => Math.abs(d.pnl)), 1);
+  const W = 700; const H = 90;
+  const gap = 5;
+  const barW = Math.max(12, Math.floor((W - (recent.length - 1) * gap) / recent.length));
+  const midY = H / 2;
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <svg viewBox={`0 0 ${W} ${H + 22}`} className="w-full" style={{ minHeight: 90 }} preserveAspectRatio="xMidYMid meet">
+        <line x1="0" y1={midY} x2={W} y2={midY} stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
+        {recent.map((d, i) => {
+          const x = i * (barW + gap);
+          const barH = Math.max(3, (Math.abs(d.pnl) / maxAbs) * (midY - 6));
+          const isPos = d.pnl >= 0;
+          const y = isPos ? midY - barH : midY;
+          const valLabel = Math.abs(d.pnl) >= 1000
+            ? `${isPos ? '+' : '-'}$${(Math.abs(d.pnl) / 1000).toFixed(1)}k`
+            : `${isPos ? '+' : '-'}$${Math.abs(d.pnl)}`;
+          return (
+            <g key={d.month}>
+              <title>{d.label}: {isPos ? '+' : '-'}${Math.abs(d.pnl).toLocaleString()}</title>
+              <rect x={x} y={y} width={barW} height={barH} fill={isPos ? G : '#ff4d4d'} opacity="0.8" rx="2" />
+              {barW > 20 && (
+                <text x={x + barW / 2} y={isPos ? y - 3 : y + barH + 10} textAnchor="middle"
+                  fill={isPos ? G : '#ff4d4d'} fontSize="7" fontFamily="monospace" opacity="0.8">
+                  {valLabel}
+                </text>
+              )}
+              <text x={x + barW / 2} y={H + 18} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="8" fontFamily="monospace">
+                {d.label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 }

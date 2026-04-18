@@ -11,8 +11,9 @@ import About    from './pages/About';
 import HowItWorks from './pages/HowItWorks';
 
 // Auth pages
-import Login  from './pages/Login';
-import Signup from './pages/Signup';
+import Login          from './pages/Login';
+import Signup         from './pages/Signup';
+import ForgotPassword from './pages/ForgotPassword';
 
 // Legal pages
 import PrivacyPolicy  from './pages/PrivacyPolicy';
@@ -77,8 +78,9 @@ function AnimatedRoutes() {
         <Route path="terms"   element={<TermsOfService />} />
 
         {/* Auth pages (redirect to /dashboard if already logged in) */}
-        <Route path="login" element={<GuestOnlyRoute><Login /></GuestOnlyRoute>} />
-        <Route path="signup" element={<GuestOnlyRoute><Signup /></GuestOnlyRoute>} />
+        <Route path="login"            element={<GuestOnlyRoute><Login /></GuestOnlyRoute>} />
+        <Route path="signup"           element={<GuestOnlyRoute><Signup /></GuestOnlyRoute>} />
+        <Route path="forgot-password"  element={<ForgotPassword />} />
 
         {/* Protected app routes — all nested inside AppShell */}
         <Route

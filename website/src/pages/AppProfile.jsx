@@ -1,8 +1,8 @@
 import { useAuth } from '../context/AuthContext';
 import { useTrades, calcStats } from '../hooks/useTrades';
 import { useMemo, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { User, LogOut, ExternalLink, Copy, Check, Gift } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { User, LogOut, ExternalLink, Copy, Check, Gift, KeyRound } from 'lucide-react';
 
 const G = '#00ff41';
 
@@ -164,6 +164,14 @@ export default function AppProfile() {
             <p className="text-sm truncate">{user?.email}</p>
           </div>
         </div>
+        <Link
+          to="/forgot-password"
+          className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-white/[0.03]"
+          style={{ color: 'rgba(255,255,255,0.5)' }}
+        >
+          <KeyRound className="w-4 h-4 flex-shrink-0" />
+          <span className="text-sm font-medium">Change Password</span>
+        </Link>
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-red-500/[0.06] text-left"
