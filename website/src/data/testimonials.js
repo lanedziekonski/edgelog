@@ -15,7 +15,7 @@ export const testimonials = [
   },
   {
     quote:
-      'I run four funded accounts. Before TradeAscend I was tracking payouts in a spreadsheet. The payout dashboard alone is worth the Elite price.',
+      'I run four funded accounts. Before TraderAscend I was tracking payouts in a spreadsheet. The payout dashboard alone is worth the Elite price.',
     name: 'Devon S.',
     title: 'Prop firm trader · 4 funded accounts',
     initials: 'DS',

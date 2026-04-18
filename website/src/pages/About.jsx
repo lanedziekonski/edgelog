@@ -18,7 +18,7 @@ export default function About() {
           <PageHeading
             eyebrow="Our Mission"
             title={<>Built by traders who refused to <span className="text-neon glow-text">settle</span>.</>}
-            subtitle="Generic journals are bloated, slow, and built for a different generation of trader. TradeAscend is fast, opinionated, and powered by AI that actually reads your trades."
+            subtitle="Generic journals are bloated, slow, and built for a different generation of trader. TraderAscend is fast, opinionated, and powered by AI that actually reads your trades."
             watermark="ABOUT"
           />
         </div>
@@ -48,7 +48,7 @@ export default function About() {
                 that didn't make us close the tab. So we built it.
               </p>
               <p className="text-ink">
-                TradeAscend is the journal we needed. We hope it's the one you needed
+                TraderAscend is the journal we needed. We hope it's the one you needed
                 too.
               </p>
             </div>
@@ -112,7 +112,7 @@ export default function About() {
       </section>
 
       <CTABanner
-        title="Join the TradeAscend community"
+        title="Join the TraderAscend community"
         subtitle="Discord channel, weekly insights, and direct access to the team. Free with any plan."
         ctaLabel="Join Free"
       />

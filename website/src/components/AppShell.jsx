@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -36,12 +36,13 @@ export default function AppShell() {
     <>
       {/* Logo */}
       <div className="h-14 flex items-center px-4 border-b border-white/[0.06] flex-shrink-0">
-        <span
+        <Link
+          to="/"
           className="font-bold text-lg whitespace-nowrap overflow-hidden"
-          style={{ color: G }}
+          style={{ color: G, textDecoration: 'none' }}
         >
-          {collapsed && !mobileOpen ? 'TA' : 'TRADEASCEND'}
-        </span>
+          {collapsed && !mobileOpen ? 'TA' : 'TRADERASCEND'}
+        </Link>
         {mobileOpen && (
           <button onClick={() => setMobileOpen(false)} className="ml-auto p-1 text-white/40 hover:text-white">
             <X className="w-5 h-5" />

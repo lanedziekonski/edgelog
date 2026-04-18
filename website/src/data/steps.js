@@ -25,7 +25,7 @@ export const steps = [
     icon: 'Map',
     title: 'Get your AI-generated trading plan',
     description:
-      'Answer 10 questions about your strategy and goals. TradeAscend writes a complete trading plan you can edit and reset anytime.',
+      'Answer 10 questions about your strategy and goals. TraderAscend writes a complete trading plan you can edit and reset anytime.',
   },
   {
     n: '05',

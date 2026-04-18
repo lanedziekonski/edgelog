@@ -302,7 +302,7 @@ export const COACH_CONVERSATION = [
 export const PROFILE = {
   name: 'Carter Peters',
   handle: '@carter',
-  email: 'carter@tradeascend.com',
+  email: 'carter@traderascend.com',
   memberSince: 'Oct 2025',
   plan: 'Pro',
   allTimeStats: {

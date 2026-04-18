@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 
 const API = 'https://edgelog.onrender.com/api';
-const TOKEN_KEY = 'tradeascend_token';
+const TOKEN_KEY = 'traderascend_token';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {

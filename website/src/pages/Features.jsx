@@ -31,7 +31,7 @@ export default function Features() {
 
       <CTABanner
         title="Stop journaling in spreadsheets."
-        subtitle="Get every TradeAscend feature. Start with Free, upgrade when you outgrow it."
+        subtitle="Get every TraderAscend feature. Start with Free, upgrade when you outgrow it."
         ctaLabel="Start Free"
       />
     </>
