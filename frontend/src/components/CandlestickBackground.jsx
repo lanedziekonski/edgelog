@@ -1,95 +1,158 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-export default function CandlestickBackground() {
-  const canvasRef = useRef(null);
+const CANDLE_COUNT = 70;
+const VIEW_WIDTH = 1000;
+const VIEW_HEIGHT = 400;
+const TICK_MS = 850;
+
+function makeCandle(prevClose) {
+  const bigMove = Math.random() < 0.1;
+  const volatility = bigMove ? 24 : 9;
+  const drift = (50 - prevClose) * 0.012;
+  const direction = Math.random() < 0.5 ? -1 : 1;
+  const open = prevClose;
+  const close = Math.max(5, Math.min(95, open + direction * Math.random() * volatility + drift));
+  const wickExtra = volatility * (0.45 + Math.random() * 0.9);
+  const high = Math.max(open, close) + Math.random() * wickExtra;
+  const low = Math.min(open, close) - Math.random() * wickExtra;
+  return { open, high, low, close };
+}
+
+function buildInitialCandles() {
+  const arr = [];
+  let prev = 50;
+  for (let i = 0; i <= CANDLE_COUNT; i++) {
+    const c = makeCandle(prev);
+    arr.push(c);
+    prev = c.close;
+  }
+  return arr;
+}
+
+function priceToY(p) {
+  const padTop = VIEW_HEIGHT * 0.05;
+  const usable = VIEW_HEIGHT * 0.9;
+  return padTop + (1 - p / 100) * usable;
+}
+
+function CandlestickChart() {
+  const [candles, setCandles] = useState(buildInitialCandles);
+  const groupRef = useRef(null);
+  const lastTickRef = useRef(performance.now());
+  const cw = VIEW_WIDTH / CANDLE_COUNT;
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let raf;
-
-    const resize = () => {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
+    let rafId;
+    const loop = (now) => {
+      const elapsed = now - lastTickRef.current;
+      const progress = Math.min(1, elapsed / TICK_MS);
+      if (groupRef.current) {
+        groupRef.current.setAttribute('transform', `translate(${-progress * cw}, 0)`);
+      }
+      if (elapsed >= TICK_MS) {
+        lastTickRef.current = now;
+        setCandles((prev) => {
+          const last = prev[prev.length - 1];
+          return [...prev.slice(1), makeCandle(last.close)];
+        });
+      }
+      rafId = requestAnimationFrame(loop);
     };
-    resize();
-    window.addEventListener('resize', resize);
-
-    const CANDLE_COUNT = 18;
-    const candles = Array.from({ length: CANDLE_COUNT }, (_, i) => ({
-      x: (i / CANDLE_COUNT) * canvas.width + 20,
-      open: 0.3 + Math.random() * 0.4,
-      close: 0.3 + Math.random() * 0.4,
-      high: 0,
-      low: 0,
-      speed: 0.0008 + Math.random() * 0.001,
-      phase: Math.random() * Math.PI * 2,
-      width: 14 + Math.random() * 8,
-    }));
-
-    candles.forEach(c => {
-      c.high = Math.min(c.open, c.close) - 0.04 - Math.random() * 0.06;
-      c.low = Math.max(c.open, c.close) + 0.04 + Math.random() * 0.06;
-    });
-
-    let t = 0;
-    const draw = () => {
-      const W = canvas.width;
-      const H = canvas.height;
-      ctx.clearRect(0, 0, W, H);
-      t += 1;
-
-      candles.forEach((c, i) => {
-        c.open = 0.2 + 0.6 * (0.5 + 0.5 * Math.sin(t * c.speed + c.phase));
-        c.close = 0.2 + 0.6 * (0.5 + 0.5 * Math.sin(t * c.speed * 1.3 + c.phase + 1.2));
-        c.high = Math.min(c.open, c.close) - 0.03 - 0.05 * Math.abs(Math.sin(t * c.speed * 0.7 + i));
-        c.low = Math.max(c.open, c.close) + 0.03 + 0.05 * Math.abs(Math.cos(t * c.speed * 0.7 + i));
-
-        const isGreen = c.close < c.open;
-        const bodyColor = isGreen ? 'rgba(0,255,65,0.09)' : 'rgba(255,45,45,0.08)';
-        const wickColor = isGreen ? 'rgba(0,255,65,0.05)' : 'rgba(255,45,45,0.05)';
-
-        const x = (i / CANDLE_COUNT) * W + W / CANDLE_COUNT / 2;
-        const openY = c.open * H;
-        const closeY = c.close * H;
-        const highY = c.high * H;
-        const lowY = c.low * H;
-        const bodyTop = Math.min(openY, closeY);
-        const bodyH = Math.max(Math.abs(openY - closeY), 2);
-
-        ctx.beginPath();
-        ctx.moveTo(x, highY);
-        ctx.lineTo(x, lowY);
-        ctx.strokeStyle = wickColor;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        ctx.fillStyle = bodyColor;
-        ctx.fillRect(x - c.width / 2, bodyTop, c.width, bodyH);
-      });
-
-      raf = requestAnimationFrame(draw);
-    };
-    draw();
-
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('resize', resize);
-    };
-  }, []);
+    rafId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafId);
+  }, [cw]);
 
   return (
-    <canvas
-      ref={canvasRef}
+    <svg
+      viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
+      preserveAspectRatio="none"
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+    >
+      <g ref={groupRef}>
+        {candles.map((c, i) => {
+          const x = i * cw + cw / 2;
+          const bull = c.close >= c.open;
+          const color = bull ? '#00ff41' : '#ff2d55';
+          const yH = priceToY(c.high);
+          const yL = priceToY(c.low);
+          const yO = priceToY(c.open);
+          const yC = priceToY(c.close);
+          const bTop = Math.min(yO, yC);
+          const bH = Math.max(1.2, Math.abs(yC - yO));
+          return (
+            <g key={i}>
+              <line x1={x} x2={x} y1={yH} y2={yL} stroke={color} strokeWidth={0.7} opacity={0.7} />
+              <rect x={x - cw * 0.32} y={bTop} width={cw * 0.64} height={bH} fill={color} />
+            </g>
+          );
+        })}
+      </g>
+    </svg>
+  );
+}
+
+export default function CandlestickBackground() {
+  return (
+    <div
       style={{
         position: 'absolute',
         inset: 0,
-        width: '100%',
-        height: '100%',
+        overflow: 'hidden',
         pointerEvents: 'none',
         zIndex: 0,
       }}
-    />
+    >
+      {/* Dark base */}
+      <div style={{ position: 'absolute', inset: 0, background: '#080c08' }} />
+
+      {/* Ambient green orbs */}
+      <div style={{
+        position: 'absolute',
+        top: '-10%', left: '-10%',
+        width: 480, height: 480,
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(0,255,65,1) 0%, transparent 70%)',
+        filter: 'blur(120px)',
+        opacity: 0.08,
+      }} />
+      <div style={{
+        position: 'absolute',
+        bottom: '-10%', right: '-10%',
+        width: 560, height: 560,
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(0,204,52,1) 0%, transparent 70%)',
+        filter: 'blur(140px)',
+        opacity: 0.07,
+      }} />
+
+      {/* Candlestick chart */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        opacity: 0.22,
+        maskImage: 'radial-gradient(ellipse 95% 85% at 50% 50%, black 40%, transparent 95%)',
+        WebkitMaskImage: 'radial-gradient(ellipse 95% 85% at 50% 50%, black 40%, transparent 95%)',
+      }}>
+        <CandlestickChart />
+      </div>
+
+      {/* Subtle grid overlay */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        opacity: 0.025,
+        backgroundImage: 'linear-gradient(rgba(0,255,65,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,65,0.5) 1px, transparent 1px)',
+        backgroundSize: '60px 60px',
+        maskImage: 'radial-gradient(ellipse 70% 60% at 50% 50%, black 20%, transparent 85%)',
+        WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at 50% 50%, black 20%, transparent 85%)',
+      }} />
+
+      {/* Center vignette to keep UI readable */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        background: 'radial-gradient(ellipse 55% 45% at 50% 50%, rgba(8,12,8,0.75) 0%, rgba(8,12,8,0) 72%)',
+      }} />
+    </div>
   );
 }
