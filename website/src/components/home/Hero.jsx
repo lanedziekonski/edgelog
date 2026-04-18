@@ -31,25 +31,11 @@ export default function Hero() {
       />
 
       <div className="relative max-w-7xl mx-auto px-6">
-        <motion.div
-          variants={fadeUp}
-          initial="hidden"
-          animate="visible"
-          custom={0}
-          className="flex justify-center"
-        >
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-panel/60 backdrop-blur text-xs font-mono uppercase tracking-[0.18em] text-muted">
-            <Sparkles className="w-3.5 h-3.5 text-neon" />
-            <span>Powered by Claude AI</span>
-            <span className="w-1 h-1 rounded-full bg-neon animate-pulseSlow" />
-          </div>
-        </motion.div>
-
         <motion.h1
           variants={fadeUp}
           initial="hidden"
           animate="visible"
-          custom={1}
+          custom={0}
           className="mt-8 text-center text-5xl md:text-7xl lg:text-[104px] font-bold tracking-tight text-balance leading-[0.92]"
         >
           Trade smarter.
@@ -63,7 +49,7 @@ export default function Hero() {
           variants={fadeUp}
           initial="hidden"
           animate="visible"
-          custom={2}
+          custom={1}
           className="mt-8 max-w-2xl mx-auto text-center text-lg md:text-xl text-muted text-balance"
         >
           The AI-powered trading journal built for serious futures, stocks, and options
@@ -74,7 +60,7 @@ export default function Hero() {
           variants={fadeUp}
           initial="hidden"
           animate="visible"
-          custom={3}
+          custom={2}
           className="mt-10 flex flex-wrap justify-center gap-4"
         >
           <Button to="/signup" variant="primary" size="lg">
@@ -89,7 +75,7 @@ export default function Hero() {
           variants={fadeUp}
           initial="hidden"
           animate="visible"
-          custom={4}
+          custom={3}
           className="mt-4 text-center text-xs text-muted font-mono uppercase tracking-[0.18em]"
         >
           Free forever · No credit card · Cancel anytime
