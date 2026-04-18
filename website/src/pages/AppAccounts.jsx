@@ -389,6 +389,80 @@ export default function AppAccounts() {
                     </p>
                   </div>
                 )}
+
+                {/* Smart Estimation Panel */}
+                {(() => {
+                  const avgDailyPnl = stats.tradingDays > 0 ? stats.totalPnl / stats.tradingDays : 0;
+                  const daysToTarget = (() => {
+                    if (!acc.profitTarget || profitGain >= acc.profitTarget) return null;
+                    if (avgDailyPnl <= 0) return null;
+                    return Math.ceil((acc.profitTarget - profitGain) / avgDailyPnl);
+                  })();
+                  const daysToMinDays = (() => {
+                    if (!acc.minTradingDays) return null;
+                    const rem = acc.minTradingDays - (stats.tradingDays || 0);
+                    return rem > 0 ? rem : 0;
+                  })();
+                  const estimatedPassDate = (() => {
+                    if (!acc.profitTarget && !acc.minTradingDays) return null;
+                    let maxDays = 0;
+                    if (daysToTarget && daysToTarget > maxDays) maxDays = daysToTarget;
+                    if (daysToMinDays && daysToMinDays > maxDays) maxDays = daysToMinDays;
+                    if (maxDays === 0) return 'Now';
+                    const est = new Date(Date.now() + maxDays * 86400000);
+                    return est.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  })();
+                  const canPass = profitPct >= 100 && (acc.minTradingDays ? stats.tradingDays >= acc.minTradingDays : true);
+
+                  if (!acc.profitTarget && !acc.minTradingDays) return null;
+
+                  return (
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, background: canPass ? `${G}08` : 'transparent', borderRadius: canPass ? 10 : 0, padding: canPass ? 12 : undefined }}>
+                      <p style={{ fontSize: 10, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '1px', color: canPass ? G : 'rgba(255,255,255,0.3)', marginBottom: 10, fontWeight: canPass ? 700 : 400 }}>
+                        {canPass ? '🎯 Ready to Pass!' : 'Estimation'}
+                      </p>
+                      {stats.tradingDays === 0 ? (
+                        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', fontFamily: 'monospace' }}>Log trades to see projections</p>
+                      ) : (
+                        <>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                            <div style={{ padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                              <p style={{ fontSize: 9, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'rgba(255,255,255,0.3)', marginBottom: 4 }}>Avg Daily P&L</p>
+                              <p style={{ fontSize: 13, fontWeight: 700, fontFamily: 'monospace', color: avgDailyPnl >= 0 ? G : R }}>
+                                {avgDailyPnl >= 0 ? '+' : ''}{avgDailyPnl.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}
+                              </p>
+                            </div>
+                            <div style={{ padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                              <p style={{ fontSize: 9, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'rgba(255,255,255,0.3)', marginBottom: 4 }}>Est. Pass Date</p>
+                              <p style={{ fontSize: 13, fontWeight: 700, fontFamily: 'monospace', color: estimatedPassDate === 'Now' ? G : 'rgba(255,255,255,0.8)' }}>
+                                {estimatedPassDate || '—'}
+                              </p>
+                            </div>
+                            {acc.profitTarget > 0 && (
+                              <div style={{ padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <p style={{ fontSize: 9, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'rgba(255,255,255,0.3)', marginBottom: 4 }}>Days to Target</p>
+                                <p style={{ fontSize: 13, fontWeight: 700, fontFamily: 'monospace', color: daysToTarget === null ? G : 'rgba(255,255,255,0.8)' }}>
+                                  {daysToTarget === null ? (profitPct >= 100 ? '✓ Done' : '—') : `~${daysToTarget}d`}
+                                </p>
+                              </div>
+                            )}
+                            {acc.minTradingDays > 0 && (
+                              <div style={{ padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <p style={{ fontSize: 9, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'rgba(255,255,255,0.3)', marginBottom: 4 }}>Min Days Left</p>
+                                <p style={{ fontSize: 13, fontWeight: 700, fontFamily: 'monospace', color: daysToMinDays === 0 ? G : 'rgba(255,255,255,0.8)' }}>
+                                  {daysToMinDays === 0 ? '✓ Done' : `${daysToMinDays}d`}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                          {avgDailyPnl < 0 && !canPass && (
+                            <p style={{ fontSize: 10, color: R, fontFamily: 'monospace', marginTop: 8 }}>⚠ Avg daily P&L is negative — on current pace, target won't be reached</p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
               </motion.div>
             );
           })}
