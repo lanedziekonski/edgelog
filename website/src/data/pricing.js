@@ -46,7 +46,7 @@ export const tiers = [
     annual: annual(24.99),
     annualTotal: annualTotal(24.99),
     cta: 'Go Pro',
-    popular: true,
+    popular: false,
     features: [
       'Everything in Trader',
       'AI-generated trading plan',
@@ -64,7 +64,7 @@ export const tiers = [
     annual: annual(49.99),
     annualTotal: annualTotal(49.99),
     cta: 'Go Elite',
-    popular: false,
+    popular: true,
     features: [
       'Everything in Pro',
       'Daily AI Coach sessions',
