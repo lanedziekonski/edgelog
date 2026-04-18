@@ -20,7 +20,6 @@ import PrivacyPolicy from './screens/PrivacyPolicy';
 import TermsOfService from './screens/TermsOfService';
 import Admin from './screens/Admin';
 import TermsAgreementPopup, { needsTermsAgreement } from './components/TermsAgreementPopup';
-import CandlestickBackground from './components/CandlestickBackground';
 import { useTrades } from './hooks/useTrades';
 import { useAccounts } from './hooks/useAccounts';
 
@@ -176,7 +175,6 @@ function AppInner() {
 
   return (
     <div className="app-shell" style={{ position: 'relative', overflow: 'hidden' }}>
-      <CandlestickBackground />
       <div className="screen" ref={screenRef}>
         {renderScreen()}
       </div>
