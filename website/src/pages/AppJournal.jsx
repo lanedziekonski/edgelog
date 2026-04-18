@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Trash2, ChevronDown, ChevronUp, X, Pencil } from 'lucide-react';
+import { Plus, Search, Trash2, ChevronDown, ChevronUp, X, Pencil, Upload } from 'lucide-react';
 import { useTrades, fmtPnl } from '../hooks/useTrades';
 
 const G = '#00ff41';
@@ -32,7 +32,7 @@ const EMOTIONS_BEFORE = ['Calm', 'Confident', 'Anxious', 'Excited', 'Frustrated'
 const EMOTIONS_AFTER = ['Neutral', 'Satisfied', 'Disappointed', 'Relieved', 'Angry', 'Happy', 'Regretful', 'Proud'];
 
 export default function AppJournal() {
-  const { trades, loading, addTrade, deleteTrade, updateTrade } = useTrades();
+  const { trades, loading, reload, addTrade, deleteTrade, updateTrade, importCsv } = useTrades();
   const [filter, setFilter]   = useState('all');
   const [query, setQuery]     = useState('');
   const [addOpen, setAddOpen] = useState(false);
@@ -41,6 +41,10 @@ export default function AppJournal() {
   const [expanded, setExpanded] = useState(null);
   const [err, setErr]         = useState('');
   const [editingTrade, setEditingTrade] = useState(null);
+  const [csvOpen, setCsvOpen]           = useState(false);
+  const [csvFile, setCsvFile]           = useState(null);
+  const [csvImporting, setCsvImporting] = useState(false);
+  const [csvErr, setCsvErr]             = useState('');
 
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -76,6 +80,21 @@ export default function AppJournal() {
   };
 
   const closeModal = () => { setAddOpen(false); setEditingTrade(null); setForm(EMPTY_FORM); setErr(''); };
+
+  const handleCsvImport = async () => {
+    if (!csvFile) return;
+    setCsvImporting(true);
+    setCsvErr('');
+    try {
+      await importCsv(csvFile);
+      setCsvOpen(false);
+      setCsvFile(null);
+    } catch (e) {
+      setCsvErr(e.message || 'Import failed');
+    } finally {
+      setCsvImporting(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     const sorted = [...trades].sort((a, b) => b.date?.localeCompare(a.date) || 0);
@@ -142,14 +161,24 @@ export default function AppJournal() {
           <p className="text-xs font-mono uppercase tracking-widest mb-1" style={{ color: G }}>Journal</p>
           <h1 className="text-3xl font-bold tracking-tight">{trades.length} trade{trades.length !== 1 ? 's' : ''}</h1>
         </div>
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={() => { setEditingTrade(null); setForm(EMPTY_FORM); setErr(''); setAddOpen(true); }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-sm"
-          style={{ background: G, color: '#000' }}
-        >
-          <Plus className="w-4 h-4" /> Add Trade
-        </motion.button>
+        <div className="flex items-center gap-2">
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => { setCsvFile(null); setCsvErr(''); setCsvOpen(true); }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-sm border transition-colors"
+            style={{ border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', background: 'transparent' }}
+          >
+            <Upload className="w-4 h-4" /> Import CSV
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => { setEditingTrade(null); setForm(EMPTY_FORM); setErr(''); setAddOpen(true); }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-sm"
+            style={{ background: G, color: '#000' }}
+          >
+            <Plus className="w-4 h-4" /> Add Trade
+          </motion.button>
+        </div>
       </div>
 
       {/* Filters + search */}
@@ -212,6 +241,56 @@ export default function AppJournal() {
           })}
         </div>
       )}
+
+      {/* CSV import modal */}
+      <AnimatePresence>
+        {csvOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.8)' }}
+            onClick={e => { if (e.target === e.currentTarget) { setCsvOpen(false); setCsvFile(null); } }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md rounded-2xl p-6"
+              style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.1)' }}
+            >
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-lg font-bold">Import Trades from CSV</h2>
+                <button onClick={() => { setCsvOpen(false); setCsvFile(null); }} style={{ color: 'rgba(255,255,255,0.4)' }}><X className="w-5 h-5" /></button>
+              </div>
+              <p className="text-sm mb-4" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                Upload a CSV file exported from your broker. Columns: <span style={{ color: G }}>date, symbol, direction, pnl, setup, notes</span> (and optional: entry_price, exit_price, stop_price, quantity, account).
+              </p>
+              {csvErr && <div className="mb-4 px-3 py-2 rounded-lg text-sm" style={{ background: 'rgba(255,60,60,0.1)', color: '#ff6b6b' }}>{csvErr}</div>}
+              <label
+                className="flex flex-col items-center justify-center gap-3 rounded-xl cursor-pointer transition-colors"
+                style={{ border: `2px dashed ${csvFile ? G : 'rgba(255,255,255,0.12)'}`, background: csvFile ? `${G}08` : 'rgba(255,255,255,0.02)', padding: '28px 16px' }}
+              >
+                <Upload className="w-8 h-8" style={{ color: csvFile ? G : 'rgba(255,255,255,0.25)' }} />
+                {csvFile
+                  ? <span className="text-sm font-medium" style={{ color: G }}>{csvFile.name}</span>
+                  : <span className="text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>Click to select a CSV file</span>
+                }
+                <input type="file" accept=".csv" className="hidden" onChange={e => { if (e.target.files[0]) setCsvFile(e.target.files[0]); }} />
+              </label>
+              <div className="flex gap-3 mt-5">
+                <button type="button" onClick={() => { setCsvOpen(false); setCsvFile(null); }} className="flex-1 py-2.5 rounded-lg text-sm border" style={{ border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)' }}>Cancel</button>
+                <button
+                  type="button"
+                  onClick={handleCsvImport}
+                  disabled={!csvFile || csvImporting}
+                  className="flex-1 py-2.5 rounded-lg text-sm font-semibold"
+                  style={{ background: !csvFile || csvImporting ? `${G}40` : G, color: '#000', cursor: !csvFile || csvImporting ? 'not-allowed' : 'pointer' }}
+                >
+                  {csvImporting ? 'Importing…' : 'Import Trades'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Add trade modal */}
       <AnimatePresence>
@@ -342,7 +421,32 @@ function TradeRow({ trade: t, expanded, onToggle, onDelete, onEdit }) {
                 <Info label="Account" value={t.account || '—'} />
                 <Info label="Rule Clean" value={t.followedPlan ? 'Yes' : 'No'} valueColor={t.followedPlan ? G : '#ffaa33'} />
               </div>
+              {(t.entry_price != null || t.exit_price != null || t.stop_price != null) && (
+                <div className="grid grid-cols-3 gap-3">
+                  <Info label="Entry $" value={t.entry_price != null ? `$${t.entry_price}` : '—'} />
+                  <Info label="Exit $" value={t.exit_price != null ? `$${t.exit_price}` : '—'} />
+                  <Info label="Stop $" value={t.stop_price != null ? `$${t.stop_price}` : '—'} />
+                </div>
+              )}
+              {(t.entry_time || t.exit_time || t.emotion_before || t.emotion_after) && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {t.entry_time && <Info label="Entry Time" value={t.entry_time} />}
+                  {t.exit_time && <Info label="Exit Time" value={t.exit_time} />}
+                  {t.emotion_before && <Info label="Mood Before" value={t.emotion_before} />}
+                  {t.emotion_after && <Info label="Mood After" value={t.emotion_after} />}
+                </div>
+              )}
               {t.notes && <p className="text-sm rounded-lg px-3 py-2" style={{ background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.6)' }}>{t.notes}</p>}
+              {(t.screenshot_url || t.screenshotUrl) && (
+                <a href={t.screenshot_url || t.screenshotUrl} target="_blank" rel="noopener noreferrer">
+                  <img
+                    src={t.screenshot_url || t.screenshotUrl}
+                    alt="Trade screenshot"
+                    className="rounded-lg w-full object-cover"
+                    style={{ maxHeight: 200, border: '1px solid rgba(255,255,255,0.08)' }}
+                  />
+                </a>
+              )}
               <div className="flex justify-end gap-3">
                 <button onClick={() => onEdit(t)} className="flex items-center gap-1.5 text-xs transition-colors hover:text-white" style={{ color: 'rgba(255,255,255,0.3)' }}>
                   <Pencil className="w-3.5 h-3.5" /> Edit
