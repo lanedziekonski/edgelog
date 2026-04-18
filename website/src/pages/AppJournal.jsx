@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Trash2, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Plus, Search, Trash2, ChevronDown, ChevronUp, X, Pencil } from 'lucide-react';
 import { useTrades, fmtPnl } from '../hooks/useTrades';
 
 const G = '#00ff41';
@@ -32,7 +32,7 @@ const EMOTIONS_BEFORE = ['Calm', 'Confident', 'Anxious', 'Excited', 'Frustrated'
 const EMOTIONS_AFTER = ['Neutral', 'Satisfied', 'Disappointed', 'Relieved', 'Angry', 'Happy', 'Regretful', 'Proud'];
 
 export default function AppJournal() {
-  const { trades, loading, addTrade, deleteTrade } = useTrades();
+  const { trades, loading, addTrade, deleteTrade, updateTrade } = useTrades();
   const [filter, setFilter]   = useState('all');
   const [query, setQuery]     = useState('');
   const [addOpen, setAddOpen] = useState(false);
@@ -40,6 +40,7 @@ export default function AppJournal() {
   const [saving, setSaving]   = useState(false);
   const [expanded, setExpanded] = useState(null);
   const [err, setErr]         = useState('');
+  const [editingTrade, setEditingTrade] = useState(null);
 
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -49,6 +50,32 @@ export default function AppJournal() {
       setAddOpen(true);
     }
   }, []);
+
+  const openEdit = (t) => {
+    setEditingTrade(t);
+    setForm({
+      symbol: t.symbol || '',
+      date: t.date || new Date().toISOString().split('T')[0],
+      direction: t.direction || 'LONG',
+      setup: t.setup || 'ORB',
+      pnl: String(t.pnl ?? ''),
+      quantity: String(t.quantity ?? '1'),
+      account: t.account || '',
+      entryPrice: t.entry_price != null ? String(t.entry_price) : '',
+      exitPrice: t.exit_price != null ? String(t.exit_price) : '',
+      stopPrice: t.stop_price != null ? String(t.stop_price) : '',
+      entryTime: t.entry_time || '',
+      exitTime: t.exit_time || '',
+      emotionBefore: t.emotion_before || 'Calm',
+      emotionAfter: t.emotion_after || 'Neutral',
+      notes: t.notes || '',
+      followedPlan: !!t.followedPlan,
+    });
+    setErr('');
+    setAddOpen(true);
+  };
+
+  const closeModal = () => { setAddOpen(false); setEditingTrade(null); setForm(EMPTY_FORM); setErr(''); };
 
   const filtered = useMemo(() => {
     const sorted = [...trades].sort((a, b) => b.date?.localeCompare(a.date) || 0);
@@ -77,25 +104,29 @@ export default function AppJournal() {
     const pnlNum = parseFloat(form.pnl);
     if (isNaN(pnlNum)) { setErr('P&L must be a number'); return; }
     setSaving(true);
+    const payload = {
+      ...form,
+      symbol: form.symbol.toUpperCase(),
+      pnl: pnlNum,
+      quantity: Number(form.quantity) || 1,
+      entry_price: form.entryPrice ? parseFloat(form.entryPrice) : null,
+      exit_price: form.exitPrice ? parseFloat(form.exitPrice) : null,
+      stop_price: form.stopPrice ? parseFloat(form.stopPrice) : null,
+      entry_time: form.entryTime || '',
+      exit_time: form.exitTime || '',
+      emotion_before: form.emotionBefore,
+      emotion_after: form.emotionAfter,
+      side: form.direction,
+    };
     try {
-      await addTrade({
-        ...form,
-        symbol: form.symbol.toUpperCase(),
-        pnl: pnlNum,
-        quantity: Number(form.quantity) || 1,
-        entry_price: form.entryPrice ? parseFloat(form.entryPrice) : null,
-        exit_price: form.exitPrice ? parseFloat(form.exitPrice) : null,
-        stop_price: form.stopPrice ? parseFloat(form.stopPrice) : null,
-        entry_time: form.entryTime || '',
-        exit_time: form.exitTime || '',
-        emotion_before: form.emotionBefore,
-        emotion_after: form.emotionAfter,
-        side: form.direction,
-      });
-      setAddOpen(false);
-      setForm(EMPTY_FORM);
+      if (editingTrade) {
+        await updateTrade(editingTrade.id, payload);
+      } else {
+        await addTrade(payload);
+      }
+      closeModal();
     } catch (e) {
-      setErr(e.message || 'Failed to add trade');
+      setErr(e.message || (editingTrade ? 'Failed to update trade' : 'Failed to add trade'));
     } finally {
       setSaving(false);
     }
@@ -113,7 +144,7 @@ export default function AppJournal() {
         </div>
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={() => setAddOpen(true)}
+          onClick={() => { setEditingTrade(null); setForm(EMPTY_FORM); setErr(''); setAddOpen(true); }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-sm"
           style={{ background: G, color: '#000' }}
         >
@@ -173,7 +204,7 @@ export default function AppJournal() {
                 </div>
                 <div className="space-y-1.5">
                   {dayTrades.map(t => (
-                    <TradeRow key={t.id} trade={t} expanded={expanded === t.id} onToggle={() => setExpanded(expanded === t.id ? null : t.id)} onDelete={deleteTrade} />
+                    <TradeRow key={t.id} trade={t} expanded={expanded === t.id} onToggle={() => setExpanded(expanded === t.id ? null : t.id)} onDelete={deleteTrade} onEdit={openEdit} />
                   ))}
                 </div>
               </div>
@@ -191,7 +222,7 @@ export default function AppJournal() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             style={{ background: 'rgba(0,0,0,0.8)' }}
-            onClick={e => { if (e.target === e.currentTarget) setAddOpen(false); }}
+            onClick={e => { if (e.target === e.currentTarget) closeModal(); }}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 16 }}
@@ -201,8 +232,8 @@ export default function AppJournal() {
               style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.1)' }}
             >
               <div className="flex items-center justify-between mb-5">
-                <h2 className="text-lg font-bold">Log Trade</h2>
-                <button onClick={() => setAddOpen(false)} style={{ color: 'rgba(255,255,255,0.4)' }}><X className="w-5 h-5" /></button>
+                <h2 className="text-lg font-bold">{editingTrade ? 'Edit Trade' : 'Log Trade'}</h2>
+                <button onClick={closeModal} style={{ color: 'rgba(255,255,255,0.4)' }}><X className="w-5 h-5" /></button>
               </div>
               {err && <div className="mb-4 px-3 py-2 rounded-lg text-sm" style={{ background: 'rgba(255,60,60,0.1)', color: '#ff6b6b' }}>{err}</div>}
               <form onSubmit={handleAdd} className="space-y-4">
@@ -270,9 +301,9 @@ export default function AppJournal() {
                   <span className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>Followed my trading plan</span>
                 </label>
                 <div className="flex gap-3 pt-1">
-                  <button type="button" onClick={() => setAddOpen(false)} className="flex-1 py-2.5 rounded-lg text-sm border transition-colors" style={{ border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)' }}>Cancel</button>
+                  <button type="button" onClick={closeModal} className="flex-1 py-2.5 rounded-lg text-sm border transition-colors" style={{ border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)' }}>Cancel</button>
                   <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all" style={{ background: saving ? `${G}70` : G, color: '#000' }}>
-                    {saving ? 'Saving…' : 'Save Trade'}
+                    {saving ? 'Saving…' : editingTrade ? 'Update Trade' : 'Save Trade'}
                   </button>
                 </div>
               </form>
@@ -284,7 +315,7 @@ export default function AppJournal() {
   );
 }
 
-function TradeRow({ trade: t, expanded, onToggle, onDelete }) {
+function TradeRow({ trade: t, expanded, onToggle, onDelete, onEdit }) {
   return (
     <div className="rounded-xl overflow-hidden" style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.06)' }}>
       <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors" onClick={onToggle}>
@@ -312,7 +343,10 @@ function TradeRow({ trade: t, expanded, onToggle, onDelete }) {
                 <Info label="Rule Clean" value={t.followedPlan ? 'Yes' : 'No'} valueColor={t.followedPlan ? G : '#ffaa33'} />
               </div>
               {t.notes && <p className="text-sm rounded-lg px-3 py-2" style={{ background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.6)' }}>{t.notes}</p>}
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-3">
+                <button onClick={() => onEdit(t)} className="flex items-center gap-1.5 text-xs transition-colors hover:text-white" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </button>
                 <button onClick={() => onDelete(t.id)} className="flex items-center gap-1.5 text-xs transition-colors hover:text-red-400" style={{ color: 'rgba(255,255,255,0.3)' }}>
                   <Trash2 className="w-3.5 h-3.5" /> Delete
                 </button>
