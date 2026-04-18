@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Send, RefreshCw, Edit3, Check, X, Loader } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const API = import.meta.env.VITE_API_URL || 'https://edgelog.onrender.com';
+const API = (import.meta.env.VITE_API_URL || 'https://edgelog.onrender.com') + '/api';
 const G = '#00ff41';
 
 export default function AppTradingPlan() {
