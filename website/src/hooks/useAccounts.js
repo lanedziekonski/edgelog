@@ -53,5 +53,22 @@ export function useAccounts() {
     setAccounts(prev => prev.filter(a => a.id !== id));
   }, [token]);
 
-  return { accounts, loading, reload: load, createAccount, deleteAccount };
+  const updateAccountBalance = useCallback(async (id, balance) => {
+    const res = await fetch(`${API}/accounts/${id}/balance`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ balance }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed');
+    setAccounts(prev => prev.map(a => a.id === id ? {
+      ...a,
+      balance: balance,
+      manualBalance: balance,
+      balanceLastUpdated: new Date().toISOString(),
+    } : a));
+    return data;
+  }, [token]);
+
+  return { accounts, loading, reload: load, createAccount, deleteAccount, updateAccountBalance };
 }
