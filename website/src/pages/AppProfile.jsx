@@ -1,8 +1,8 @@
 import { useAuth } from '../context/AuthContext';
 import { useTrades, calcStats } from '../hooks/useTrades';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, LogOut, ExternalLink } from 'lucide-react';
+import { User, LogOut, ExternalLink, Copy, Check, Gift } from 'lucide-react';
 
 const G = '#00ff41';
 
@@ -13,11 +13,36 @@ const PLAN_LABELS = {
   elite:  { label: 'Elite',  color: '#f59e0b',                bg: 'rgba(245,158,11,0.1)' },
 };
 
+const API = 'https://edgelog.onrender.com/api';
+
 export default function AppProfile() {
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const { trades }       = useTrades();
   const navigate         = useNavigate();
   const stats = useMemo(() => calcStats(trades), [trades]);
+
+  const [referralCode, setReferralCode]       = useState('');
+  const [referralEarnings, setReferralEarnings] = useState({ total: 0, referral_count: 0 });
+  const [copied, setCopied]                   = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+    fetch(`${API}/referrals/my-code`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { if (d.code) setReferralCode(d.code); })
+      .catch(() => {});
+    fetch(`${API}/referrals/earnings`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { if (d.total != null) setReferralEarnings(d); })
+      .catch(() => {});
+  }, [token]);
+
+  const handleCopy = () => {
+    if (!referralCode) return;
+    navigator.clipboard.writeText(referralCode).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const plan = PLAN_LABELS[user?.plan] || PLAN_LABELS.free;
 
@@ -90,6 +115,42 @@ export default function AppProfile() {
           >
             {user?.plan === 'free' ? 'View Plans' : (<><ExternalLink className="w-3.5 h-3.5" /> Billing Portal</>)}
           </a>
+        </div>
+      </div>
+
+      {/* Referral */}
+      <div className="rounded-xl p-6 space-y-4" style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="flex items-center gap-2">
+          <Gift className="w-4 h-4 flex-shrink-0" style={{ color: G }} />
+          <p className="text-xs font-mono uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>Referral Program</p>
+        </div>
+        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>Share your code and earn rewards when friends subscribe.</p>
+        {referralCode ? (
+          <div className="flex items-center gap-2">
+            <div className="flex-1 px-4 py-2.5 rounded-lg font-mono text-sm tracking-widest" style={{ background: `${G}10`, border: `1px solid ${G}30`, color: G }}>
+              {referralCode}
+            </div>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium flex-shrink-0 transition-all"
+              style={{ background: copied ? `${G}20` : 'rgba(255,255,255,0.05)', color: copied ? G : 'rgba(255,255,255,0.6)', border: `1px solid ${copied ? `${G}40` : 'rgba(255,255,255,0.1)'}` }}
+            >
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+        ) : (
+          <div className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>Generating your code…</div>
+        )}
+        <div className="grid grid-cols-2 gap-3 pt-1">
+          <div className="px-4 py-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
+            <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>Referrals</p>
+            <p className="text-xl font-bold">{referralEarnings.referral_count ?? 0}</p>
+          </div>
+          <div className="px-4 py-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
+            <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>Earnings</p>
+            <p className="text-xl font-bold" style={{ color: G }}>${(referralEarnings.total ?? 0).toFixed(2)}</p>
+          </div>
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, BarChart2, Target, Zap, Clock } from 'lucide-react';
 import { useTrades, calcStats, buildEquityCurve, fmtPnl } from '../hooks/useTrades';
@@ -63,6 +64,7 @@ function EquityChart({ curve }) {
 }
 
 export default function AppDashboard() {
+  const navigate = useNavigate();
   const { trades, loading } = useTrades();
   const stats = useMemo(() => calcStats(trades), [trades]);
   const curve = useMemo(() => buildEquityCurve(trades), [trades]);
@@ -125,6 +127,33 @@ export default function AppDashboard() {
         <EquityChart curve={curve} />
       </div>
 
+      {/* Stats row 2 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard label="Rule Score" value={`${stats.ruleScore?.toFixed(0) ?? 0}%`} sub="plan adherence" positive={stats.ruleScore >= 80} Icon={Target} />
+        <StatCard label="Best Day" value={fmtPnl(stats.bestDay ?? 0)} sub="single day" positive={true} Icon={TrendingUp} />
+        <StatCard label="Worst Day" value={fmtPnl(stats.worstDay ?? 0)} sub="single day" positive={false} Icon={TrendingDown} />
+        <StatCard label="Win Days" value={`${stats.winDays ?? 0}/${stats.tradingDays ?? 0}`} sub="trading days" positive={(stats.winDays ?? 0) >= (stats.tradingDays ?? 1) / 2} Icon={BarChart2} />
+      </div>
+
+      {/* Streak banner */}
+      {stats.streak > 0 && (
+        <div
+          className="rounded-xl px-5 py-4 flex items-center gap-3"
+          style={{
+            background: stats.streakType === 'win' ? `${G}12` : 'rgba(255,77,77,0.08)',
+            border: `1px solid ${stats.streakType === 'win' ? `${G}30` : 'rgba(255,77,77,0.2)'}`,
+          }}
+        >
+          <Zap className="w-5 h-5 flex-shrink-0" style={{ color: stats.streakType === 'win' ? G : '#ff4d4d' }} />
+          <p className="text-sm font-semibold" style={{ color: stats.streakType === 'win' ? G : '#ff4d4d' }}>
+            {stats.streak}-trade {stats.streakType} streak
+          </p>
+          <p className="text-xs ml-auto" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            {stats.streakType === 'win' ? 'Keep it up!' : 'Stay disciplined'}
+          </p>
+        </div>
+      )}
+
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Recent trades */}
         <div className="rounded-xl p-5" style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -132,7 +161,7 @@ export default function AppDashboard() {
             Recent Trades
           </p>
           {recent.length === 0 ? (
-            <EmptyTrades />
+            <EmptyTrades onAdd={() => navigate('/journal?addTrade=1')} />
           ) : (
             <div className="space-y-2">
               {recent.map((t, i) => (
@@ -209,12 +238,18 @@ function Loader() {
   );
 }
 
-function EmptyTrades() {
+function EmptyTrades({ onAdd }) {
   return (
-    <div className="flex flex-col items-center justify-center py-10 gap-2">
+    <div className="flex flex-col items-center justify-center py-10 gap-3">
       <Clock className="w-8 h-8" style={{ color: 'rgba(255,255,255,0.15)' }} />
       <p className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>No trades yet</p>
-      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>Log your first trade in the Journal</p>
+      <button
+        onClick={onAdd}
+        className="text-xs font-semibold px-4 py-1.5 rounded-lg"
+        style={{ background: `${G}20`, color: G, border: `1px solid ${G}40` }}
+      >
+        Log your first trade
+      </button>
     </div>
   );
 }
