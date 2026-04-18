@@ -154,15 +154,19 @@ export default function Signup() {
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
               <div
                 onClick={() => setAgreedToTerms(a => !a)}
+                title="I have read and agree to the Terms of Service and Privacy Policy"
                 style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${agreedToTerms ? G : 'rgba(255,255,255,0.25)'}`, background: agreedToTerms ? G : 'transparent', cursor: 'pointer', flexShrink: 0, marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 {agreedToTerms && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 3.5L3.5 6.5L9 1" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
               </div>
-              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 1.5, margin: 0 }}>
-                I agree to the{' '}
-                <button type="button" onClick={() => setShowTermsModal(true)} style={{ background: 'none', border: 'none', color: G, cursor: 'pointer', fontSize: 12, padding: 0, textDecoration: 'underline' }}>Terms of Service</button>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6, margin: 0 }}>
+                I confirm that I have read and agree to the{' '}
+                <button type="button" onClick={() => setShowTermsModal(true)} style={{ background: 'none', border: 'none', color: '#00ff41', cursor: 'pointer', fontSize: 12, padding: 0, textDecoration: 'underline' }}>Terms of Service</button>
                 {' '}and{' '}
-                <button type="button" onClick={() => setShowPrivacyModal(true)} style={{ background: 'none', border: 'none', color: G, cursor: 'pointer', fontSize: 12, padding: 0, textDecoration: 'underline' }}>Privacy Policy</button>
+                <button type="button" onClick={() => setShowPrivacyModal(true)} style={{ background: 'none', border: 'none', color: '#00ff41', cursor: 'pointer', fontSize: 12, padding: 0, textDecoration: 'underline' }}>Privacy Policy</button>
+                , including the{' '}
+                <strong style={{ color: 'rgba(255,255,255,0.7)' }}>No Financial Advice disclaimer</strong>
+                . I understand that TraderAscend is not a financial advisor and I am solely responsible for my trading decisions.
               </p>
             </div>
 
