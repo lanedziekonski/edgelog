@@ -9,7 +9,7 @@ export const NAV_LINKS = [
 export const SOCIAL = {
   twitter: 'https://x.com',
   discord: 'https://discord.com',
-  email: 'mailto:hello@tradeascend.com',
+  email: 'mailto:hello@traderascend.com',
 };
 
 export const VALUES = [
@@ -39,7 +39,7 @@ export const TEAM = [
   {
     name: 'Carter Peters',
     role: 'Founder & Trader',
-    bio: '7 years trading futures. Built TradeAscend after 4 broken spreadsheets.',
+    bio: '7 years trading futures. Built TraderAscend after 4 broken spreadsheets.',
     initials: 'CP',
   },
   {

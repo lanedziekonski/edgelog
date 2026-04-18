@@ -5,7 +5,7 @@ export default function Logo({ to = '/', className = '' }) {
     <Link
       to={to}
       className={`inline-flex items-center gap-2 group ${className}`}
-      aria-label="TradeAscend home"
+      aria-label="TraderAscend home"
     >
       <span className="relative w-7 h-7 flex items-center justify-center">
         <svg viewBox="0 0 32 32" fill="none" className="w-full h-full">

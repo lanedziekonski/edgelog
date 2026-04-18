@@ -4,7 +4,7 @@ import FadeUp from '../effects/FadeUp';
 
 export default function CTABanner({
   title = 'Ready to find your edge?',
-  subtitle = 'Start your free TradeAscend account in under 30 seconds. No credit card required.',
+  subtitle = 'Start your free TraderAscend account in under 30 seconds. No credit card required.',
   ctaLabel = 'Start Free',
   ctaTo = '/preview',
 }) {

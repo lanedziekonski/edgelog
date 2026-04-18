@@ -91,7 +91,7 @@ export default function AppJournal() {
     if (!file) return;
     setUploadingScreenshot(tradeId);
     try {
-      const token = localStorage.getItem('tradeascend_token');
+      const token = localStorage.getItem('traderascend_token');
       const fd = new FormData();
       fd.append('screenshot', file);
       const res = await fetch(
@@ -108,7 +108,7 @@ export default function AppJournal() {
   const handleScreenshotDelete = async (tradeId) => {
     setDeletingScreenshot(tradeId);
     try {
-      const token = localStorage.getItem('tradeascend_token');
+      const token = localStorage.getItem('traderascend_token');
       await fetch(
         `${import.meta.env.VITE_API_URL || 'https://edgelog.onrender.com'}/api/trades/${tradeId}/screenshot`,
         { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }

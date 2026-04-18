@@ -48,7 +48,7 @@ export const detailedFeatures = [
     eyebrow: 'Import',
     title: 'CSV Import',
     description:
-      'Drag and drop your broker statement and TradeAscend will auto-detect the format. Five major broker CSVs supported out of the box.',
+      'Drag and drop your broker statement and TraderAscend will auto-detect the format. Five major broker CSVs supported out of the box.',
     bullets: ['Tradovate · IBKR · ThinkorSwim', 'TradeStation · Webull', 'Auto-mapping with override controls'],
     mockType: 'csv',
   },
@@ -75,7 +75,7 @@ export const detailedFeatures = [
     eyebrow: 'Strategy',
     title: 'AI Trading Plan Builder',
     description:
-      'Answer a structured intake and TradeAscend writes a complete trading plan: edge, criteria, risk rules, and routine. Edit anytime. Reset when your strategy evolves.',
+      'Answer a structured intake and TraderAscend writes a complete trading plan: edge, criteria, risk rules, and routine. Edit anytime. Reset when your strategy evolves.',
     bullets: ['Saves to your account', 'Editable & versioned', 'Resettable on demand'],
     mockType: 'plan',
   },

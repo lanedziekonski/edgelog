@@ -87,7 +87,7 @@ export default function AppAccounts() {
           fd.append('file', csvFile);
           fd.append('broker', csvBroker);
           fd.append('accountId', created.id);
-          const token = localStorage.getItem('tradeascend_token');
+          const token = localStorage.getItem('traderascend_token');
           await fetch(`${import.meta.env.VITE_API_URL || 'https://edgelog.onrender.com'}/api/trades/import`, {
             method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd,
           });
@@ -122,7 +122,7 @@ export default function AppAccounts() {
     if (!editForm.name.trim()) { setEditErr('Account name is required'); return; }
     setEditSaving(true);
     try {
-      const token = localStorage.getItem('tradeascend_token');
+      const token = localStorage.getItem('traderascend_token');
       const API = (import.meta.env.VITE_API_URL || 'https://edgelog.onrender.com') + '/api';
       const res = await fetch(`${API}/accounts/${editingAcc.id}`, {
         method: 'PUT',

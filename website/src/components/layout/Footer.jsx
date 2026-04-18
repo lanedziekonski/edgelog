@@ -88,7 +88,7 @@ export default function Footer() {
       <div className="border-t border-border">
         <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs text-muted font-mono uppercase tracking-[0.15em]">
-            © {new Date().getFullYear()} TradeAscend · All rights reserved
+            © {new Date().getFullYear()} TraderAscend · All rights reserved
           </p>
           <p className="text-xs text-muted">
             Trading involves risk. Past performance is not indicative of future results.

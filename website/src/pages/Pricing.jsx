@@ -52,7 +52,7 @@ export default function Pricing() {
           <SectionHeading
             eyebrow="FAQ"
             title="Common questions"
-            subtitle="Can't find what you're looking for? Email hello@tradeascend.com — we usually reply within a few hours."
+            subtitle="Can't find what you're looking for? Email hello@traderascend.com — we usually reply within a few hours."
             className="mb-14"
           />
           <PricingFAQ />

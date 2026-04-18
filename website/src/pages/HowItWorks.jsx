@@ -31,7 +31,7 @@ export default function HowItWorks() {
 
       <CTABanner
         title="Five minutes from now, you'll be journaling."
-        subtitle="Create your free TradeAscend account and skip the setup overhead."
+        subtitle="Create your free TraderAscend account and skip the setup overhead."
         ctaLabel="Start Your Free Account"
       />
     </>
