@@ -1,15 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
   Search,
   Filter,
-  TrendingUp,
-  TrendingDown,
-  Shield,
-  Clock,
-  Target,
   Trash2,
+  Pencil,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 import SectionEyebrow from '../../ui/SectionEyebrow';
 import Modal from '../../ui/Modal';
@@ -26,12 +24,20 @@ const SETUPS = ['ORB', 'VWAP Reclaim', 'Bull Flag', 'Gap Fill', 'Fade High'];
 const ACCOUNTS = ['Apex', 'FTMO', 'tastytrade'];
 const SIDES = ['LONG', 'SHORT'];
 
+function withIds(trades) {
+  return trades.map((t, i) => ({ ...t, id: `t-${Date.now()}-${i}` }));
+}
+
 export default function JournalScreen() {
-  const [trades, setTrades] = useState(JOURNAL_TRADES);
+  const [trades, setTrades] = useState(() => withIds(JOURNAL_TRADES));
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
-  const [detailTrade, setDetailTrade] = useState(null);
+  const [viewingId, setViewingId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
+
+  const viewingTrade = viewingId ? trades.find((t) => t.id === viewingId) : null;
+  const editingTrade = editingId ? trades.find((t) => t.id === editingId) : null;
 
   const filtered = useMemo(() => {
     return trades.filter((t) => {
@@ -56,13 +62,25 @@ export default function JournalScreen() {
   }, [filtered]);
 
   const handleAdd = (newTrade) => {
-    setTrades((prev) => [newTrade, ...prev]);
+    const withId = { ...newTrade, id: `t-${Date.now()}` };
+    setTrades((prev) => [withId, ...prev]);
     setAddOpen(false);
   };
 
-  const handleDelete = (tradeToDelete) => {
-    setTrades((prev) => prev.filter((t) => t !== tradeToDelete));
-    setDetailTrade(null);
+  const handleDelete = (id) => {
+    setTrades((prev) => prev.filter((t) => t.id !== id));
+    setEditingId(null);
+    setViewingId(null);
+  };
+
+  const handleUploadScreenshot = (id, dataUrl) => {
+    setTrades((prev) => prev.map((t) => (t.id === id ? { ...t, screenshot: dataUrl } : t)));
+  };
+
+  const handleRemoveScreenshot = (id) => {
+    setTrades((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, screenshot: undefined } : t)),
+    );
   };
 
   return (
@@ -149,10 +167,11 @@ export default function JournalScreen() {
 
                 {dayTrades.map((t, i) => (
                   <TradeRow
-                    key={`${date}-${t._idx}`}
+                    key={t.id}
                     trade={t}
                     index={i}
-                    onClick={() => setDetailTrade(t)}
+                    onView={() => setViewingId(t.id)}
+                    onEdit={() => setEditingId(t.id)}
                   />
                 ))}
               </motion.div>
@@ -172,15 +191,42 @@ export default function JournalScreen() {
         )}
       </div>
 
-      {/* Detail modal */}
+      {/* Screenshot view popup */}
       <Modal
-        open={!!detailTrade}
-        onClose={() => setDetailTrade(null)}
-        subtitle={detailTrade?.date}
-        title={detailTrade ? `${detailTrade.symbol} · ${detailTrade.setup}` : ''}
+        open={!!viewingTrade}
+        onClose={() => setViewingId(null)}
+        subtitle={viewingTrade?.date}
+        title={viewingTrade ? `${viewingTrade.symbol} · ${viewingTrade.setup}` : ''}
+        size="lg"
+      >
+        {viewingTrade && (
+          <TradeScreenshotView
+            trade={viewingTrade}
+            onEdit={() => {
+              setViewingId(null);
+              setEditingId(viewingTrade.id);
+            }}
+          />
+        )}
+      </Modal>
+
+      {/* Edit trade modal (screenshot upload + delete) */}
+      <Modal
+        open={!!editingTrade}
+        onClose={() => setEditingId(null)}
+        subtitle="Edit"
+        title={editingTrade ? `${editingTrade.symbol} · ${editingTrade.setup}` : ''}
         size="md"
       >
-        {detailTrade && <TradeDetail trade={detailTrade} onDelete={handleDelete} />}
+        {editingTrade && (
+          <EditTradeForm
+            trade={editingTrade}
+            onUpload={(dataUrl) => handleUploadScreenshot(editingTrade.id, dataUrl)}
+            onRemove={() => handleRemoveScreenshot(editingTrade.id)}
+            onDelete={() => handleDelete(editingTrade.id)}
+            onDone={() => setEditingId(null)}
+          />
+        )}
       </Modal>
 
       {/* Add trade modal */}
@@ -197,7 +243,7 @@ export default function JournalScreen() {
   );
 }
 
-function TradeRow({ trade, index, onClick }) {
+function TradeRow({ trade, index, onView, onEdit }) {
   const win = trade.pl >= 0;
   const borderColor = win ? 'border-l-neon' : 'border-l-red-500';
   const plColor = win ? 'text-neon' : 'text-red-400';
@@ -206,16 +252,26 @@ function TradeRow({ trade, index, onClick }) {
       ? 'text-neon border-neon/40 bg-neon/10'
       : 'text-red-400 border-red-500/40 bg-red-500/10';
 
+  const handleKey = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onView();
+    }
+  };
+
   return (
-    <motion.button
+    <motion.div
       layout
+      role="button"
+      tabIndex={0}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -20 }}
       transition={{ duration: 0.3, delay: 0.05 + index * 0.03 }}
       whileHover={{ x: 4, borderColor: 'rgba(0,255,65,0.4)' }}
-      onClick={onClick}
-      className={`w-full text-left rounded-xl border border-border border-l-[3px] ${borderColor} bg-panel/60 backdrop-blur px-4 md:px-5 py-3.5 md:py-4 flex items-center justify-between gap-3 hover:shadow-neon-soft transition-shadow`}
+      onClick={onView}
+      onKeyDown={handleKey}
+      className={`group cursor-pointer rounded-xl border border-border border-l-[3px] ${borderColor} bg-panel/60 backdrop-blur px-4 md:px-5 py-3.5 md:py-4 flex items-center justify-between gap-3 hover:shadow-neon-soft transition-shadow focus:outline-none focus:ring-2 focus:ring-neon/40`}
     >
       <div className="flex flex-col gap-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
@@ -232,121 +288,182 @@ function TradeRow({ trade, index, onClick }) {
               Rule Break
             </span>
           )}
+          {trade.screenshot && (
+            <span
+              className="text-[10px] px-1.5 py-0.5 rounded border border-neon/40 bg-neon/10 text-neon font-mono uppercase tracking-wider inline-flex items-center gap-1"
+              aria-label="Has screenshot"
+            >
+              <ImageIcon className="w-3 h-3" /> Shot
+            </span>
+          )}
         </div>
         <div className="text-xs text-muted font-mono truncate">
           {trade.setup} · {trade.qty}
         </div>
       </div>
 
-      <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-        <span className={`font-mono font-bold text-base md:text-lg ${plColor}`}>
-          {win ? '+' : '-'}${Math.abs(trade.pl).toLocaleString('en-US')}
-        </span>
-        <span className="text-[11px] text-muted font-mono">{trade.account}</span>
+      <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex flex-col items-end gap-0.5">
+          <span className={`font-mono font-bold text-base md:text-lg ${plColor}`}>
+            {win ? '+' : '-'}${Math.abs(trade.pl).toLocaleString('en-US')}
+          </span>
+          <span className="text-[11px] text-muted font-mono">{trade.account}</span>
+        </div>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          aria-label="Edit trade"
+          className="p-2 rounded-lg border border-border text-muted hover:text-neon hover:border-neon/40 transition-colors opacity-70 group-hover:opacity-100"
+        >
+          <Pencil className="w-4 h-4" />
+        </button>
       </div>
-    </motion.button>
+    </motion.div>
   );
 }
 
-function TradeDetail({ trade, onDelete }) {
+function TradeScreenshotView({ trade, onEdit }) {
   const win = trade.pl >= 0;
-  // Derive plausible entry / exit prices for the mock preview
-  const entry = 15_000 + Math.abs(trade.pl) * 0.2;
-  const exit = trade.side === 'LONG' ? entry + trade.pl / 10 : entry - trade.pl / 10;
-  const rr = win ? (2 + Math.random() * 1.2).toFixed(2) : (0.4 + Math.random() * 0.5).toFixed(2);
-
   return (
-    <div className="space-y-5">
-      <div className="rounded-xl border border-border bg-bg/60 p-5 flex items-end justify-between gap-4">
-        <div>
-          <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted">P&L</div>
-          <div
-            className={`mt-1 text-4xl md:text-5xl font-bold tabular-nums ${
-              win ? 'text-neon glow-text' : 'text-red-400'
-            }`}
-          >
-            {win ? '+' : '-'}${Math.abs(trade.pl).toLocaleString('en-US')}
-          </div>
-        </div>
-        <span
-          className={`inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest ${
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div
+          className={`font-mono font-bold text-2xl md:text-3xl tabular-nums ${
             win ? 'text-neon' : 'text-red-400'
           }`}
         >
-          {win ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-          {win ? 'Winner' : 'Loss'}
-        </span>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-        <Field label="Side" value={trade.side} tone={trade.side === 'LONG' ? 'neon' : 'red'} />
-        <Field label="Setup" value={trade.setup} />
-        <Field label="Quantity" value={trade.qty} />
-        <Field label="Account" value={trade.account} />
-        <Field label="Entry" value={`$${entry.toFixed(2)}`} />
-        <Field label="Exit" value={`$${exit.toFixed(2)}`} />
-        <Field label="R:R" value={`${rr}R`} tone="neon" />
-        <Field
-          label="Rules"
-          value={trade.rulesClean ? 'Clean' : 'Broken'}
-          tone={trade.rulesClean ? 'neon' : 'amber'}
-        />
-      </div>
-
-      <div className="rounded-xl border border-border bg-bg/40 p-4">
-        <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] text-muted mb-2">
-          <Target className="w-3.5 h-3.5" />
-          Plan Adherence
+          {win ? '+' : '-'}${Math.abs(trade.pl).toLocaleString('en-US')}
         </div>
-        <p className="text-sm text-ink/90 leading-relaxed">
-          {trade.rulesClean
-            ? `Setup fired on plan. Entry confirmed with volume, stop placed below structure, and target hit cleanly for a ${rr}R result.`
-            : `Entered outside the setup window. Review the session rules — tightening the window usually improves win rate on ${trade.setup} trades.`}
-        </p>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={onEdit}
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-border bg-panel/60 text-sm text-muted hover:text-neon hover:border-neon/40 transition-colors"
+        >
+          <Pencil className="w-3.5 h-3.5" /> Edit
+        </motion.button>
       </div>
 
-      <div className="flex flex-wrap gap-2 text-[10px] font-mono uppercase tracking-[0.2em]">
-        <Tag Icon={Clock} label={trade.setup.split(' ')[0]} />
-        <Tag Icon={Shield} label={trade.rulesClean ? 'On-plan' : 'Rule break'} />
-        <Tag Icon={Target} label={`${rr}R`} />
+      {trade.screenshot ? (
+        <div className="rounded-xl border border-border bg-black overflow-hidden">
+          <img
+            src={trade.screenshot}
+            alt={`${trade.symbol} trade screenshot`}
+            className="w-full max-h-[65vh] object-contain"
+          />
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-border bg-bg/40 py-14 px-6 text-center">
+          <ImageIcon className="w-10 h-10 text-muted mx-auto mb-3 opacity-60" />
+          <div className="text-sm text-ink/80">No screenshot uploaded</div>
+          <div className="text-xs text-muted mt-1">
+            Tap <span className="text-neon font-mono">Edit</span> to upload one.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EditTradeForm({ trade, onUpload, onRemove, onDelete, onDone }) {
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      onUpload(ev.target.result);
+      setUploading(false);
+      e.target.value = '';
+    };
+    reader.onerror = () => setUploading(false);
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted mb-2">
+          Screenshot
+        </div>
+        {trade.screenshot ? (
+          <div className="rounded-xl border border-border bg-black overflow-hidden">
+            <img
+              src={trade.screenshot}
+              alt=""
+              className="w-full max-h-[50vh] object-contain"
+            />
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-border bg-bg/40 py-10 px-6 text-center">
+            <ImageIcon className="w-8 h-8 text-muted mx-auto mb-2 opacity-60" />
+            <div className="text-xs text-muted">No screenshot uploaded yet</div>
+          </div>
+        )}
       </div>
 
-      <div className="flex justify-end pt-2 border-t border-border">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFile}
+        className="hidden"
+      />
+
+      <div className="flex gap-2">
+        <motion.button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          whileHover={{ scale: uploading ? 1 : 1.02 }}
+          whileTap={{ scale: uploading ? 1 : 0.98 }}
+          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-neon text-black font-semibold hover:shadow-neon transition-shadow disabled:opacity-60"
+        >
+          <Upload className="w-4 h-4" />
+          {uploading
+            ? 'Uploading…'
+            : trade.screenshot
+            ? 'Replace Screenshot'
+            : 'Upload Screenshot'}
+        </motion.button>
+        {trade.screenshot && (
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label="Remove screenshot"
+            className="px-3.5 py-2.5 rounded-full border border-border text-muted hover:text-red-400 hover:border-red-500/40 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between pt-3 border-t border-border">
         <button
-          onClick={() => onDelete(trade)}
+          type="button"
+          onClick={onDelete}
           className="inline-flex items-center gap-2 px-3 py-2 text-xs font-mono uppercase tracking-wider text-muted hover:text-red-400 transition-colors"
         >
           <Trash2 className="w-3.5 h-3.5" />
           Delete trade
         </button>
+        <button
+          type="button"
+          onClick={onDone}
+          className="px-4 py-2 text-sm font-mono uppercase tracking-wider text-muted hover:text-ink transition-colors"
+        >
+          Done
+        </button>
       </div>
     </div>
-  );
-}
-
-function Field({ label, value, tone = 'ink' }) {
-  const color =
-    tone === 'neon'
-      ? 'text-neon'
-      : tone === 'red'
-      ? 'text-red-400'
-      : tone === 'amber'
-      ? 'text-amber-400'
-      : 'text-ink';
-  return (
-    <div className="rounded-lg border border-border bg-bg/40 px-3 py-2.5">
-      <div className="text-[9px] font-mono uppercase tracking-[0.2em] text-muted">{label}</div>
-      <div className={`mt-0.5 text-sm font-mono font-bold tabular-nums ${color}`}>{value}</div>
-    </div>
-  );
-}
-
-function Tag({ Icon, label }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-border bg-bg/40 text-muted">
-      <Icon className="w-3 h-3" />
-      {label}
-    </span>
   );
 }
 
