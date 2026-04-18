@@ -202,6 +202,7 @@ function rowToAccount(row) {
     dailyLossLimit:  row.daily_loss_limit != null ? parseFloat(row.daily_loss_limit) : null,
     maxDrawdown:     row.max_drawdown     != null ? parseFloat(row.max_drawdown)     : null,
     profitTarget:    row.profit_target    != null ? parseFloat(row.profit_target)    : null,
+    minTradingDays:  row.min_trading_days != null ? parseInt(row.min_trading_days)   : null,
     createdAt:       row.created_at,
   };
 }
