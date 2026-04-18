@@ -8,9 +8,9 @@ export function useTrades() {
   const [trades, setTrades]   = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(() => {
+  const load = useCallback((showLoading = true) => {
     if (!token) { setTrades([]); setLoading(false); return; }
-    setLoading(true);
+    if (showLoading) setLoading(true);
     fetch(`${API}/trades`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => setTrades(Array.isArray(data) ? data : []))
@@ -19,8 +19,8 @@ export function useTrades() {
   }, [token]);
 
   useEffect(() => {
-    load();
-    const interval = setInterval(load, 30000);
+    load(true);
+    const interval = setInterval(() => load(false), 30000);
     return () => clearInterval(interval);
   }, [load]);
 
