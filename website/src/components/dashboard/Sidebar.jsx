@@ -89,7 +89,7 @@ export default function Sidebar({ active = 'dashboard', onChange }) {
                 exit={{ opacity: 0 }}
                 className="font-bold tracking-tight text-neon text-lg glow-text"
               >
-                TRADEASCEND
+                TRADERASCEND
               </motion.span>
             ) : (
               <motion.span

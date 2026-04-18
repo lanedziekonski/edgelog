@@ -44,7 +44,7 @@ export default function TermsOfService({ embedded = false }) {
           <DisclaimerBox>
             <div style={{ fontSize: 13, fontWeight: 800, color: G, letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 14 }}>⚠ Important — Please Read Carefully</div>
             <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', lineHeight: 1.8 }}>
-              <strong style={{ color: '#fff' }}>TRADEASCEND IS NOT A FINANCIAL ADVISOR.</strong> Nothing on this platform constitutes financial advice, investment advice, trading advice, or a recommendation to buy or sell any financial instrument.<br /><br />
+              <strong style={{ color: '#fff' }}>TRADERASCEND IS NOT A FINANCIAL ADVISOR.</strong> Nothing on this platform constitutes financial advice, investment advice, trading advice, or a recommendation to buy or sell any financial instrument.<br /><br />
               All AI coaching features are for <strong style={{ color: '#fff' }}>educational and performance improvement purposes only</strong>. Past performance does not guarantee future results.<br /><br />
               Trading financial instruments involves <strong style={{ color: '#fff' }}>substantial risk of loss</strong>. Consult a qualified licensed financial advisor before making any investment decisions.<br /><br />
               TraderAscend is <strong style={{ color: '#fff' }}>not responsible for any trading or investment losses</strong> incurred by users of this platform.
