@@ -57,6 +57,8 @@ body {
   padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 16px);
   scrollbar-width: none;
   background: var(--bg);
+  position: relative;
+  z-index: 1;
 }
 .screen::-webkit-scrollbar { display: none; }
 
