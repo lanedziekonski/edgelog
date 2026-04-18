@@ -17,15 +17,18 @@ export function useAccounts() {
         ...a,
         id: a.id,
         name: a.name,
-        accountType: a.type || 'Live',
         type: a.type || 'prop',
         phase: a.phase || 'evaluation',
-        startingBalance: parseFloat(a.starting_balance) || 0,
-        balance: a.manual_balance != null ? parseFloat(a.manual_balance) : parseFloat(a.starting_balance) || 0,
-        dailyLossLimit: a.daily_loss_limit != null ? parseFloat(a.daily_loss_limit) : null,
-        maxDrawdown: a.max_drawdown != null ? parseFloat(a.max_drawdown) : null,
-        profitTarget: a.profit_target != null ? parseFloat(a.profit_target) : null,
-        balanceLastUpdated: a.balance_last_updated || null,
+        startingBalance: parseFloat(a.startingBalance ?? a.starting_balance) || 0,
+        balance: a.manualBalance != null
+          ? parseFloat(a.manualBalance)
+          : a.manual_balance != null
+            ? parseFloat(a.manual_balance)
+            : parseFloat(a.startingBalance ?? a.starting_balance) || 0,
+        dailyLossLimit: a.dailyLossLimit ?? a.daily_loss_limit ?? null,
+        maxDrawdown: a.maxDrawdown ?? a.max_drawdown ?? null,
+        profitTarget: a.profitTarget ?? a.profit_target ?? null,
+        balanceLastUpdated: a.balanceLastUpdated ?? a.balance_last_updated ?? null,
       })) : []))
       .catch(() => setAccounts([]))
       .finally(() => setLoading(false));
