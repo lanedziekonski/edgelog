@@ -72,20 +72,36 @@ function parsePlanSections(content) {
   return sections;
 }
 
-function AccordionSection({ title, isOpen, onToggle, children }) {
+function PlanSection({ title, children }) {
   return (
-    <div style={{ borderRadius: 10, overflow: 'hidden', marginBottom: 6, border: isOpen ? `1px solid ${G}28` : '1px solid rgba(255,255,255,0.07)', transition: 'border-color 0.2s' }}>
-      <button onClick={onToggle} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px 12px 13px', background: isOpen ? 'rgba(0,255,65,0.06)' : 'rgba(255,255,255,0.02)', border: 'none', cursor: 'pointer', borderLeft: `3px solid ${isOpen ? G : 'transparent'}` }}>
-        <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color: isOpen ? G : 'rgba(255,255,255,0.55)', textAlign: 'left' }}>{title}</span>
-        <motion.span animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.22 }} style={{ fontSize: 10, color: isOpen ? G : 'rgba(255,255,255,0.3)', flexShrink: 0, marginLeft: 10 }}>▼</motion.span>
-      </button>
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div key="body" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} style={{ overflow: 'hidden' }}>
-            <div style={{ padding: '12px 16px 14px', background: 'rgba(0,255,65,0.03)', borderTop: '1px solid rgba(255,255,255,0.06)' }}>{children}</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div style={{
+      borderRadius: 12,
+      overflow: 'hidden',
+      border: '1px solid rgba(0,255,65,0.12)',
+      background: 'rgba(0,255,65,0.02)',
+    }}>
+      <div style={{
+        padding: '12px 16px',
+        background: 'rgba(0,255,65,0.06)',
+        borderBottom: '1px solid rgba(0,255,65,0.1)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+      }}>
+        <div style={{ width: 3, height: 14, background: '#00ff41', borderRadius: 2, flexShrink: 0 }} />
+        <span style={{
+          fontSize: 11,
+          fontWeight: 800,
+          letterSpacing: '2px',
+          textTransform: 'uppercase',
+          color: '#00ff41',
+        }}>
+          {title}
+        </span>
+      </div>
+      <div style={{ padding: '14px 16px' }}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -93,19 +109,36 @@ function AccordionSection({ title, isOpen, onToggle, children }) {
 function PlanRenderer({ content }) {
   const sections = parsePlanSections(content);
   const hasTitledSections = sections.some(s => s.title !== null);
-  const [openSections, setOpenSections] = useState(() => new Set());
-  const toggle = (idx) => setOpenSections(prev => { const next = new Set(prev); next.has(idx) ? next.delete(idx) : next.add(idx); return next; });
-  if (!hasTitledSections) return <div>{renderLines(content.split('\n'))}</div>;
+
+  if (!hasTitledSections) {
+    return (
+      <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
+        {renderLines(content.split('\n'))}
+      </div>
+    );
+  }
+
+  const introSection = sections.find(s => s.title === null && s.lines.some(l => l.trim()));
+  const titledSections = sections.filter(s => s.title !== null);
+
   return (
-    <div>
-      {sections.map((section, idx) => {
-        if (section.title === null) {
-          const introLines = section.lines.filter(l => l.trim() && l.trim() !== PLAN_MARKER.trim());
-          if (!introLines.length) return null;
-          return <div key={idx} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{renderLines(section.lines)}</div>;
-        }
-        return <AccordionSection key={idx} title={section.title} isOpen={openSections.has(idx)} onToggle={() => toggle(idx)}>{renderLines(section.lines)}</AccordionSection>;
-      })}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {introSection && (
+        <div style={{ padding: '14px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+          {renderLines(introSection.lines)}
+        </div>
+      )}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+        gap: 14,
+      }}>
+        {titledSections.map((section, idx) => (
+          <PlanSection key={idx} title={section.title}>
+            {renderLines(section.lines)}
+          </PlanSection>
+        ))}
+      </div>
     </div>
   );
 }
@@ -310,7 +343,7 @@ export default function AppTradingPlan() {
         {/* Plan view */}
         {view === 'plan' && savedPlan && (
           <motion.div key="plan" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <div style={{ background: 'rgba(10,10,10,0.85)', border: `1px solid ${G}20`, borderRadius: 16, padding: '24px 20px', backdropFilter: 'blur(12px)' }}>
+            <div style={{ background: 'rgba(10,10,10,0.85)', border: `1px solid rgba(0,255,65,0.15)`, borderRadius: 16, padding: '28px 24px', backdropFilter: 'blur(12px)' }}>
               <PlanRenderer content={savedPlan} />
             </div>
           </motion.div>
