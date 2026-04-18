@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import TermsOfService from './TermsOfService';
+import PrivacyPolicy from './PrivacyPolicy';
 
 const G = '#00ff41';
 
@@ -15,6 +17,9 @@ export default function Signup() {
   const [showPw, setShowPw]     = useState(false);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
+  const [agreedToTerms, setAgreedToTerms]     = useState(false);
+  const [showTermsModal, setShowTermsModal]   = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -146,12 +151,27 @@ export default function Signup() {
               </div>
             </div>
 
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <div
+                onClick={() => setAgreedToTerms(a => !a)}
+                style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${agreedToTerms ? G : 'rgba(255,255,255,0.25)'}`, background: agreedToTerms ? G : 'transparent', cursor: 'pointer', flexShrink: 0, marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                {agreedToTerms && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 3.5L3.5 6.5L9 1" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+              </div>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 1.5, margin: 0 }}>
+                I agree to the{' '}
+                <button type="button" onClick={() => setShowTermsModal(true)} style={{ background: 'none', border: 'none', color: G, cursor: 'pointer', fontSize: 12, padding: 0, textDecoration: 'underline' }}>Terms of Service</button>
+                {' '}and{' '}
+                <button type="button" onClick={() => setShowPrivacyModal(true)} style={{ background: 'none', border: 'none', color: G, cursor: 'pointer', fontSize: 12, padding: 0, textDecoration: 'underline' }}>Privacy Policy</button>
+              </p>
+            </div>
+
             <motion.button
               type="submit"
-              disabled={loading}
-              whileTap={!loading ? { scale: 0.98 } : {}}
+              disabled={loading || !agreedToTerms}
+              whileTap={!loading && agreedToTerms ? { scale: 0.98 } : {}}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-lg font-semibold text-sm tracking-wide transition-all"
-              style={{ background: loading ? `${G}70` : G, color: '#000', cursor: loading ? 'wait' : 'pointer' }}
+              style={{ background: loading || !agreedToTerms ? `${G}40` : G, color: '#000', cursor: loading || !agreedToTerms ? 'not-allowed' : 'pointer' }}
             >
               {loading ? 'Creating account…' : (<>Create Account <ArrowRight className="w-4 h-4" /></>)}
             </motion.button>
@@ -169,6 +189,44 @@ export default function Signup() {
           </Link>
         </p>
       </motion.div>
+
+      {showTermsModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ width: '100%', maxWidth: 700, maxHeight: '85vh', background: '#0d0d0d', border: '1px solid rgba(0,255,65,0.2)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p style={{ fontWeight: 700, color: G, margin: 0 }}>Terms of Service</p>
+              <button onClick={() => setShowTermsModal(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 20 }}>×</button>
+            </div>
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              <TermsOfService embedded />
+            </div>
+            <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+              <button onClick={() => { setAgreedToTerms(true); setShowTermsModal(false); }} style={{ width: '100%', padding: '11px 0', borderRadius: 10, background: G, color: '#000', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700 }}>
+                I Agree
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPrivacyModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ width: '100%', maxWidth: 700, maxHeight: '85vh', background: '#0d0d0d', border: '1px solid rgba(0,255,65,0.2)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p style={{ fontWeight: 700, color: G, margin: 0 }}>Privacy Policy</p>
+              <button onClick={() => setShowPrivacyModal(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 20 }}>×</button>
+            </div>
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              <PrivacyPolicy embedded />
+            </div>
+            <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+              <button onClick={() => setShowPrivacyModal(false)} style={{ width: '100%', padding: '11px 0', borderRadius: 10, background: 'rgba(255,255,255,0.06)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontSize: 14 }}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

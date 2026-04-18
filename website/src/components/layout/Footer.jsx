@@ -72,14 +72,14 @@ export default function Footer() {
               </a>
             </li>
             <li>
-              <a href="#" className="text-ink/70 hover:text-neon transition-colors">
+              <Link to="/privacy" className="text-ink/70 hover:text-neon transition-colors">
                 Privacy
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#" className="text-ink/70 hover:text-neon transition-colors">
+              <Link to="/terms" className="text-ink/70 hover:text-neon transition-colors">
                 Terms
-              </a>
+              </Link>
             </li>
           </ul>
         </div>
