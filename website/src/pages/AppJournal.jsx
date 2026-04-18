@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Trash2, ChevronDown, ChevronUp, X, Pencil, Upload } from 'lucide-react';
+import { Plus, Search, Trash2, ChevronDown, ChevronUp, X, Pencil, Upload, FileText, Camera, Loader as LoaderIcon, ImageOff } from 'lucide-react';
 import { useTrades, fmtPnl } from '../hooks/useTrades';
 
 const G = '#00ff41';
@@ -45,6 +45,8 @@ export default function AppJournal() {
   const [csvFile, setCsvFile]           = useState(null);
   const [csvImporting, setCsvImporting] = useState(false);
   const [csvErr, setCsvErr]             = useState('');
+  const [uploadingScreenshot, setUploadingScreenshot] = useState(null);
+  const [deletingScreenshot, setDeletingScreenshot]   = useState(null);
 
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -80,6 +82,37 @@ export default function AppJournal() {
   };
 
   const closeModal = () => { setAddOpen(false); setEditingTrade(null); setForm(EMPTY_FORM); setErr(''); };
+
+  const handleScreenshotUpload = async (tradeId, file) => {
+    if (!file) return;
+    setUploadingScreenshot(tradeId);
+    try {
+      const token = localStorage.getItem('tradeascend_token');
+      const fd = new FormData();
+      fd.append('screenshot', file);
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL || 'https://edgelog.onrender.com'}/api/trades/${tradeId}/screenshot`,
+        { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      reload();
+    } catch (e) { console.error('Screenshot upload failed:', e); }
+    finally { setUploadingScreenshot(null); }
+  };
+
+  const handleScreenshotDelete = async (tradeId) => {
+    setDeletingScreenshot(tradeId);
+    try {
+      const token = localStorage.getItem('tradeascend_token');
+      await fetch(
+        `${import.meta.env.VITE_API_URL || 'https://edgelog.onrender.com'}/api/trades/${tradeId}/screenshot`,
+        { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }
+      );
+      reload();
+    } catch (e) { console.error('Screenshot delete failed:', e); }
+    finally { setDeletingScreenshot(null); }
+  };
 
   const handleCsvImport = async () => {
     if (!csvFile) return;
@@ -151,7 +184,7 @@ export default function AppJournal() {
     }
   };
 
-  if (loading) return <Loader />;
+  if (loading) return <PageLoader />;
 
   return (
     <div className="space-y-6">
@@ -233,7 +266,18 @@ export default function AppJournal() {
                 </div>
                 <div className="space-y-1.5">
                   {dayTrades.map(t => (
-                    <TradeRow key={t.id} trade={t} expanded={expanded === t.id} onToggle={() => setExpanded(expanded === t.id ? null : t.id)} onDelete={deleteTrade} onEdit={openEdit} />
+                    <TradeRow
+                      key={t.id}
+                      trade={t}
+                      expanded={expanded === t.id}
+                      onToggle={() => setExpanded(expanded === t.id ? null : t.id)}
+                      onDelete={deleteTrade}
+                      onEdit={openEdit}
+                      onUploadScreenshot={handleScreenshotUpload}
+                      onDeleteScreenshot={handleScreenshotDelete}
+                      uploadingScreenshot={uploadingScreenshot}
+                      deletingScreenshot={deletingScreenshot}
+                    />
                   ))}
                 </div>
               </div>
@@ -369,6 +413,24 @@ export default function AppJournal() {
                 <Field label="Notes (optional)">
                   <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="What happened…" rows={2} className="input-field resize-none" />
                 </Field>
+                {editingTrade && (
+                  <div>
+                    <label className="block text-xs font-mono uppercase tracking-wider mb-1.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                      Screenshot
+                    </label>
+                    {editingTrade.screenshotUrl ? (
+                      <div>
+                        <img src={editingTrade.screenshotUrl} alt="screenshot" style={{ width: '100%', borderRadius: 8, maxHeight: 200, objectFit: 'contain', background: '#000', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 8 }} />
+                        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>Screenshot attached — manage from trade row</p>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, border: '1px dashed rgba(0,255,65,0.25)', color: 'rgba(255,255,255,0.4)' }}>
+                        <Camera size={14} style={{ color: '#00ff41', flexShrink: 0 }} />
+                        <span style={{ fontSize: 13 }}>Save trade first, then upload screenshot from trade row</span>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <label className="flex items-center gap-2.5 cursor-pointer select-none">
                   <div
                     onClick={() => setForm(f => ({ ...f, followedPlan: !f.followedPlan }))}
@@ -394,7 +456,7 @@ export default function AppJournal() {
   );
 }
 
-function TradeRow({ trade: t, expanded, onToggle, onDelete, onEdit }) {
+function TradeRow({ trade: t, expanded, onToggle, onDelete, onEdit, onUploadScreenshot, onDeleteScreenshot, uploadingScreenshot, deletingScreenshot }) {
   return (
     <div className="rounded-xl overflow-hidden" style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.06)' }}>
       <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors" onClick={onToggle}>
@@ -437,16 +499,57 @@ function TradeRow({ trade: t, expanded, onToggle, onDelete, onEdit }) {
                 </div>
               )}
               {t.notes && <p className="text-sm rounded-lg px-3 py-2" style={{ background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.6)' }}>{t.notes}</p>}
-              {(t.screenshot_url || t.screenshotUrl) && (
-                <a href={t.screenshot_url || t.screenshotUrl} target="_blank" rel="noopener noreferrer">
-                  <img
-                    src={t.screenshot_url || t.screenshotUrl}
-                    alt="Trade screenshot"
-                    className="rounded-lg w-full object-cover"
-                    style={{ maxHeight: 200, border: '1px solid rgba(255,255,255,0.08)' }}
-                  />
-                </a>
-              )}
+
+              {/* Screenshot section */}
+              <div>
+                {t.screenshotUrl ? (
+                  <div>
+                    <img
+                      src={t.screenshotUrl}
+                      alt="Trade screenshot"
+                      style={{ width: '100%', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', maxHeight: 400, objectFit: 'contain', background: '#000', cursor: 'pointer', display: 'block' }}
+                      onClick={() => window.open(t.screenshotUrl, '_blank')}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+                      <button
+                        onClick={() => onDeleteScreenshot(t.id)}
+                        disabled={deletingScreenshot === t.id}
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'rgba(255,77,77,0.7)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}
+                      >
+                        {deletingScreenshot === t.id
+                          ? <span style={{ fontSize: 11 }}>Removing…</span>
+                          : <><ImageOff size={12} /> Remove screenshot</>}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, border: '1px dashed rgba(0,255,65,0.25)', cursor: uploadingScreenshot === t.id ? 'default' : 'pointer', color: 'rgba(255,255,255,0.4)' }}>
+                    {uploadingScreenshot === t.id ? (
+                      <>
+                        <LoaderIcon size={14} style={{ color: '#00ff41', animation: 'spin 1s linear infinite' }} />
+                        <span style={{ fontSize: 12 }}>Uploading…</span>
+                        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                      </>
+                    ) : (
+                      <>
+                        <Camera size={14} style={{ color: '#00ff41', flexShrink: 0 }} />
+                        <span style={{ fontSize: 12 }}>Add screenshot</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={e => {
+                            const file = e.target.files?.[0];
+                            if (file) onUploadScreenshot(t.id, file);
+                            e.target.value = '';
+                          }}
+                        />
+                      </>
+                    )}
+                  </label>
+                )}
+              </div>
+
               <div className="flex justify-end gap-3">
                 <button onClick={() => onEdit(t)} className="flex items-center gap-1.5 text-xs transition-colors hover:text-white" style={{ color: 'rgba(255,255,255,0.3)' }}>
                   <Pencil className="w-3.5 h-3.5" /> Edit
@@ -494,6 +597,6 @@ function Info({ label, value, valueColor }) {
   );
 }
 
-function Loader() {
+function PageLoader() {
   return <div className="flex items-center justify-center h-48"><p className="text-sm font-mono" style={{ color: 'rgba(255,255,255,0.3)' }}>Loading trades…</p></div>;
 }
