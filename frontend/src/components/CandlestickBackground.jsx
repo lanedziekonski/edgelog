@@ -103,6 +103,9 @@ export default function CandlestickBackground() {
       }}
     >
 
+      {/* Semi-transparent dark base so content is readable */}
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(8,12,8,0.85)' }} />
+
       {/* Ambient green orbs */}
       <div style={{
         position: 'absolute',
