@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 
-const CANDLE_COUNT = 70;
+const isMobile = window.innerWidth < 480;
+const CANDLE_COUNT = isMobile ? 30 : 70;
 const VIEW_WIDTH = 1000;
 const VIEW_HEIGHT = 400;
-const TICK_MS = 850;
+const TICK_MS = isMobile ? 1400 : 850;
 
 function makeCandle(prevClose) {
   const bigMove = Math.random() < 0.1;
@@ -44,6 +45,10 @@ function CandlestickChart() {
   useEffect(() => {
     let rafId;
     const loop = (now) => {
+      if (document.hidden) {
+        rafId = requestAnimationFrame(loop);
+        return;
+      }
       const elapsed = now - lastTickRef.current;
       const progress = Math.min(1, elapsed / TICK_MS);
       if (groupRef.current) {
@@ -92,63 +97,49 @@ function CandlestickChart() {
 }
 
 export default function CandlestickBackground() {
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        overflow: 'hidden',
-        pointerEvents: 'none',
-        zIndex: 0,
-      }}
-    >
+  const mobile = window.innerWidth < 480;
 
+  return (
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
       {/* Ambient green orbs */}
       <div style={{
-        position: 'absolute',
-        top: '-10%', left: '-10%',
-        width: 480, height: 480,
+        position: 'absolute', top: '-10%', left: '-10%',
+        width: mobile ? 280 : 480, height: mobile ? 280 : 480,
         borderRadius: '50%',
         background: 'radial-gradient(circle, rgba(0,255,65,1) 0%, transparent 70%)',
-        filter: 'blur(120px)',
-        opacity: 0.08,
+        filter: 'blur(120px)', opacity: 0.08,
       }} />
       <div style={{
-        position: 'absolute',
-        bottom: '-10%', right: '-10%',
-        width: 560, height: 560,
+        position: 'absolute', bottom: '-10%', right: '-10%',
+        width: mobile ? 320 : 560, height: mobile ? 320 : 560,
         borderRadius: '50%',
         background: 'radial-gradient(circle, rgba(0,204,52,1) 0%, transparent 70%)',
-        filter: 'blur(140px)',
-        opacity: 0.07,
+        filter: 'blur(140px)', opacity: 0.07,
       }} />
 
-      {/* Candlestick chart */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        opacity: 0.22,
-        maskImage: 'radial-gradient(ellipse 95% 85% at 50% 50%, black 40%, transparent 95%)',
-        WebkitMaskImage: 'radial-gradient(ellipse 95% 85% at 50% 50%, black 40%, transparent 95%)',
-      }}>
-        <CandlestickChart />
-      </div>
+      {/* Candlestick chart — skip entirely on mobile to save battery and CPU */}
+      {!mobile && (
+        <div style={{
+          position: 'absolute', inset: 0, opacity: 0.22,
+          maskImage: 'radial-gradient(ellipse 95% 85% at 50% 50%, black 40%, transparent 95%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 95% 85% at 50% 50%, black 40%, transparent 95%)',
+        }}>
+          <CandlestickChart />
+        </div>
+      )}
 
       {/* Subtle grid overlay */}
       <div style={{
-        position: 'absolute',
-        inset: 0,
-        opacity: 0.025,
+        position: 'absolute', inset: 0, opacity: 0.025,
         backgroundImage: 'linear-gradient(rgba(0,255,65,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,65,0.5) 1px, transparent 1px)',
         backgroundSize: '60px 60px',
         maskImage: 'radial-gradient(ellipse 70% 60% at 50% 50%, black 20%, transparent 85%)',
         WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at 50% 50%, black 20%, transparent 85%)',
       }} />
 
-      {/* Center vignette to keep UI readable */}
+      {/* Center vignette */}
       <div style={{
-        position: 'absolute',
-        inset: 0,
+        position: 'absolute', inset: 0,
         background: 'radial-gradient(ellipse 55% 45% at 50% 50%, rgba(8,12,8,0.75) 0%, rgba(8,12,8,0) 72%)',
       }} />
     </div>
