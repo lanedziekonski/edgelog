@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+* {
+  font-family: 'Arial', Arial, sans-serif !important;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -11,7 +15,7 @@
   body {
     background-color: #000000;
     color: #ffffff;
-    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-family: 'Arial', Arial, sans-serif;
     overflow-x: hidden;
   }
 
