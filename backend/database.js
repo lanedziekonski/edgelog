@@ -70,6 +70,7 @@ async function initDb() {
     await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS phase TEXT DEFAULT 'evaluation'`);
     await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS manual_balance NUMERIC`);
     await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS balance_last_updated TIMESTAMPTZ`);
+    await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS min_trading_days INTEGER DEFAULT NULL`).catch(() => {});
     await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS entry_price NUMERIC`);
     await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS exit_price NUMERIC`);
     await pool.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS quantity INTEGER`);
