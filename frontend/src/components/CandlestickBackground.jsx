@@ -102,8 +102,6 @@ export default function CandlestickBackground() {
         zIndex: 0,
       }}
     >
-      {/* Dark base */}
-      <div style={{ position: 'absolute', inset: 0, background: '#080c08' }} />
 
       {/* Ambient green orbs */}
       <div style={{
