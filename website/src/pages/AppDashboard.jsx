@@ -82,19 +82,15 @@ export default function AppDashboard() {
   const curve = useMemo(() => buildEquityCurve(filteredTrades), [filteredTrades]);
 
   const monthlyData = useMemo(() => {
-    const byMonth = {};
-    filteredTrades.forEach(t => {
-      const month = t.date?.slice(0, 7);
-      if (!month) return;
-      byMonth[month] = (byMonth[month] || 0) + t.pnl;
+    const now = new Date();
+    return Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      const mTrades = filteredTrades.filter(t => t.date?.startsWith(key));
+      const pnl = mTrades.reduce((s, t) => s + t.pnl, 0);
+      return { label, pnl, trades: mTrades.length };
     });
-    return Object.entries(byMonth)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, pnl]) => {
-        const [y, m] = month.split('-');
-        const label = new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-        return { month, label, pnl: Math.round(pnl) };
-      });
   }, [filteredTrades]);
 
   const recent = useMemo(() =>
@@ -157,10 +153,33 @@ export default function AppDashboard() {
 
       {/* Monthly P&L */}
       <div className="rounded-xl p-5" style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.06)' }}>
-        <p className="text-xs font-mono uppercase tracking-widest mb-4" style={{ color: 'rgba(255,255,255,0.35)' }}>
-          Monthly P&amp;L
-        </p>
-        <MonthlyChart data={monthlyData} />
+        <p className="text-xs font-mono uppercase tracking-widest mb-4" style={{ color: 'rgba(255,255,255,0.35)' }}>Monthly P&amp;L — Last 6 Months</p>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', height: 120 }}>
+          {monthlyData.map(m => {
+            const maxAbs = Math.max(...monthlyData.map(x => Math.abs(x.pnl)), 1);
+            const barHeight = m.trades > 0 ? Math.max((Math.abs(m.pnl) / maxAbs) * 90, 4) : 0;
+            const isPos = m.pnl >= 0;
+            return (
+              <div key={m.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <p style={{ fontSize: 9, fontFamily: 'monospace', color: m.trades > 0 ? (isPos ? '#00ff41' : '#ff4d4d') : 'transparent', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                  {m.trades > 0 ? `${isPos ? '+' : '-'}$${Math.abs(m.pnl) >= 1000 ? `${(Math.abs(m.pnl)/1000).toFixed(1)}k` : Math.abs(m.pnl).toFixed(0)}` : ''}
+                </p>
+                <div style={{ width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', height: 90 }}>
+                  <div style={{
+                    width: '70%',
+                    height: barHeight,
+                    background: m.trades === 0 ? 'rgba(255,255,255,0.06)' : isPos ? '#00ff41' : '#ff4d4d',
+                    borderRadius: '3px 3px 0 0',
+                    opacity: m.trades === 0 ? 0.3 : 0.85,
+                    minHeight: m.trades === 0 ? 2 : 4,
+                  }} />
+                </div>
+                <p style={{ fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>{m.label}</p>
+                {m.trades > 0 && <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', textAlign: 'center' }}>{m.trades}t</p>}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Stats row 2 */}
@@ -262,51 +281,6 @@ export default function AppDashboard() {
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function MonthlyChart({ data }) {
-  if (!data.length) return (
-    <div className="flex items-center justify-center h-32 text-sm" style={{ color: 'rgba(255,255,255,0.25)' }}>
-      Log more trades to see monthly P&L
-    </div>
-  );
-  const recent = data.slice(-12);
-  const maxAbs = Math.max(...recent.map(d => Math.abs(d.pnl)), 1);
-  const W = 700; const H = 90;
-  const gap = 5;
-  const barW = Math.max(12, Math.floor((W - (recent.length - 1) * gap) / recent.length));
-  const midY = H / 2;
-  return (
-    <div style={{ overflowX: 'auto' }}>
-      <svg viewBox={`0 0 ${W} ${H + 22}`} className="w-full" style={{ minHeight: 90 }} preserveAspectRatio="xMidYMid meet">
-        <line x1="0" y1={midY} x2={W} y2={midY} stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
-        {recent.map((d, i) => {
-          const x = i * (barW + gap);
-          const barH = Math.max(3, (Math.abs(d.pnl) / maxAbs) * (midY - 6));
-          const isPos = d.pnl >= 0;
-          const y = isPos ? midY - barH : midY;
-          const valLabel = Math.abs(d.pnl) >= 1000
-            ? `${isPos ? '+' : '-'}$${(Math.abs(d.pnl) / 1000).toFixed(1)}k`
-            : `${isPos ? '+' : '-'}$${Math.abs(d.pnl)}`;
-          return (
-            <g key={d.month}>
-              <title>{d.label}: {isPos ? '+' : '-'}${Math.abs(d.pnl).toLocaleString()}</title>
-              <rect x={x} y={y} width={barW} height={barH} fill={isPos ? G : '#ff4d4d'} opacity="0.8" rx="2" />
-              {barW > 20 && (
-                <text x={x + barW / 2} y={isPos ? y - 3 : y + barH + 10} textAnchor="middle"
-                  fill={isPos ? G : '#ff4d4d'} fontSize="7" fontFamily="monospace" opacity="0.8">
-                  {valLabel}
-                </text>
-              )}
-              <text x={x + barW / 2} y={H + 18} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="8" fontFamily="monospace">
-                {d.label}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
     </div>
   );
 }
