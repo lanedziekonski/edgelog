@@ -23,7 +23,6 @@ const ALLOWED_ORIGINS = [
   'http://localhost:4173',
   'https://traderascend.com',
   'https://www.traderascend.com',
-  'https://app.traderascend.com',
   'https://edgelog-mu.vercel.app',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
@@ -421,21 +420,37 @@ app.post('/api/accounts', requireAuth, async (req, res) => {
 });
 
 app.put('/api/accounts/:id', requireAuth, async (req, res) => {
-  const { name, type, phase, startingBalance, dailyLossLimit, maxDrawdown, profitTarget } = req.body;
+  const {
+    name, type, phase,
+    starting_balance, manual_balance,
+    profit_target, max_drawdown, daily_loss_limit, min_trading_days,
+  } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'Account name is required' });
   try {
     const { rows } = await pool.query(
       `UPDATE user_accounts
-       SET name=$1, type=$2, phase=$3, starting_balance=$4, daily_loss_limit=$5, max_drawdown=$6, profit_target=$7
-       WHERE id=$8 AND user_id=$9
+       SET name=$1, type=$2, phase=$3,
+           starting_balance=$4,
+           manual_balance=$5,
+           balance_last_updated = CASE WHEN $5 IS NOT NULL THEN NOW() ELSE balance_last_updated END,
+           profit_target=$6,
+           max_drawdown=$7,
+           daily_loss_limit=$8,
+           min_trading_days=$9
+       WHERE id=$10 AND user_id=$11
        RETURNING *`,
-      [name.trim(), type || 'prop',
-       (type === 'prop' ? (phase || 'evaluation') : null),
-       startingBalance || 0,
-       dailyLossLimit  || null,
-       maxDrawdown     || null,
-       profitTarget    || null,
-       req.params.id, req.userId]
+      [
+        name.trim(),
+        type || 'prop',
+        type === 'prop' ? (phase || 'evaluation') : null,
+        starting_balance || 0,
+        manual_balance != null ? parseFloat(manual_balance) : null,
+        profit_target  != null ? parseFloat(profit_target)  : null,
+        max_drawdown   != null ? parseFloat(max_drawdown)   : null,
+        daily_loss_limit != null ? parseFloat(daily_loss_limit) : null,
+        min_trading_days != null ? parseInt(min_trading_days)   : null,
+        req.params.id, req.userId,
+      ]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'Account not found' });
     res.json(rowToAccount(rows[0]));
