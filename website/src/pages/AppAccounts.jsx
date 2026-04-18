@@ -32,7 +32,7 @@ function Field({ label, children }) {
 }
 
 export default function AppAccounts() {
-  const { accounts, loading, createAccount, deleteAccount, updateAccountBalance } = useAccounts();
+  const { accounts, loading, createAccount, deleteAccount, updateAccountBalance, reload } = useAccounts();
   const { trades } = useTrades();
   const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -43,6 +43,11 @@ export default function AppAccounts() {
   const [editingBalance, setEditingBalance] = useState(null);
   const [balanceInput, setBalanceInput] = useState('');
   const [savingBalance, setSavingBalance] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingAcc, setEditingAcc] = useState(null);
+  const [editForm, setEditForm] = useState(EMPTY_FORM);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editErr, setEditErr] = useState('');
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -93,6 +98,52 @@ export default function AppAccounts() {
       setCsvFile(null);
     } catch (e) { setErr(e.message || 'Failed to create account'); }
     finally { setSaving(false); }
+  };
+
+  const openEdit = (acc) => {
+    setEditingAcc(acc);
+    setEditForm({
+      name: acc.name || '',
+      type: acc.type || 'prop',
+      phase: acc.phase || 'evaluation',
+      startingBalance: acc.startingBalance?.toString() || '',
+      manualBalance: acc.balance?.toString() || '',
+      profitTarget: acc.profitTarget?.toString() || '',
+      maxDrawdown: acc.maxDrawdown?.toString() || '',
+      dailyLossLimit: acc.dailyLossLimit?.toString() || '',
+    });
+    setEditErr('');
+    setEditOpen(true);
+  };
+
+  const handleEditSave = async (e) => {
+    e.preventDefault();
+    setEditErr('');
+    if (!editForm.name.trim()) { setEditErr('Account name is required'); return; }
+    setEditSaving(true);
+    try {
+      const token = localStorage.getItem('tradeascend_token');
+      const API = (import.meta.env.VITE_API_URL || 'https://edgelog.onrender.com') + '/api';
+      const res = await fetch(`${API}/accounts/${editingAcc.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          name: editForm.name.trim(),
+          type: editForm.type,
+          phase: editForm.phase,
+          starting_balance: parseFloat(editForm.startingBalance) || 0,
+          manual_balance: editForm.manualBalance ? parseFloat(editForm.manualBalance) : null,
+          profit_target: editForm.profitTarget ? parseFloat(editForm.profitTarget) : null,
+          max_drawdown: editForm.maxDrawdown ? parseFloat(editForm.maxDrawdown) : null,
+          daily_loss_limit: editForm.dailyLossLimit ? parseFloat(editForm.dailyLossLimit) : null,
+        }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      await reload();
+      setEditOpen(false);
+      setEditingAcc(null);
+    } catch (e) { setEditErr(e.message || 'Failed to update account'); }
+    finally { setEditSaving(false); }
   };
 
   const handleSaveBalance = async (accId) => {
@@ -169,9 +220,14 @@ export default function AppAccounts() {
                       </span>
                     </div>
                   </div>
-                  <button onClick={() => deleteAccount(acc.id)} style={{ padding: 6, borderRadius: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.25)' }}>
-                    <Trash2 size={15} />
-                  </button>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => openEdit(acc)} style={{ padding: 6, borderRadius: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)' }} title="Edit account">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button onClick={() => deleteAccount(acc.id)} style={{ padding: 6, borderRadius: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.25)' }} title="Delete account">
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Balance */}
@@ -357,6 +413,64 @@ export default function AppAccounts() {
                   <button type="button" onClick={() => setAddOpen(false)} style={{ flex: 1, padding: '11px 0', borderRadius: 10, background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 14 }}>Cancel</button>
                   <button type="submit" disabled={saving} style={{ flex: 1, padding: '11px 0', borderRadius: 10, background: saving ? `${G}70` : G, color: '#000', border: 'none', cursor: saving ? 'default' : 'pointer', fontSize: 14, fontWeight: 700 }}>
                     {saving ? 'Saving…' : 'Add Account'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Account Modal */}
+      <AnimatePresence>
+        {editOpen && editingAcc && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.8)' }}
+            onClick={e => { if (e.target === e.currentTarget) setEditOpen(false); }}>
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+              style={{ width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', borderRadius: 20, padding: 24, background: '#0d0d0d', border: '1px solid rgba(0,255,65,0.2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Edit Account</h2>
+                <button onClick={() => setEditOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)' }}><X size={20} /></button>
+              </div>
+              {editErr && <div style={{ marginBottom: 16, padding: '10px 12px', borderRadius: 8, background: 'rgba(255,60,60,0.1)', color: '#ff6b6b', fontSize: 13 }}>{editErr}</div>}
+              <form onSubmit={handleEditSave} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <Field label="Account Name">
+                  <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} placeholder="Apex $100K" style={inp} />
+                </Field>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <Field label="Type">
+                    <select value={editForm.type} onChange={e => setEditForm(f => ({ ...f, type: e.target.value }))} style={{ ...inp, appearance: 'none' }}>
+                      {ACCOUNT_TYPES.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="Phase">
+                    <select value={editForm.phase} onChange={e => setEditForm(f => ({ ...f, phase: e.target.value }))} style={{ ...inp, appearance: 'none' }}>
+                      {PHASES.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+                    </select>
+                  </Field>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <Field label="Starting Balance ($)">
+                    <input type="number" step="0.01" value={editForm.startingBalance} onChange={e => setEditForm(f => ({ ...f, startingBalance: e.target.value }))} placeholder="100000" style={inp} />
+                  </Field>
+                  <Field label="Current Balance ($)">
+                    <input type="number" step="0.01" value={editForm.manualBalance} onChange={e => setEditForm(f => ({ ...f, manualBalance: e.target.value }))} placeholder="100000" style={inp} />
+                  </Field>
+                </div>
+                <Field label="Profit Target ($)">
+                  <input type="number" step="0.01" value={editForm.profitTarget} onChange={e => setEditForm(f => ({ ...f, profitTarget: e.target.value }))} placeholder="10000" style={inp} />
+                </Field>
+                <Field label="Max Drawdown ($)">
+                  <input type="number" step="0.01" value={editForm.maxDrawdown} onChange={e => setEditForm(f => ({ ...f, maxDrawdown: e.target.value }))} placeholder="5000" style={inp} />
+                </Field>
+                <Field label="Daily Loss Limit ($)">
+                  <input type="number" step="0.01" value={editForm.dailyLossLimit} onChange={e => setEditForm(f => ({ ...f, dailyLossLimit: e.target.value }))} placeholder="1000" style={inp} />
+                </Field>
+                <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
+                  <button type="button" onClick={() => setEditOpen(false)} style={{ flex: 1, padding: '11px 0', borderRadius: 10, background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 14 }}>Cancel</button>
+                  <button type="submit" disabled={editSaving} style={{ flex: 1, padding: '11px 0', borderRadius: 10, background: editSaving ? 'rgba(0,255,65,0.4)' : '#00ff41', color: '#000', border: 'none', cursor: editSaving ? 'default' : 'pointer', fontSize: 14, fontWeight: 700 }}>
+                    {editSaving ? 'Saving…' : 'Save Changes'}
                   </button>
                 </div>
               </form>
