@@ -1,7 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useTrades, fmtPnl } from '../hooks/useTrades';
+import { useAccounts } from '../hooks/useAccounts';
+import { useAccountFilter } from '../context/AccountFilterContext';
 
 const G = '#00ff41';
 const R = '#ff2d2d';
@@ -81,7 +83,15 @@ function CtxItem({ label, value, positive }) {
 
 export default function AppAICoach() {
   const { token } = useAuth();
-  const { trades } = useTrades();
+  const { trades: allTrades } = useTrades();
+  const { accounts } = useAccounts();
+  const { selectedAccountId } = useAccountFilter();
+  const trades = useMemo(() => {
+    if (!selectedAccountId) return allTrades;
+    const acct = accounts.find(a => String(a.id) === String(selectedAccountId));
+    if (!acct) return allTrades;
+    return allTrades.filter(t => t.account === acct.name);
+  }, [allTrades, accounts, selectedAccountId]);
   const [period, setPeriod] = useState(() => detectPeriod());
   const [allSessions, setAllSessions] = useState({ pre_market: EMPTY_PERIOD_DATA(), post_market: EMPTY_PERIOD_DATA() });
   const [periodLoading, setPeriodLoading] = useState({ pre_market: true, post_market: true });

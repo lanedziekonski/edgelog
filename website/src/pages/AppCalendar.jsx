@@ -2,13 +2,23 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, X, Plus } from 'lucide-react';
 import { useTrades, fmtPnl } from '../hooks/useTrades';
+import { useAccounts } from '../hooks/useAccounts';
+import { useAccountFilter } from '../context/AccountFilterContext';
 
 const G = '#00ff41';
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 export default function AppCalendar() {
-  const { trades, loading } = useTrades();
+  const { trades: allTrades, loading } = useTrades();
+  const { accounts } = useAccounts();
+  const { selectedAccountId } = useAccountFilter();
+  const trades = useMemo(() => {
+    if (!selectedAccountId) return allTrades;
+    const acct = accounts.find(a => String(a.id) === String(selectedAccountId));
+    if (!acct) return allTrades;
+    return allTrades.filter(t => t.account === acct.name);
+  }, [allTrades, accounts, selectedAccountId]);
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());

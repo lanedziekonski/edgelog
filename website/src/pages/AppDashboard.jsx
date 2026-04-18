@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, BarChart2, Target, Zap, Clock } from 'lucide-react';
 import { useTrades, calcStats, buildEquityCurve, fmtPnl } from '../hooks/useTrades';
+import { useAccounts } from '../hooks/useAccounts';
+import { useAccountFilter } from '../context/AccountFilterContext';
 
 const G = '#00ff41';
 
@@ -66,13 +68,15 @@ function EquityChart({ curve }) {
 export default function AppDashboard() {
   const navigate = useNavigate();
   const { trades, loading } = useTrades();
-  const [selectedAccount, setSelectedAccount] = useState('all');
+  const { accounts } = useAccounts();
+  const { selectedAccountId } = useAccountFilter();
 
-  const accountNames = useMemo(() => [...new Set(trades.map(t => t.account).filter(Boolean))], [trades]);
-
-  const filteredTrades = useMemo(() =>
-    selectedAccount === 'all' ? trades : trades.filter(t => t.account === selectedAccount),
-  [trades, selectedAccount]);
+  const filteredTrades = useMemo(() => {
+    if (!selectedAccountId) return trades;
+    const acct = accounts.find(a => String(a.id) === String(selectedAccountId));
+    if (!acct) return trades;
+    return trades.filter(t => t.account === acct.name);
+  }, [trades, accounts, selectedAccountId]);
 
   const stats = useMemo(() => calcStats(filteredTrades), [filteredTrades]);
   const curve = useMemo(() => buildEquityCurve(filteredTrades), [filteredTrades]);
@@ -110,20 +114,7 @@ export default function AppDashboard() {
     <div className="space-y-8">
       {/* Hero stats */}
       <div>
-        <div className="flex items-end justify-between gap-4 flex-wrap mb-5">
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          {accountNames.length > 0 && (
-            <select
-              value={selectedAccount}
-              onChange={e => setSelectedAccount(e.target.value)}
-              className="text-xs px-3 py-1.5 rounded-lg outline-none"
-              style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.1)', color: selectedAccount === 'all' ? 'rgba(255,255,255,0.5)' : G }}
-            >
-              <option value="all">All Accounts</option>
-              {accountNames.map(n => <option key={n} value={n}>{n}</option>)}
-            </select>
-          )}
-        </div>
+        <h1 className="text-3xl font-bold tracking-tight mb-5">Dashboard</h1>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatCard
             label="Total P&L"

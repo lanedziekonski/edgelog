@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Trash2, ChevronDown, ChevronUp, X, Pencil, Upload, FileText, Camera, Loader as LoaderIcon, ImageOff } from 'lucide-react';
 import { useTrades, fmtPnl } from '../hooks/useTrades';
+import { useAccounts } from '../hooks/useAccounts';
+import { useAccountFilter } from '../context/AccountFilterContext';
 
 const G = '#00ff41';
 const SETUPS = ['ORB', 'VWAP Reclaim', 'Bull Flag', 'Gap Fill', 'Fade High', 'Other'];
@@ -33,6 +35,8 @@ const EMOTIONS_AFTER = ['Neutral', 'Satisfied', 'Disappointed', 'Relieved', 'Ang
 
 export default function AppJournal() {
   const { trades, loading, reload, addTrade, deleteTrade, updateTrade, importCsv } = useTrades();
+  const { accounts } = useAccounts();
+  const { selectedAccountId } = useAccountFilter();
   const [filter, setFilter]   = useState('all');
   const [query, setQuery]     = useState('');
   const [addOpen, setAddOpen] = useState(false);
@@ -130,8 +134,11 @@ export default function AppJournal() {
   };
 
   const filtered = useMemo(() => {
+    const selectedAccount = selectedAccountId ? accounts.find(a => String(a.id) === String(selectedAccountId)) : null;
+    const selectedAccountName = selectedAccount?.name;
     const sorted = [...trades].sort((a, b) => b.date?.localeCompare(a.date) || 0);
     return sorted.filter(t => {
+      if (selectedAccountId && t.account !== selectedAccountName) return false;
       if (filter === 'wins'        && t.pnl < 0) return false;
       if (filter === 'losses'      && t.pnl >= 0) return false;
       if (filter === 'rule breaks' && t.followedPlan) return false;
@@ -141,7 +148,7 @@ export default function AppJournal() {
       }
       return true;
     });
-  }, [trades, filter, query]);
+  }, [trades, accounts, selectedAccountId, filter, query]);
 
   const grouped = useMemo(() => {
     const g = {};

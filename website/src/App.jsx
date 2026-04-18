@@ -1,6 +1,7 @@
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { AccountFilterProvider } from './context/AccountFilterContext';
 
 // Marketing layout + pages
 import Layout   from './components/layout/Layout';
@@ -116,8 +117,10 @@ function AnimatedRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AnimatedRoutes />
-    </AuthProvider>
+    <AccountFilterProvider>
+      <AuthProvider>
+        <AnimatedRoutes />
+      </AuthProvider>
+    </AccountFilterProvider>
   );
 }
