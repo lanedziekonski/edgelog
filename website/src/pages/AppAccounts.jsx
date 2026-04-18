@@ -14,6 +14,7 @@ const EMPTY_FORM = {
   name: '', type: 'prop', phase: 'evaluation',
   startingBalance: '', manualBalance: '',
   profitTarget: '', maxDrawdown: '', dailyLossLimit: '',
+  minTradingDays: '',
 };
 
 const inp = {
@@ -60,7 +61,8 @@ export default function AppAccounts() {
       const todayTrades = accTrades.filter(t => t.date === today);
       const todayPnl = todayTrades.reduce((s, t) => s + t.pnl, 0);
       const totalPnl = accTrades.reduce((s, t) => s + t.pnl, 0);
-      map[acc.id] = { totalTrades: accTrades.length, todayPnl, totalPnl };
+      const tradingDays = new Set(accTrades.map(t => t.date)).size;
+      map[acc.id] = { totalTrades: accTrades.length, todayPnl, totalPnl, tradingDays };
     });
     return map;
   }, [accounts, trades, today]);
@@ -80,6 +82,7 @@ export default function AppAccounts() {
         profit_target: form.profitTarget ? parseFloat(form.profitTarget) : null,
         max_drawdown: form.maxDrawdown ? parseFloat(form.maxDrawdown) : null,
         daily_loss_limit: form.dailyLossLimit ? parseFloat(form.dailyLossLimit) : null,
+        min_trading_days: form.minTradingDays ? parseInt(form.minTradingDays) : null,
       });
       if (csvFile && created?.id) {
         try {
@@ -111,6 +114,7 @@ export default function AppAccounts() {
       profitTarget: acc.profitTarget?.toString() || '',
       maxDrawdown: acc.maxDrawdown?.toString() || '',
       dailyLossLimit: acc.dailyLossLimit?.toString() || '',
+      minTradingDays: acc.minTradingDays?.toString() || '',
     });
     setEditErr('');
     setEditOpen(true);
@@ -136,6 +140,7 @@ export default function AppAccounts() {
           profit_target: editForm.profitTarget ? parseFloat(editForm.profitTarget) : null,
           max_drawdown: editForm.maxDrawdown ? parseFloat(editForm.maxDrawdown) : null,
           daily_loss_limit: editForm.dailyLossLimit ? parseFloat(editForm.dailyLossLimit) : null,
+          min_trading_days: editForm.minTradingDays ? parseInt(editForm.minTradingDays) : null,
         }),
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
@@ -341,6 +346,49 @@ export default function AppAccounts() {
                     {dailyUsedPct >= 90 && <p style={{ fontSize: 11, color: R, fontWeight: 700, marginTop: 4 }}>🚨 Near daily loss limit — stop trading</p>}
                   </div>
                 )}
+
+                {/* Payout Tracker */}
+                {acc.profitTarget > 0 && (
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <p style={{ fontSize: 10, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '1px', color: 'rgba(255,255,255,0.3)' }}>
+                        Payout Tracker
+                      </p>
+                      <p style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 700, color: profitPct >= 100 ? G : 'rgba(255,255,255,0.6)' }}>
+                        {profitPct >= 100 ? '✓ Target Hit!' : `${profitPct.toFixed(1)}%`}
+                      </p>
+                    </div>
+                    <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginBottom: 4 }}>
+                      <div style={{ height: '100%', borderRadius: 3, width: `${Math.min(profitPct, 100)}%`, background: profitPct >= 100 ? G : `rgba(0,255,65,0.6)`, transition: 'width 0.4s ease' }} />
+                    </div>
+                    <p style={{ fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,0.3)' }}>
+                      {profitPct >= 100
+                        ? `Exceeded target by $${(profitGain - acc.profitTarget).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+                        : `$${profitGain.toLocaleString('en-US', { maximumFractionDigits: 0 })} of $${acc.profitTarget.toLocaleString('en-US', { maximumFractionDigits: 0 })} target`
+                      }
+                    </p>
+                  </div>
+                )}
+
+                {/* Days Till Pass */}
+                {acc.minTradingDays > 0 && (
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <p style={{ fontSize: 10, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '1px', color: 'rgba(255,255,255,0.3)' }}>
+                        Min Trading Days
+                      </p>
+                      <p style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 700, color: stats.tradingDays >= acc.minTradingDays ? G : 'rgba(255,255,255,0.6)' }}>
+                        {stats.tradingDays >= acc.minTradingDays ? '✓ Requirement Met!' : `${acc.minTradingDays - stats.tradingDays} days to go`}
+                      </p>
+                    </div>
+                    <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginBottom: 4 }}>
+                      <div style={{ height: '100%', borderRadius: 3, width: `${Math.min((stats.tradingDays / acc.minTradingDays) * 100, 100)}%`, background: stats.tradingDays >= acc.minTradingDays ? G : 'rgba(0,255,65,0.5)', transition: 'width 0.4s ease' }} />
+                    </div>
+                    <p style={{ fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,0.3)' }}>
+                      {stats.tradingDays} of {acc.minTradingDays} trading days completed
+                    </p>
+                  </div>
+                )}
               </motion.div>
             );
           })}
@@ -392,6 +440,9 @@ export default function AppAccounts() {
                 </Field>
                 <Field label="Daily Loss Limit ($)">
                   <input type="number" step="0.01" value={form.dailyLossLimit} onChange={e => setForm(f => ({ ...f, dailyLossLimit: e.target.value }))} placeholder="1000" style={inp} />
+                </Field>
+                <Field label="Min Trading Days (Eval)">
+                  <input type="number" min="1" value={form.minTradingDays} onChange={e => setForm(f => ({ ...f, minTradingDays: e.target.value }))} placeholder="10" style={inp} />
                 </Field>
 
                 {/* CSV Import */}
@@ -466,6 +517,9 @@ export default function AppAccounts() {
                 </Field>
                 <Field label="Daily Loss Limit ($)">
                   <input type="number" step="0.01" value={editForm.dailyLossLimit} onChange={e => setEditForm(f => ({ ...f, dailyLossLimit: e.target.value }))} placeholder="1000" style={inp} />
+                </Field>
+                <Field label="Min Trading Days (Eval)">
+                  <input type="number" min="1" value={editForm.minTradingDays} onChange={e => setEditForm(f => ({ ...f, minTradingDays: e.target.value }))} placeholder="10" style={inp} />
                 </Field>
                 <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
                   <button type="button" onClick={() => setEditOpen(false)} style={{ flex: 1, padding: '11px 0', borderRadius: 10, background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 14 }}>Cancel</button>

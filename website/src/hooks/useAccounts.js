@@ -29,6 +29,7 @@ export function useAccounts() {
         maxDrawdown: a.maxDrawdown ?? a.max_drawdown ?? null,
         profitTarget: a.profitTarget ?? a.profit_target ?? null,
         balanceLastUpdated: a.balanceLastUpdated ?? a.balance_last_updated ?? null,
+        minTradingDays: a.minTradingDays ?? a.min_trading_days ?? null,
       })) : []))
       .catch(() => setAccounts([]))
       .finally(() => setLoading(false));
