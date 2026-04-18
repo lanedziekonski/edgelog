@@ -6,6 +6,8 @@ import {
   ClipboardCheck, MessageSquare, User, LogOut, ChevronLeft, Menu, X,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useAccounts } from '../hooks/useAccounts';
+import { useAccountFilter } from '../context/AccountFilterContext';
 import AnimatedBackground from './effects/AnimatedBackground';
 
 const NAV = [
@@ -25,6 +27,8 @@ export default function AppShell() {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { accounts } = useAccounts();
+  const { selectedAccountId, setSelectedAccountId } = useAccountFilter();
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -145,6 +149,29 @@ export default function AppShell() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {accounts.length > 0 && (
+              <select
+                value={selectedAccountId || ''}
+                onChange={e => setSelectedAccountId(e.target.value || null)}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  color: selectedAccountId ? '#00ff41' : 'rgba(255,255,255,0.5)',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  maxWidth: 160,
+                }}
+              >
+                <option value="">All Accounts</option>
+                {accounts.map(a => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+            )}
             <span
               className="hidden sm:block text-[10px] font-mono uppercase tracking-widest px-2.5 py-1 rounded-full border"
               style={{ borderColor: `${G}40`, color: G, background: `${G}10` }}
