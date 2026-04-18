@@ -121,7 +121,7 @@ export default function TermsOfService() {
               ⚠ Important — Please Read Carefully
             </div>
             <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', lineHeight: 1.8 }}>
-              <strong style={{ color: '#fff' }}>TRADEASCEND IS NOT A FINANCIAL ADVISOR.</strong> Nothing on this platform constitutes financial advice, investment advice, trading advice, or a recommendation to buy or sell any financial instrument or security.
+              <strong style={{ color: '#fff' }}>TRADERASCEND IS NOT A FINANCIAL ADVISOR.</strong> Nothing on this platform constitutes financial advice, investment advice, trading advice, or a recommendation to buy or sell any financial instrument or security.
               <br /><br />
               All AI coaching features are for <strong style={{ color: '#fff' }}>educational and performance improvement purposes only</strong>. Past performance shown in your journal does not guarantee future results.
               <br /><br />
@@ -187,7 +187,7 @@ export default function TermsOfService() {
         </Section>
 
         <Section title="10. Disclaimer of Warranties">
-          <P>THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMITTED BY LAW, TRADEASCEND DISCLAIMS ALL WARRANTIES INCLUDING:</P>
+          <P>THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMITTED BY LAW, TRADERASCEND DISCLAIMS ALL WARRANTIES INCLUDING:</P>
           <Ul items={[
             'Warranties of merchantability, fitness for a particular purpose, or non-infringement',
             'Guarantees of uptime, availability, or uninterrupted access',
