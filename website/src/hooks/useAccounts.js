@@ -8,9 +8,9 @@ export function useAccounts() {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading]   = useState(true);
 
-  const load = useCallback(() => {
+  const load = useCallback((showLoading = true) => {
     if (!token) { setAccounts([]); setLoading(false); return; }
-    setLoading(true);
+    if (showLoading) setLoading(true);
     fetch(`${API}/accounts`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => setAccounts(Array.isArray(data) ? data.map(a => ({
@@ -18,6 +18,7 @@ export function useAccounts() {
         id: a.id,
         name: a.name,
         accountType: a.type || 'Live',
+        type: a.type || 'prop',
         phase: a.phase || 'evaluation',
         startingBalance: parseFloat(a.starting_balance) || 0,
         balance: a.manual_balance != null ? parseFloat(a.manual_balance) : parseFloat(a.starting_balance) || 0,
@@ -31,8 +32,8 @@ export function useAccounts() {
   }, [token]);
 
   useEffect(() => {
-    load();
-    const interval = setInterval(load, 30000);
+    load(true);
+    const interval = setInterval(() => load(false), 30000);
     return () => clearInterval(interval);
   }, [load]);
 
