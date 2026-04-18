@@ -14,6 +14,10 @@ import HowItWorks from './pages/HowItWorks';
 import Login  from './pages/Login';
 import Signup from './pages/Signup';
 
+// Legal pages
+import PrivacyPolicy  from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
+
 // App shell + protected pages
 import AppShell      from './components/AppShell';
 import AppDashboard  from './pages/AppDashboard';
@@ -68,6 +72,10 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
+        {/* Legal pages — full page, no layout wrapper */}
+        <Route path="privacy" element={<PrivacyPolicy />} />
+        <Route path="terms"   element={<TermsOfService />} />
+
         {/* Auth pages (redirect to /dashboard if already logged in) */}
         <Route path="login" element={<GuestOnlyRoute><Login /></GuestOnlyRoute>} />
         <Route path="signup" element={<GuestOnlyRoute><Signup /></GuestOnlyRoute>} />
