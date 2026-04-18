@@ -250,7 +250,7 @@ export default function AppTradingPlan() {
   if (view === 'loading') return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}><TypingDots /></div>;
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto' }}>
+    <div style={{ maxWidth: '100%' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
