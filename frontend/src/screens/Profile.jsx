@@ -34,7 +34,24 @@ export default function Profile({ onNavigate, onSignUp, onLogin }) {
     setPortalError('');
     setPortalLoading(true);
     try {
-      const data = await api.createPortalSession(token);
+      const BASE = import.meta.env.VITE_API_URL
+        ? `${import.meta.env.VITE_API_URL}/api`
+        : 'https://edgelog.onrender.com/api';
+      const res = await fetch(`${BASE}/stripe/create-portal-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 400 && data.error?.includes('No billing account')) {
+          throw new Error('No active subscription found. Subscribe to a plan first to manage billing.');
+        }
+        throw new Error(data.error || `Request failed (${res.status})`);
+      }
+      if (!data.url) throw new Error('No portal URL returned from server.');
       window.location.href = data.url;
     } catch (err) {
       setPortalError(err.message.includes('not configured')
@@ -388,6 +405,7 @@ export default function Profile({ onNavigate, onSignUp, onLogin }) {
               Manage your subscription, update payment method, download invoices, or cancel via Stripe's secure billing portal.
             </div>
             <motion.button
+              type="button"
               whileTap={{ scale: 0.97 }}
               onClick={handleBillingPortal}
               disabled={portalLoading}
@@ -396,12 +414,12 @@ export default function Profile({ onNavigate, onSignUp, onLogin }) {
                 background: 'transparent',
                 border: '1px solid rgba(255,255,255,0.15)',
                 color: 'rgba(255,255,255,0.7)',
-                fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'Barlow',
+                fontWeight: 600, fontSize: 14, cursor: portalLoading ? 'default' : 'pointer', fontFamily: 'Barlow',
                 opacity: portalLoading ? 0.6 : 1,
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               }}
             >
-              <span>{portalLoading ? 'Opening portal…' : 'Open Billing Portal'}</span>
+              <span>{portalLoading ? 'Opening portal…' : 'Manage Subscription'}</span>
               <span style={{ color: G }}>›</span>
             </motion.button>
           </motion.div>
