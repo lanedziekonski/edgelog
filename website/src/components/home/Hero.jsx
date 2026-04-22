@@ -63,7 +63,7 @@ export default function Hero() {
           custom={2}
           className="mt-10 flex flex-wrap justify-center gap-4"
         >
-          <Button to="/signup" variant="primary" size="lg">
+          <Button href="https://app.traderascend.com/signup" variant="primary" size="lg">
             Start Free <ArrowRight className="w-5 h-5" />
           </Button>
           <Button to="/how-it-works" variant="ghost" size="lg">

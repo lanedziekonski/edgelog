@@ -6,7 +6,8 @@ export default function CTABanner({
   title = 'Ready to find your edge?',
   subtitle = 'Start your free TraderAscend account in under 30 seconds. No credit card required.',
   ctaLabel = 'Start Free',
-  ctaTo = '/preview',
+  ctaTo,
+  ctaHref = 'https://app.traderascend.com/signup',
 }) {
   return (
     <section className="relative py-24 md:py-32 overflow-hidden border-y border-border">
@@ -37,7 +38,7 @@ export default function CTABanner({
           {subtitle}
         </p>
         <div className="mt-10 flex flex-wrap justify-center gap-4">
-          <Button to={ctaTo} variant="primary" size="lg">
+          <Button {...(ctaTo ? { to: ctaTo } : { href: ctaHref })} variant="primary" size="lg">
             {ctaLabel} <ArrowRight className="w-5 h-5" />
           </Button>
           <Button to="/pricing" variant="ghost" size="lg">

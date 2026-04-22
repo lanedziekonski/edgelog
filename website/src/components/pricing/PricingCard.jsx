@@ -2,9 +2,16 @@ import { motion } from 'framer-motion';
 import { Check, ArrowRight } from 'lucide-react';
 import Button from '../ui/Button';
 
+const APP_URL = 'https://app.traderascend.com';
+
 export default function PricingCard({ tier, billing }) {
   const price = billing === 'annual' ? tier.annual : tier.monthly;
   const isPaid = price > 0;
+  const billingParam = billing === 'annual' ? 'yearly' : 'monthly';
+  const ctaHref =
+    tier.id === 'free'
+      ? `${APP_URL}/signup`
+      : `${APP_URL}/pricing?plan=${tier.id}&billing=${billingParam}`;
 
   return (
     <motion.div
@@ -60,7 +67,7 @@ export default function PricingCard({ tier, billing }) {
 
       <div className="mt-8">
         <Button
-          to="/signup"
+          href={ctaHref}
           variant={tier.popular ? 'primary' : 'ghost'}
           size="md"
           className="w-full"
