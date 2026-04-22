@@ -58,7 +58,36 @@ const FEATURE_INFO = {
 
 function AppInner() {
   const { user, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() =>
+    window.location.pathname === '/pricing' ? 'pricing' : 'dashboard'
+  );
+
+  // Capture deep-link params from /pricing?plan=...&billing=...&ref=...
+  // State persists through the auth gate (no page reload), so params survive login.
+  // sessionStorage is a fallback in case of an unexpected reload during auth.
+  const [pricingInitParams] = useState(() => {
+    if (window.location.pathname === '/pricing') {
+      const p = new URLSearchParams(window.location.search);
+      const params = {
+        plan:    p.get('plan')    || null,
+        billing: p.get('billing') || null,
+        ref:     p.get('ref')     || null,
+      };
+      if (params.plan || params.billing || params.ref) {
+        sessionStorage.setItem('ta_pending_pricing', JSON.stringify(params));
+      }
+      return params;
+    }
+    // Recover from sessionStorage if a page reload happened during auth
+    const stored = sessionStorage.getItem('ta_pending_pricing');
+    if (stored) {
+      try {
+        sessionStorage.removeItem('ta_pending_pricing');
+        return JSON.parse(stored);
+      } catch { /* ignore */ }
+    }
+    return null;
+  });
   const [focusTradeId, setFocusTradeId]       = useState(null);
   const [pendingTradeDate, setPendingTradeDate] = useState(null);
   const [showTermsGate, setShowTermsGate]     = useState(() => needsTermsAgreement());
@@ -71,7 +100,7 @@ function AppInner() {
 
   const screenRef = useRef(null);
 
-  // Handle Stripe payment-success redirect
+  // Handle Stripe payment-success redirect + clean /pricing URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment') === 'cancelled') {
@@ -80,6 +109,10 @@ function AppInner() {
     if (window.location.pathname === '/payment-success') {
       window.history.replaceState({}, '', '/');
       setActiveTab('profile');
+    }
+    // Clean /pricing?... → / so params don't re-apply on manual refresh
+    if (window.location.pathname === '/pricing') {
+      window.history.replaceState({}, '', '/');
     }
   }, []);
 
@@ -130,7 +163,7 @@ function AppInner() {
 
   // Full-page screens that don't use the shell layout
   if (activeTab === 'pricing') {
-    return <Pricing onClose={() => setActiveTab('profile')} />;
+    return <Pricing onClose={() => setActiveTab('profile')} initParams={pricingInitParams} />;
   }
 
   const userPlan = user?.plan || 'free';

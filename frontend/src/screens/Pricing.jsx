@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth, PLANS } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -83,15 +83,62 @@ const TIERS = [
   },
 ];
 
-export default function Pricing({ onClose }) {
+const VALID_PLANS = ['trader', 'pro', 'elite'];
+
+export default function Pricing({ onClose, initParams }) {
   const { user, token } = useAuth();
-  const [billing, setBilling]   = useState('monthly');
+  const [billing, setBilling]   = useState(() => {
+    const b = initParams?.billing;
+    return (b === 'annual' || b === 'yearly') ? 'annual' : 'monthly';
+  });
   const [loading, setLoading]   = useState(null);
   const [error, setError]       = useState('');
   const [refCode, setRefCode]   = useState('');
   const [refLoading, setRefLoading] = useState(false);
   const [refStatus, setRefStatus]   = useState(null); // null | 'valid' | 'invalid' | 'used' | 'own' | 'error'
   const [refMsg, setRefMsg]         = useState('');
+  const [highlightPlan, setHighlightPlan] = useState(null);
+  const planRefs = useRef({});
+
+  // Apply deep-link init params once on mount
+  useEffect(() => {
+    if (!initParams) return;
+    const { plan, billing: initBilling, ref } = initParams;
+
+    // Scroll to + highlight the requested plan tile
+    if (plan && VALID_PLANS.includes(plan)) {
+      setHighlightPlan(plan);
+      setTimeout(() => {
+        const el = planRefs.current[plan];
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 200);
+      // Fade glow out after 3 s
+      setTimeout(() => setHighlightPlan(null), 3200);
+    }
+
+    // Auto-validate referral code
+    if (ref) {
+      const normalized = ref.trim().toUpperCase();
+      setRefCode(normalized);
+      setRefLoading(true);
+      const billingForMsg = (initBilling === 'annual' || initBilling === 'yearly') ? 'annual' : 'monthly';
+      api.validateReferralCode(normalized)
+        .then(vData => {
+          if (!vData.valid) {
+            setRefStatus('invalid');
+            setRefMsg("That code doesn't exist. Check and try again.");
+          } else {
+            setRefStatus('valid');
+            const ownerName = vData.ownerFirstName ? `${vData.ownerFirstName}'s code` : 'Referral code';
+            setRefMsg(billingForMsg === 'annual'
+              ? `${ownerName} applied — 20% off your first year!`
+              : `${ownerName} applied — 20% off your first 3 months!`);
+          }
+        })
+        .catch(() => { setRefStatus('error'); setRefMsg('Could not validate referral code.'); })
+        .finally(() => setRefLoading(false));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const currentPlan = user?.plan || 'free';
   const PLAN_ORDER  = ['free', 'trader', 'pro', 'elite'];
@@ -239,14 +286,16 @@ export default function Pricing({ onClose }) {
         )}
 
         {TIERS.map((tier, idx) => {
-          const isCurrent  = tier.id === currentPlan;
+          const isCurrent   = tier.id === currentPlan;
           const isDowngrade = PLAN_ORDER.indexOf(tier.id) < PLAN_ORDER.indexOf(currentPlan);
-          const isPopular  = tier.popular && !isCurrent;
-          const showPrice  = billing === 'annual' && tier.monthlyPrice > 0;
+          const isPopular   = tier.popular && !isCurrent;
+          const isHighlighted = tier.id === highlightPlan;
+          const showPrice   = billing === 'annual' && tier.monthlyPrice > 0;
 
           return (
             <motion.div
               key={tier.id}
+              ref={el => { planRefs.current[tier.id] = el; }}
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.06, duration: 0.28, ease: 'easeOut' }}
@@ -254,6 +303,8 @@ export default function Pricing({ onClose }) {
                 background: '#0d140d',
                 border: isCurrent
                   ? `2px solid ${tier.color}`
+                  : isHighlighted
+                  ? `2px solid ${G}`
                   : isPopular
                   ? `1.5px solid ${G}70`
                   : '1px solid rgba(255,255,255,0.08)',
@@ -261,9 +312,12 @@ export default function Pricing({ onClose }) {
                 marginBottom: 14, position: 'relative',
                 boxShadow: isCurrent
                   ? `0 0 32px ${tier.color}20`
+                  : isHighlighted
+                  ? `0 0 48px ${G}40`
                   : isPopular
                   ? `0 0 30px ${G}18`
                   : 'none',
+                transition: 'border 0.6s ease, box-shadow 0.6s ease',
               }}
             >
               {/* Badge */}
