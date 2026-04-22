@@ -1001,19 +1001,21 @@ app.post('/api/stripe/webhook', async (req, res) => {
     }
     if (event.type === 'invoice.payment_succeeded') {
       const invoice = event.data.object;
-      console.log(`[invoice.payment_succeeded] id=${invoice.id} customer=${invoice.customer} amount_paid=${invoice.amount_paid} subscription=${invoice.subscription} discount=${invoice.discount ? invoice.discount.id ?? 'present' : 'none'} total_discount_amounts=${JSON.stringify(invoice.total_discount_amounts)}`);
+      // Stripe API 2026-03-25.dahlia: invoice.subscription and invoice.discount are deprecated/removed.
+      // subscription ID now lives at invoice.parent.subscription_details.subscription or lines.data[0].subscription.
+      // discount presence is indicated by invoice.total_discount_amounts having entries.
+      const parentSub = invoice.parent?.subscription_details?.subscription;
+      const lineSub   = invoice.lines?.data?.[0]?.subscription;
+      const subscriptionId = parentSub || lineSub || invoice.subscription; // legacy fallback
+      const hasActiveDiscount = (invoice.total_discount_amounts?.length > 0) || !!invoice.discount;
+      console.log(`[invoice.payment_succeeded] id=${invoice.id} customer=${invoice.customer} amount_paid=${invoice.amount_paid} parent_subscription=${parentSub} line_subscription=${lineSub} legacy_subscription=${invoice.subscription} resolved_subscription=${subscriptionId} has_active_discount=${hasActiveDiscount} total_discount_amounts=${JSON.stringify(invoice.total_discount_amounts)}`);
 
-      if (!invoice.subscription) {
-        console.log(`[invoice.payment_succeeded] skipping — no subscription on invoice ${invoice.id}`);
+      if (!subscriptionId) {
+        console.log(`[invoice.payment_succeeded] skipping — no subscription ID found on invoice ${invoice.id}`);
         return res.sendStatus(200);
       }
 
-      // Check if a discount (referral coupon) was applied to this invoice.
-      // Primary: invoice.discount — set when a coupon is active on the subscription.
-      // Fallback: total_discount_amounts — array of amounts per discount.
-      const discountApplied = invoice.discount != null ||
-        (Array.isArray(invoice.total_discount_amounts) && invoice.total_discount_amounts.some(d => d.amount > 0));
-      if (!discountApplied) {
+      if (!hasActiveDiscount) {
         console.log(`[invoice.payment_succeeded] skipping ${invoice.id} — no discount applied (referral window likely over)`);
         return res.sendStatus(200);
       }
