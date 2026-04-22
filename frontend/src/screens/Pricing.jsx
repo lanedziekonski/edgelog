@@ -101,7 +101,8 @@ export default function Pricing({ onClose }) {
     setError('');
     setLoading(planId);
     try {
-      const data = await api.createCheckoutSession(token, planId, billing);
+      const appliedCode = refStatus === 'valid' ? refCode.trim() : null;
+      const data = await api.createCheckoutSession(token, planId, billing, appliedCode);
       window.location.href = data.url;
     } catch (err) {
       setError(err.message.includes('not configured')
@@ -118,16 +119,14 @@ export default function Pricing({ onClose }) {
     try {
       const vData = await api.validateReferralCode(refCode.trim().toUpperCase());
       if (!vData.valid) { setRefStatus('invalid'); setRefMsg('That code doesn\'t exist. Check and try again.'); setRefLoading(false); return; }
-      if (!token) { setRefStatus('error'); setRefMsg('Sign in to apply a referral code.'); setRefLoading(false); return; }
-      await api.applyReferralCode(token, refCode.trim().toUpperCase(), billing);
       setRefStatus('valid');
+      const ownerName = vData.ownerFirstName ? `${vData.ownerFirstName}'s code` : 'Referral code';
       setRefMsg(billing === 'annual'
-        ? '20% off your first year has been applied!'
-        : '20% off your first 3 months has been applied!');
+        ? `${ownerName} applied — 20% off your first year!`
+        : `${ownerName} applied — 20% off your first 3 months!`);
     } catch (err) {
-      if (err.message.includes('own')) { setRefStatus('own'); setRefMsg("You can't use your own referral code."); }
-      else if (err.message.includes('already')) { setRefStatus('used'); setRefMsg('You\'ve already used a referral code.'); }
-      else { setRefStatus('error'); setRefMsg(err.message); }
+      setRefStatus('error');
+      setRefMsg(err.message || 'Validation failed. Try again.');
     } finally {
       setRefLoading(false);
     }

@@ -659,11 +659,12 @@ app.post('/api/referrals/validate', async (req, res) => {
   if (!code) return res.status(400).json({ error: 'code required' });
   try {
     const { rows } = await pool.query(
-      `SELECT rc.code FROM referral_codes rc WHERE rc.code = $1`,
+      `SELECT rc.code, u.name FROM referral_codes rc JOIN users u ON u.id = rc.user_id WHERE UPPER(rc.code) = $1`,
       [code.trim().toUpperCase()]
     );
     if (!rows[0]) return res.json({ valid: false });
-    res.json({ valid: true, discount_percent: 20, duration_months: 3 });
+    const ownerFirstName = (rows[0].name || '').split(' ')[0] || null;
+    res.json({ valid: true, discount_percent: 20, duration_months: 3, ownerFirstName });
   } catch (err) {
     console.error('Validate referral error:', err.message);
     res.status(500).json({ error: 'Validation failed' });
@@ -703,12 +704,33 @@ app.post('/api/referrals/apply', requireAuth, async (req, res) => {
 
 app.get('/api/referrals/earnings', requireAuth, async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      `SELECT COALESCE(SUM(earnings_amount), 0) as total, COUNT(*) as referral_count
-       FROM referral_uses WHERE referrer_user_id = $1`,
+    const { rows: countRows } = await pool.query(
+      `SELECT COUNT(*) as referral_count FROM referral_uses WHERE referrer_user_id = $1`,
       [req.userId]
     );
-    res.json({ total: parseFloat(rows[0].total), referral_count: parseInt(rows[0].referral_count) });
+    const { rows: earningsRows } = await pool.query(
+      `SELECT COALESCE(SUM(amount), 0) as total_earned, COUNT(*) as payment_count
+       FROM referral_earnings WHERE referrer_user_id = $1`,
+      [req.userId]
+    );
+    const { rows: recentRows } = await pool.query(
+      `SELECT re.amount, re.created_at, u.name as referred_name
+       FROM referral_earnings re
+       JOIN users u ON u.id = re.referred_user_id
+       WHERE re.referrer_user_id = $1
+       ORDER BY re.created_at DESC LIMIT 5`,
+      [req.userId]
+    );
+    res.json({
+      referral_count: parseInt(countRows[0].referral_count),
+      total_earned:   parseFloat(earningsRows[0].total_earned),
+      payment_count:  parseInt(earningsRows[0].payment_count),
+      recent: recentRows.map(r => ({
+        amount:       parseFloat(r.amount),
+        createdAt:    r.created_at,
+        referredName: (r.referred_name || '').split(' ')[0] || 'Trader',
+      })),
+    });
   } catch (err) {
     console.error('Referral earnings error:', err.message);
     res.status(500).json({ error: 'Failed to get earnings' });
@@ -842,7 +864,7 @@ app.post('/api/stripe/create-checkout-session', requireAuth, async (req, res) =>
     const missing = !process.env.STRIPE_SECRET_KEY ? 'STRIPE_SECRET_KEY' : 'Stripe SDK';
     return res.status(503).json({ error: `Stripe not configured: ${missing} is missing` });
   }
-  const { plan, billing = 'monthly' } = req.body;
+  const { plan, billing = 'monthly', referralCode } = req.body;
   const interval = billing === 'yearly' ? 'yearly' : 'monthly';
   const priceKey = `${plan}_${interval}`;
   const priceId = PLAN_PRICES[priceKey];
@@ -863,7 +885,7 @@ app.post('/api/stripe/create-checkout-session', requireAuth, async (req, res) =>
       await pool.query(`UPDATE users SET stripe_customer_id = $1 WHERE id = $2`, [customerId, req.userId]);
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams = {
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -871,7 +893,26 @@ app.post('/api/stripe/create-checkout-session', requireAuth, async (req, res) =>
       success_url: `${frontendUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  `${frontendUrl}?payment=cancelled`,
       subscription_data: { metadata: { userId: String(req.userId), plan } },
-    });
+    };
+
+    // Apply referral discount if a valid, non-self code was provided
+    if (referralCode) {
+      const normalizedCode = referralCode.trim().toUpperCase();
+      const { rows: codeRows } = await pool.query(
+        'SELECT user_id FROM referral_codes WHERE UPPER(code) = $1', [normalizedCode]
+      );
+      if (codeRows[0] && codeRows[0].user_id !== req.userId) {
+        const couponId = interval === 'yearly' ? 'referral_yearly_20' : 'referral_monthly_20';
+        sessionParams.discounts = [{ coupon: couponId }];
+        sessionParams.metadata = {
+          referralCode: normalizedCode,
+          referrerUserId: String(codeRows[0].user_id),
+          billingInterval: interval,
+        };
+      }
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
     res.json({ url: session.url });
   } catch (err) {
     console.error('Stripe checkout error:', err.message);
@@ -929,7 +970,52 @@ app.post('/api/stripe/webhook', async (req, res) => {
           `UPDATE users SET plan = $1, stripe_subscription_id = $2 WHERE stripe_customer_id = $3`,
           [plan, session.subscription, session.customer]
         );
+        // Record referral signup if code was passed through checkout metadata
+        const referralCode    = session.metadata?.referralCode;
+        const referrerUserId  = session.metadata?.referrerUserId ? parseInt(session.metadata.referrerUserId) : null;
+        const billingInterval = session.metadata?.billingInterval || 'monthly';
+        if (referralCode && referrerUserId) {
+          const { rows: buyerRows } = await pool.query(
+            'SELECT id FROM users WHERE stripe_customer_id = $1', [session.customer]
+          );
+          const referredUserId = buyerRows[0]?.id;
+          if (referredUserId && referredUserId !== referrerUserId) {
+            const durationMonths = billingInterval === 'yearly' ? 12 : 3;
+            await pool.query(
+              `INSERT INTO referral_uses (code, referrer_user_id, referred_user_id, discount_percent, duration_months, plan_type)
+               VALUES ($1, $2, $3, 20, $4, $5)
+               ON CONFLICT (referred_user_id) DO NOTHING`,
+              [referralCode, referrerUserId, referredUserId, durationMonths, billingInterval === 'yearly' ? 'annual' : 'monthly']
+            );
+            await pool.query(
+              `UPDATE users SET referred_by_user_id = $1 WHERE id = $2 AND referred_by_user_id IS NULL`,
+              [referrerUserId, referredUserId]
+            );
+          }
+        }
       }
+    }
+    if (event.type === 'invoice.payment_succeeded') {
+      const invoice = event.data.object;
+      if (!invoice.subscription) return res.sendStatus(200);
+      // Only credit commission when a discount was actually applied to this invoice
+      const discountApplied = Array.isArray(invoice.total_discount_amounts) &&
+        invoice.total_discount_amounts.some(d => d.amount > 0);
+      if (!discountApplied) return res.sendStatus(200);
+      const { rows: payerRows } = await pool.query(
+        'SELECT id, referred_by_user_id FROM users WHERE stripe_customer_id = $1', [invoice.customer]
+      );
+      const payer = payerRows[0];
+      if (!payer || !payer.referred_by_user_id) return res.sendStatus(200);
+      if (payer.referred_by_user_id === payer.id) return res.sendStatus(200); // self-referral guard
+      // Commission = 20% of amount paid (Stripe amounts are in cents)
+      const commissionAmount = (invoice.amount_paid * 0.20) / 100;
+      await pool.query(
+        `INSERT INTO referral_earnings (referrer_user_id, referred_user_id, stripe_invoice_id, amount)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (stripe_invoice_id) DO NOTHING`,
+        [payer.referred_by_user_id, payer.id, invoice.id, commissionAmount]
+      );
     }
     if (event.type === 'customer.subscription.updated') {
       const sub = event.data.object;

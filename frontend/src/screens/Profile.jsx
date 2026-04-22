@@ -10,7 +10,7 @@ export default function Profile({ onNavigate, onSignUp, onLogin }) {
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState('');
   const [refCode, setRefCode] = useState(null);
-  const [earnings, setEarnings] = useState({ total: 0, referral_count: 0 });
+  const [earnings, setEarnings] = useState({ total_earned: 0, referral_count: 0, payment_count: 0, recent: [] });
   const [copied, setCopied] = useState(false);
 
   React.useEffect(() => {
@@ -363,14 +363,15 @@ export default function Profile({ onNavigate, onSignUp, onLogin }) {
               <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>Referral Earnings</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>
                 {earnings.referral_count} referral{earnings.referral_count !== 1 ? 's' : ''}
+                {earnings.payment_count > 0 && ` · ${earnings.payment_count} payment${earnings.payment_count !== 1 ? 's' : ''}`}
               </div>
             </div>
             <div style={{
               fontFamily: "'Barlow Condensed', sans-serif",
               fontSize: 26, fontWeight: 800,
-              color: earnings.total > 0 ? G : 'rgba(255,255,255,0.25)',
+              color: earnings.total_earned > 0 ? G : 'rgba(255,255,255,0.25)',
             }}>
-              ${earnings.total.toFixed(2)}
+              ${(earnings.total_earned || 0).toFixed(2)}
             </div>
           </div>
 

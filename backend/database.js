@@ -158,6 +158,18 @@ async function initDb() {
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token TEXT`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMPTZ`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMPTZ`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by_user_id INTEGER REFERENCES users(id)`).catch(() => {});
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS referral_earnings (
+        id               SERIAL PRIMARY KEY,
+        referrer_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        referred_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        stripe_invoice_id TEXT UNIQUE NOT NULL,
+        amount           NUMERIC NOT NULL,
+        created_at       TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS referral_earnings_referrer ON referral_earnings (referrer_user_id)`);
     console.log('Database schema ready — all tables OK including trading_plans, coach_sessions');
   } catch (err) {
     console.error('Schema creation failed:', err.message);

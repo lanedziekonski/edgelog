@@ -55,8 +55,8 @@ export const api = {
     call('/coach/session', { method: 'POST', body: JSON.stringify({ date, role, content, session_number: sessionNumber, period }) }, token),
 
   // Stripe
-  createCheckoutSession: (token, plan, billing = 'monthly') =>
-    call('/stripe/create-checkout-session', { method: 'POST', body: JSON.stringify({ plan, billing }) }, token),
+  createCheckoutSession: (token, plan, billing = 'monthly', referralCode = null) =>
+    call('/stripe/create-checkout-session', { method: 'POST', body: JSON.stringify({ plan, billing, ...(referralCode ? { referralCode } : {}) }) }, token),
   createPortalSession: (token) =>
     call('/stripe/create-portal-session', { method: 'POST' }, token),
 
