@@ -966,7 +966,10 @@ app.post('/api/stripe/webhook', async (req, res) => {
       const session = event.data.object;
       if (session.subscription) {
         const sub = await stripe.subscriptions.retrieve(session.subscription);
-        const plan = PRICE_TO_PLAN[sub.items.data[0]?.price.id] || 'trader';
+        const priceId = sub.items.data[0]?.price.id;
+        // Prefer plan stored in subscription metadata (set at checkout creation) — more reliable than env var lookup
+        const plan = sub.metadata?.plan || PRICE_TO_PLAN[priceId] || 'trader';
+        console.log(`[checkout.completed] sub=${session.subscription} priceId=${priceId} metaPlan=${sub.metadata?.plan} pricePlan=${PRICE_TO_PLAN[priceId]} resolved=${plan}`);
         await pool.query(
           `UPDATE users SET plan = $1, stripe_subscription_id = $2 WHERE stripe_customer_id = $3`,
           [plan, session.subscription, session.customer]
@@ -998,25 +1001,55 @@ app.post('/api/stripe/webhook', async (req, res) => {
     }
     if (event.type === 'invoice.payment_succeeded') {
       const invoice = event.data.object;
-      if (!invoice.subscription) return res.sendStatus(200);
-      // Only credit commission when a discount was actually applied to this invoice
-      const discountApplied = Array.isArray(invoice.total_discount_amounts) &&
-        invoice.total_discount_amounts.some(d => d.amount > 0);
-      if (!discountApplied) return res.sendStatus(200);
+      console.log(`[invoice.payment_succeeded] id=${invoice.id} customer=${invoice.customer} amount_paid=${invoice.amount_paid} subscription=${invoice.subscription} discount=${invoice.discount ? invoice.discount.id ?? 'present' : 'none'} total_discount_amounts=${JSON.stringify(invoice.total_discount_amounts)}`);
+
+      if (!invoice.subscription) {
+        console.log(`[invoice.payment_succeeded] skipping — no subscription on invoice ${invoice.id}`);
+        return res.sendStatus(200);
+      }
+
+      // Check if a discount (referral coupon) was applied to this invoice.
+      // Primary: invoice.discount — set when a coupon is active on the subscription.
+      // Fallback: total_discount_amounts — array of amounts per discount.
+      const discountApplied = invoice.discount != null ||
+        (Array.isArray(invoice.total_discount_amounts) && invoice.total_discount_amounts.some(d => d.amount > 0));
+      if (!discountApplied) {
+        console.log(`[invoice.payment_succeeded] skipping ${invoice.id} — no discount applied (referral window likely over)`);
+        return res.sendStatus(200);
+      }
+
       const { rows: payerRows } = await pool.query(
         'SELECT id, referred_by_user_id FROM users WHERE stripe_customer_id = $1', [invoice.customer]
       );
       const payer = payerRows[0];
-      if (!payer || !payer.referred_by_user_id) return res.sendStatus(200);
-      if (payer.referred_by_user_id === payer.id) return res.sendStatus(200); // self-referral guard
-      // Commission = 20% of amount paid (Stripe amounts are in cents)
-      const commissionAmount = (invoice.amount_paid * 0.20) / 100;
-      await pool.query(
+      if (!payer) {
+        console.log(`[invoice.payment_succeeded] skipping — no user found for customer ${invoice.customer}`);
+        return res.sendStatus(200);
+      }
+      if (!payer.referred_by_user_id) {
+        console.log(`[invoice.payment_succeeded] skipping user ${payer.id} — no referred_by_user_id set`);
+        return res.sendStatus(200);
+      }
+      if (payer.referred_by_user_id === payer.id) {
+        console.log(`[invoice.payment_succeeded] skipping user ${payer.id} — self-referral guard`);
+        return res.sendStatus(200);
+      }
+
+      // Commission = 15% of amount paid (Stripe amounts are in cents → divide by 100)
+      const commissionAmount = (invoice.amount_paid / 100) * 0.15;
+      console.log(`[invoice.payment_succeeded] inserting commission: referrer=${payer.referred_by_user_id} referred=${payer.id} invoice=${invoice.id} amount=${commissionAmount}`);
+
+      const result = await pool.query(
         `INSERT INTO referral_earnings (referrer_user_id, referred_user_id, stripe_invoice_id, amount)
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (stripe_invoice_id) DO NOTHING`,
         [payer.referred_by_user_id, payer.id, invoice.id, commissionAmount]
       );
+      if (result.rowCount === 0) {
+        console.log(`[invoice.payment_succeeded] duplicate — invoice ${invoice.id} already recorded, skipped`);
+      } else {
+        console.log(`[invoice.payment_succeeded] commission recorded OK — invoice ${invoice.id}`);
+      }
     }
     if (event.type === 'customer.subscription.updated') {
       const sub = event.data.object;
@@ -1035,7 +1068,7 @@ app.post('/api/stripe/webhook', async (req, res) => {
       );
     }
   } catch (err) {
-    console.error('Webhook handler error:', err.message);
+    console.error('Webhook handler error:', err.message, err.stack);
   }
 
   res.sendStatus(200);
