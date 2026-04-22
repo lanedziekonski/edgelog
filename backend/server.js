@@ -40,16 +40,44 @@ app.use(cors({
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 
-// ─── Stripe (optional — graceful degradation when not configured) ──────────
+// ─── Stripe ───────────────────────────────────────────────────────────────
+const STRIPE_VARS = {
+  STRIPE_SECRET_KEY:           process.env.STRIPE_SECRET_KEY,
+  STRIPE_WEBHOOK_SECRET:       process.env.STRIPE_WEBHOOK_SECRET,
+  STRIPE_PRICE_TRADER_MONTHLY: process.env.STRIPE_PRICE_TRADER_MONTHLY,
+  STRIPE_PRICE_TRADER_YEARLY:  process.env.STRIPE_PRICE_TRADER_YEARLY,
+  STRIPE_PRICE_PRO_MONTHLY:    process.env.STRIPE_PRICE_PRO_MONTHLY,
+  STRIPE_PRICE_PRO_YEARLY:     process.env.STRIPE_PRICE_PRO_YEARLY,
+  STRIPE_PRICE_ELITE_MONTHLY:  process.env.STRIPE_PRICE_ELITE_MONTHLY,
+  STRIPE_PRICE_ELITE_YEARLY:   process.env.STRIPE_PRICE_ELITE_YEARLY,
+};
+
+// Startup diagnostic — logs SET/MISSING for every Stripe env var (never logs values)
+console.log('─── Stripe env var diagnostics ───────────────────────');
+Object.entries(STRIPE_VARS).forEach(([key, val]) => {
+  console.log(`  ${key}: ${val ? 'SET' : 'MISSING'}`);
+});
+console.log('──────────────────────────────────────────────────────');
+
 let stripe = null;
-if (process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.includes('your_key')) {
-  stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+if (STRIPE_VARS.STRIPE_SECRET_KEY) {
+  try {
+    stripe = require('stripe')(STRIPE_VARS.STRIPE_SECRET_KEY);
+    console.log('Stripe SDK initialised OK');
+  } catch (err) {
+    console.error('Stripe SDK init failed:', err.message);
+  }
+} else {
+  console.warn('Stripe SDK NOT initialised: STRIPE_SECRET_KEY is missing');
 }
 
 const PLAN_PRICES = {
-  trader: process.env.STRIPE_PRICE_TRADER,
-  pro:    process.env.STRIPE_PRICE_PRO,
-  elite:  process.env.STRIPE_PRICE_ELITE,
+  trader_monthly: process.env.STRIPE_PRICE_TRADER_MONTHLY,
+  trader_yearly:  process.env.STRIPE_PRICE_TRADER_YEARLY,
+  pro_monthly:    process.env.STRIPE_PRICE_PRO_MONTHLY,
+  pro_yearly:     process.env.STRIPE_PRICE_PRO_YEARLY,
+  elite_monthly:  process.env.STRIPE_PRICE_ELITE_MONTHLY,
+  elite_yearly:   process.env.STRIPE_PRICE_ELITE_YEARLY,
 };
 
 // ─── Resend (email sending) ──────────────────────────────────────────────────
@@ -810,10 +838,18 @@ app.post('/api/plan-chat', requireAuth, requirePlan('pro'), async (req, res) => 
 // ─── STRIPE ───────────────────────────────────────────────────────────────
 
 app.post('/api/stripe/create-checkout-session', requireAuth, async (req, res) => {
-  if (!stripe) return res.status(503).json({ error: 'Stripe is not configured on this server' });
-  const { plan } = req.body;
-  const priceId = PLAN_PRICES[plan];
-  if (!priceId) return res.status(400).json({ error: `No Stripe price configured for plan: ${plan}` });
+  if (!stripe) {
+    const missing = !process.env.STRIPE_SECRET_KEY ? 'STRIPE_SECRET_KEY' : 'Stripe SDK';
+    return res.status(503).json({ error: `Stripe not configured: ${missing} is missing` });
+  }
+  const { plan, billing = 'monthly' } = req.body;
+  const interval = billing === 'yearly' ? 'yearly' : 'monthly';
+  const priceKey = `${plan}_${interval}`;
+  const priceId = PLAN_PRICES[priceKey];
+  if (!priceId) {
+    const envVar = `STRIPE_PRICE_${plan.toUpperCase()}_${interval.toUpperCase()}`;
+    return res.status(400).json({ error: `No Stripe price configured for ${plan}/${interval} — set ${envVar} on Render` });
+  }
 
   try {
     const { rows } = await pool.query(`SELECT * FROM users WHERE id = $1`, [req.userId]);
@@ -844,7 +880,10 @@ app.post('/api/stripe/create-checkout-session', requireAuth, async (req, res) =>
 });
 
 app.post('/api/stripe/create-portal-session', requireAuth, async (req, res) => {
-  if (!stripe) return res.status(503).json({ error: 'Stripe is not configured on this server' });
+  if (!stripe) {
+    const missing = !process.env.STRIPE_SECRET_KEY ? 'STRIPE_SECRET_KEY' : 'Stripe SDK';
+    return res.status(503).json({ error: `Stripe not configured: ${missing} is missing` });
+  }
   try {
     const { rows } = await pool.query(`SELECT * FROM users WHERE id = $1`, [req.userId]);
     const user = rows[0];
@@ -872,9 +911,12 @@ app.post('/api/stripe/webhook', async (req, res) => {
   }
 
   const PRICE_TO_PLAN = {
-    [process.env.STRIPE_PRICE_TRADER]: 'trader',
-    [process.env.STRIPE_PRICE_PRO]:    'pro',
-    [process.env.STRIPE_PRICE_ELITE]:  'elite',
+    [process.env.STRIPE_PRICE_TRADER_MONTHLY]: 'trader',
+    [process.env.STRIPE_PRICE_TRADER_YEARLY]:  'trader',
+    [process.env.STRIPE_PRICE_PRO_MONTHLY]:    'pro',
+    [process.env.STRIPE_PRICE_PRO_YEARLY]:     'pro',
+    [process.env.STRIPE_PRICE_ELITE_MONTHLY]:  'elite',
+    [process.env.STRIPE_PRICE_ELITE_YEARLY]:   'elite',
   };
 
   try {
