@@ -34,29 +34,30 @@ export default function Profile({ onNavigate, onSignUp, onLogin }) {
     setPortalError('');
     setPortalLoading(true);
     try {
-      const BASE = import.meta.env.VITE_API_URL
-        ? `${import.meta.env.VITE_API_URL}/api`
-        : 'https://edgelog.onrender.com/api';
-      const res = await fetch(`${BASE}/stripe/create-portal-session`, {
+      const authToken = localStorage.getItem('tradeascend_token');
+      if (!authToken) throw new Error('Not authenticated. Please log in again.');
+      const API_URL = import.meta.env.VITE_API_URL || 'https://edgelog.onrender.com';
+      const res = await fetch(`${API_URL}/api/stripe/create-portal-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${authToken}`,
         },
       });
       const data = await res.json();
       if (!res.ok) {
-        if (res.status === 400 && data.error?.includes('No billing account')) {
-          throw new Error('No active subscription found. Subscribe to a plan first to manage billing.');
+        if (res.status === 400) {
+          throw new Error('No active subscription found. Please subscribe to a paid plan first.');
+        }
+        if (res.status === 503) {
+          throw new Error('Stripe is not configured on this server.');
         }
         throw new Error(data.error || `Request failed (${res.status})`);
       }
       if (!data.url) throw new Error('No portal URL returned from server.');
       window.location.href = data.url;
     } catch (err) {
-      setPortalError(err.message.includes('not configured')
-        ? 'Stripe is not configured on this server.'
-        : err.message);
+      setPortalError(err.message);
     } finally {
       setPortalLoading(false);
     }
