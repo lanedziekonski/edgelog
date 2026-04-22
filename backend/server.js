@@ -57,6 +57,7 @@ console.log('─── Stripe env var diagnostics ──────────
 Object.entries(STRIPE_VARS).forEach(([key, val]) => {
   console.log(`  ${key}: ${val ? 'SET' : 'MISSING'}`);
 });
+console.log(`  APP_URL: ${process.env.APP_URL || '(not set — will fall back to http://localhost:5173)'}`);
 console.log('──────────────────────────────────────────────────────');
 
 let stripe = null;
@@ -876,7 +877,7 @@ app.post('/api/stripe/create-checkout-session', requireAuth, async (req, res) =>
   try {
     const { rows } = await pool.query(`SELECT * FROM users WHERE id = $1`, [req.userId]);
     const user = rows[0];
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const appUrl = process.env.APP_URL || 'http://localhost:5173';
 
     let customerId = user.stripe_customer_id;
     if (!customerId) {
@@ -890,8 +891,8 @@ app.post('/api/stripe/create-checkout-session', requireAuth, async (req, res) =>
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${frontendUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url:  `${frontendUrl}?payment=cancelled`,
+      success_url: `${appUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:  `${appUrl}?payment=cancelled`,
       subscription_data: { metadata: { userId: String(req.userId), plan } },
     };
 
@@ -931,7 +932,7 @@ app.post('/api/stripe/create-portal-session', requireAuth, async (req, res) => {
     if (!user.stripe_customer_id) return res.status(400).json({ error: 'No billing account found' });
     const session = await stripe.billingPortal.sessions.create({
       customer:   user.stripe_customer_id,
-      return_url: process.env.FRONTEND_URL || 'http://localhost:5173',
+      return_url: process.env.APP_URL || 'http://localhost:5173',
     });
     res.json({ url: session.url });
   } catch (err) {
