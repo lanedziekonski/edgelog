@@ -335,29 +335,113 @@ const inputStyle = {
   outline: 'none',
 };
 
+// ─── Mark-paid modal ────────────────────────────────────────────────────────
+
+function PayoutModal({ row, token, onClose, onPaid }) {
+  const [method, setMethod]       = useState('paypal');
+  const [reference, setReference] = useState('');
+  const [error, setError]         = useState('');
+  const [saving, setSaving]       = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!reference.trim()) { setError('Reference / transaction ID is required'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      await adminCall('/referral-payouts/mark-paid', token, {
+        method: 'POST',
+        body: JSON.stringify({
+          referrer_user_id: row.referrer_user_id,
+          payout_method:    method,
+          payout_reference: reference.trim(),
+        }),
+      });
+      onPaid();
+      onClose();
+    } catch (err) {
+      setError(err.message);
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      onClick={onClose}
+    >
+      <div onClick={e => e.stopPropagation()} style={{ background: '#111', border: `1px solid ${G}30`, borderRadius: 10, padding: '24px 28px', width: 380 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 4 }}>Mark Payout as Sent</div>
+        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginBottom: 18 }}>
+          {row.referrer_email} · <span style={{ color: G }}>${row.total_owed.toFixed(2)}</span>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.5px', display: 'block', marginBottom: 5 }}>METHOD</label>
+            <select
+              value={method}
+              onChange={e => setMethod(e.target.value)}
+              style={{ ...inputStyle, appearance: 'none', cursor: 'pointer' }}
+            >
+              <option value="paypal">PayPal</option>
+              <option value="venmo">Venmo</option>
+              <option value="zelle">Zelle</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div style={{ marginBottom: error ? 8 : 18 }}>
+            <label style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.5px', display: 'block', marginBottom: 5 }}>REFERENCE / NOTE</label>
+            <input
+              type="text"
+              placeholder="Transaction ID or note"
+              value={reference}
+              onChange={e => setReference(e.target.value)}
+              autoFocus
+              style={inputStyle}
+            />
+          </div>
+          {error && <div style={{ color: R, fontSize: 12, marginBottom: 10 }}>{error}</div>}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, padding: '9px 0', background: G, color: '#000', border: 'none', borderRadius: 6, fontWeight: 700, fontSize: 13, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+              {saving ? 'Saving…' : 'Confirm Paid'}
+            </button>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px 0', background: 'transparent', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main dashboard ────────────────────────────────────────────────────────
 
 function AdminDashboard({ token, onLogout }) {
   const [stats, setStats]         = useState(null);
   const [users, setUsers]         = useState([]);
   const [referrals, setReferrals] = useState([]);
+  const [payouts, setPayouts]     = useState({ pending: [], all_time_paid: 0 });
   const [search, setSearch]       = useState('');
   const [loading, setLoading]     = useState(true);
   const [confirmAction, setConfirmAction] = useState(null); // { userId, email, plan }
   const [showAssign, setShowAssign]       = useState(false);
   const [planUpdating, setPlanUpdating]   = useState(null); // userId being updated
+  const [payoutModal, setPayoutModal]     = useState(null); // row being paid out
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, u, r] = await Promise.all([
+      const [s, u, r, p] = await Promise.all([
         adminCall('/stats', token),
         adminCall('/users', token),
         adminCall('/referrals', token),
+        adminCall('/referral-payouts', token),
       ]);
       setStats(s);
       setUsers(u);
       setReferrals(r);
+      setPayouts(p);
     } catch (err) {
       if (err.message.includes('401') || err.message.includes('expired')) {
         localStorage.removeItem(ADMIN_KEY);
@@ -600,7 +684,7 @@ function AdminDashboard({ token, onLogout }) {
             </div>
 
             {/* Referrals section */}
-            <div>
+            <div style={{ marginBottom: 36 }}>
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 marginBottom: 12,
@@ -684,6 +768,88 @@ function AdminDashboard({ token, onLogout }) {
                 ))}
               </div>
             </div>
+
+            {/* Referral Payouts section */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>
+                    Referral Payouts
+                    {payouts.pending.length > 0 && (
+                      <span style={{
+                        fontSize: 11, color: GOLD, background: `${GOLD}15`,
+                        border: `1px solid ${GOLD}40`, borderRadius: 4, padding: '1px 7px', marginLeft: 10,
+                      }}>
+                        {payouts.pending.length} eligible
+                      </span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
+                    All-time paid: <span style={{ color: G }}>${payouts.all_time_paid.toFixed(2)}</span>
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ background: '#0a0a0a', border: '1px solid rgba(0,255,65,0.1)', borderRadius: 8, overflow: 'hidden' }}>
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '2fr 1.5fr 100px 80px 120px',
+                  padding: '9px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)',
+                  fontSize: 10, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)',
+                }}>
+                  <div>Referrer Email</div>
+                  <div>Payout Email</div>
+                  <div>Owed</div>
+                  <div>Payments</div>
+                  <div>Action</div>
+                </div>
+
+                {payouts.pending.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>
+                    No referrers have reached the $25 minimum yet
+                  </div>
+                )}
+
+                {payouts.pending.map((row, i) => (
+                  <div
+                    key={row.referrer_user_id}
+                    style={{
+                      display: 'grid', gridTemplateColumns: '2fr 1.5fr 100px 80px 120px',
+                      padding: '9px 14px',
+                      borderBottom: i < payouts.pending.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                      alignItems: 'center',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,65,0.03)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>
+                      {row.referrer_email}
+                    </div>
+                    <div style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8, color: row.referrer_payout_email ? G : 'rgba(255,255,255,0.2)' }}>
+                      {row.referrer_payout_email || '—not set—'}
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", color: GOLD }}>
+                      ${row.total_owed.toFixed(2)}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{row.earnings_count}</div>
+                    <div>
+                      <button
+                        onClick={() => setPayoutModal(row)}
+                        style={{
+                          padding: '4px 10px', background: `${GOLD}15`,
+                          border: `1px solid ${GOLD}50`, color: GOLD,
+                          borderRadius: 5, fontSize: 11, fontWeight: 700,
+                          cursor: 'pointer', fontFamily: 'Barlow, sans-serif',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = `${GOLD}28`}
+                        onMouseLeave={e => e.currentTarget.style.background = `${GOLD}15`}
+                      >
+                        Mark Paid
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </>
         )}
       </div>
@@ -701,6 +867,16 @@ function AdminDashboard({ token, onLogout }) {
           token={token}
           onClose={() => setShowAssign(false)}
           onAssigned={load}
+        />
+      )}
+
+      {/* Mark payout as paid modal */}
+      {payoutModal && (
+        <PayoutModal
+          row={payoutModal}
+          token={token}
+          onClose={() => setPayoutModal(null)}
+          onPaid={load}
         />
       )}
     </div>

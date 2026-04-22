@@ -6,18 +6,41 @@ import { api } from '../services/api';
 const G = '#00ff41';
 
 export default function Profile({ onNavigate, onSignUp, onLogin }) {
-  const { user, token, logout, refreshUser } = useAuth();
+  const { user, token, logout, refreshUser, updateUser } = useAuth();
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState('');
   const [refCode, setRefCode] = useState(null);
-  const [earnings, setEarnings] = useState({ total_earned: 0, referral_count: 0, payment_count: 0, recent: [] });
+  const [earnings, setEarnings] = useState({ total_earned: 0, pending_payout: 0, paid_out_total: 0, referral_count: 0, payment_count: 0, payout_eligible: false, minimum_payout_threshold: 25, recent: [] });
   const [copied, setCopied] = useState(false);
+  const [payoutEmail, setPayoutEmail] = useState('');
+  const [payoutEmailSaving, setPayoutEmailSaving] = useState(false);
+  const [payoutEmailMsg, setPayoutEmailMsg] = useState('');
 
   React.useEffect(() => {
     if (!token) return;
     api.getMyReferralCode(token).then(d => setRefCode(d.code)).catch(() => {});
     api.getReferralEarnings(token).then(d => setEarnings(d)).catch(() => {});
   }, [token]);
+
+  // Sync payout email input from user object when it loads
+  React.useEffect(() => {
+    if (user?.payout_email != null) setPayoutEmail(user.payout_email);
+  }, [user?.payout_email]);
+
+  const handleSavePayoutEmail = async () => {
+    setPayoutEmailSaving(true);
+    setPayoutEmailMsg('');
+    try {
+      await api.updatePayoutEmail(token, payoutEmail.trim());
+      updateUser({ payout_email: payoutEmail.trim() || null });
+      setPayoutEmailMsg('Saved!');
+      setTimeout(() => setPayoutEmailMsg(''), 2500);
+    } catch (err) {
+      setPayoutEmailMsg(err.message || 'Failed to save');
+    } finally {
+      setPayoutEmailSaving(false);
+    }
+  };
 
   const copyCode = () => {
     if (!refCode) return;
@@ -357,22 +380,79 @@ export default function Profile({ onNavigate, onSignUp, onLogin }) {
             </div>
           </div>
 
-          {/* Earnings row */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
-            <div>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>Referral Earnings</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>
+          {/* Earnings rows */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+            <div style={{ flex: 1, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 4 }}>Total Earned</div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 800, color: earnings.total_earned > 0 ? G : 'rgba(255,255,255,0.25)' }}>
+                ${(earnings.total_earned || 0).toFixed(2)}
+              </div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>
                 {earnings.referral_count} referral{earnings.referral_count !== 1 ? 's' : ''}
                 {earnings.payment_count > 0 && ` · ${earnings.payment_count} payment${earnings.payment_count !== 1 ? 's' : ''}`}
               </div>
             </div>
-            <div style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
-              fontSize: 26, fontWeight: 800,
-              color: earnings.total_earned > 0 ? G : 'rgba(255,255,255,0.25)',
-            }}>
-              ${(earnings.total_earned || 0).toFixed(2)}
+            <div style={{ flex: 1, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 4 }}>Pending Payout</div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 800, color: earnings.payout_eligible ? G : 'rgba(255,255,255,0.25)' }}>
+                ${(earnings.pending_payout || 0).toFixed(2)}
+              </div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>
+                ${(earnings.paid_out_total || 0).toFixed(2)} paid out
+              </div>
             </div>
+          </div>
+
+          {/* Payout threshold status */}
+          <div style={{
+            fontSize: 12, lineHeight: 1.55, padding: '9px 11px', borderRadius: 8, marginBottom: 10,
+            ...(earnings.payout_eligible
+              ? { background: `${G}10`, border: `1px solid ${G}35`, color: G }
+              : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.4)' }
+            ),
+          }}>
+            {earnings.payout_eligible
+              ? 'Ready for payout — contact support or wait for an email when your payment is sent.'
+              : `Minimum $${earnings.minimum_payout_threshold} to request payout. Earn $${Math.max(0, earnings.minimum_payout_threshold - (earnings.pending_payout || 0)).toFixed(2)} more to unlock.`
+            }
+          </div>
+
+          {/* Payout email */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 6 }}>
+              Payout Email (PayPal / Venmo)
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="email"
+                placeholder="you@paypal.com"
+                value={payoutEmail}
+                onChange={e => { setPayoutEmail(e.target.value); setPayoutEmailMsg(''); }}
+                style={{
+                  flex: 1, background: '#111811',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 7, padding: '8px 11px',
+                  color: '#fff', fontSize: 13, fontFamily: 'Barlow',
+                  outline: 'none',
+                }}
+              />
+              <button
+                onClick={handleSavePayoutEmail}
+                disabled={payoutEmailSaving}
+                style={{
+                  padding: '8px 14px', borderRadius: 7, flexShrink: 0,
+                  background: payoutEmailMsg === 'Saved!' ? `${G}20` : `${G}18`,
+                  color: G, border: `1px solid ${G}35`,
+                  fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                  fontFamily: 'Barlow', opacity: payoutEmailSaving ? 0.6 : 1,
+                }}
+              >
+                {payoutEmailSaving ? '…' : payoutEmailMsg === 'Saved!' ? '✓ Saved' : 'Save'}
+              </button>
+            </div>
+            {payoutEmailMsg && payoutEmailMsg !== 'Saved!' && (
+              <div style={{ fontSize: 11, color: '#ff4444', marginTop: 5 }}>{payoutEmailMsg}</div>
+            )}
           </div>
 
           {/* Explainer */}

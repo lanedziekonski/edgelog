@@ -186,7 +186,7 @@ Rules:
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
 function safeUser(user) {
-  return { id: user.id, email: user.email, name: user.name, plan: user.plan };
+  return { id: user.id, email: user.email, name: user.name, plan: user.plan, payout_email: user.payout_email || null };
 }
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────
@@ -710,7 +710,11 @@ app.get('/api/referrals/earnings', requireAuth, async (req, res) => {
       [req.userId]
     );
     const { rows: earningsRows } = await pool.query(
-      `SELECT COALESCE(SUM(amount), 0) as total_earned, COUNT(*) as payment_count
+      `SELECT
+         COALESCE(SUM(amount), 0)                                    AS total_earned,
+         COALESCE(SUM(amount) FILTER (WHERE paid_out = false), 0)    AS pending_payout,
+         COALESCE(SUM(amount) FILTER (WHERE paid_out = true),  0)    AS paid_out_total,
+         COUNT(*)                                                      AS payment_count
        FROM referral_earnings WHERE referrer_user_id = $1`,
       [req.userId]
     );
@@ -722,10 +726,16 @@ app.get('/api/referrals/earnings', requireAuth, async (req, res) => {
        ORDER BY re.created_at DESC LIMIT 5`,
       [req.userId]
     );
+    const MIN_PAYOUT = 25;
+    const pendingPayout = parseFloat(earningsRows[0].pending_payout);
     res.json({
-      referral_count: parseInt(countRows[0].referral_count),
-      total_earned:   parseFloat(earningsRows[0].total_earned),
-      payment_count:  parseInt(earningsRows[0].payment_count),
+      referral_count:           parseInt(countRows[0].referral_count),
+      total_earned:             parseFloat(earningsRows[0].total_earned),
+      pending_payout:           pendingPayout,
+      paid_out_total:           parseFloat(earningsRows[0].paid_out_total),
+      payment_count:            parseInt(earningsRows[0].payment_count),
+      minimum_payout_threshold: MIN_PAYOUT,
+      payout_eligible:          pendingPayout >= MIN_PAYOUT,
       recent: recentRows.map(r => ({
         amount:       parseFloat(r.amount),
         createdAt:    r.created_at,
@@ -735,6 +745,18 @@ app.get('/api/referrals/earnings', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Referral earnings error:', err.message);
     res.status(500).json({ error: 'Failed to get earnings' });
+  }
+});
+
+app.patch('/api/users/payout-email', requireAuth, async (req, res) => {
+  const { payout_email } = req.body;
+  const cleaned = (payout_email || '').trim() || null;
+  try {
+    await pool.query(`UPDATE users SET payout_email = $1 WHERE id = $2`, [cleaned, req.userId]);
+    res.json({ ok: true, payout_email: cleaned });
+  } catch (err) {
+    console.error('Update payout email error:', err.message);
+    res.status(500).json({ error: 'Failed to update payout email' });
   }
 });
 
@@ -1446,6 +1468,58 @@ app.post('/api/admin/referrals/assign', requireAdmin, async (req, res) => {
     if (err.code === '23505') return res.status(409).json({ error: 'That code is already assigned to another user' });
     console.error('Admin assign referral error:', err);
     res.status(500).json({ error: 'Failed to assign referral code' });
+  }
+});
+
+app.get('/api/admin/referral-payouts', requireAdmin, async (req, res) => {
+  try {
+    const { rows: pendingRows } = await pool.query(`
+      SELECT
+        re.referrer_user_id,
+        u.email   AS referrer_email,
+        u.payout_email AS referrer_payout_email,
+        SUM(re.amount)::float  AS total_owed,
+        COUNT(re.id)::int      AS earnings_count
+      FROM referral_earnings re
+      JOIN users u ON u.id = re.referrer_user_id
+      WHERE re.paid_out = false
+      GROUP BY re.referrer_user_id, u.email, u.payout_email
+      HAVING SUM(re.amount) >= 25
+      ORDER BY total_owed DESC
+    `);
+    const { rows: paidRows } = await pool.query(
+      `SELECT COALESCE(SUM(amount), 0)::float AS total FROM referral_earnings WHERE paid_out = true`
+    );
+    res.json({
+      pending: pendingRows.map(r => ({
+        referrer_user_id:      r.referrer_user_id,
+        referrer_email:        r.referrer_email,
+        referrer_payout_email: r.referrer_payout_email || null,
+        total_owed:            parseFloat(r.total_owed),
+        earnings_count:        r.earnings_count,
+      })),
+      all_time_paid: parseFloat(paidRows[0].total),
+    });
+  } catch (err) {
+    console.error('Admin referral payouts error:', err);
+    res.status(500).json({ error: 'Failed to fetch referral payouts' });
+  }
+});
+
+app.post('/api/admin/referral-payouts/mark-paid', requireAdmin, async (req, res) => {
+  const { referrer_user_id, payout_method, payout_reference } = req.body;
+  if (!referrer_user_id) return res.status(400).json({ error: 'referrer_user_id required' });
+  try {
+    const { rowCount } = await pool.query(
+      `UPDATE referral_earnings
+       SET paid_out = true, paid_out_at = NOW(), payout_method = $1, payout_reference = $2
+       WHERE referrer_user_id = $3 AND paid_out = false`,
+      [payout_method || null, payout_reference || null, referrer_user_id]
+    );
+    res.json({ ok: true, rows_updated: rowCount });
+  } catch (err) {
+    console.error('Admin mark-paid error:', err);
+    res.status(500).json({ error: 'Failed to mark payouts as paid' });
   }
 });
 

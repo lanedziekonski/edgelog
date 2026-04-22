@@ -66,6 +66,8 @@ export const api = {
   applyReferralCode: (token, code, billing = 'monthly') =>
     call('/referrals/apply', { method: 'POST', body: JSON.stringify({ code, plan_type: billing }) }, token),
   getReferralEarnings: (token) => call('/referrals/earnings', {}, token),
+  updatePayoutEmail: (token, payout_email) =>
+    call('/users/payout-email', { method: 'PATCH', body: JSON.stringify({ payout_email }) }, token),
 
   // CSV import
   importCsv: (token, rows, accountId) =>

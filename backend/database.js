@@ -170,6 +170,11 @@ async function initDb() {
       )
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS referral_earnings_referrer ON referral_earnings (referrer_user_id)`);
+    await pool.query(`ALTER TABLE referral_earnings ADD COLUMN IF NOT EXISTS paid_out BOOLEAN DEFAULT FALSE`);
+    await pool.query(`ALTER TABLE referral_earnings ADD COLUMN IF NOT EXISTS paid_out_at TIMESTAMPTZ`);
+    await pool.query(`ALTER TABLE referral_earnings ADD COLUMN IF NOT EXISTS payout_method TEXT`);
+    await pool.query(`ALTER TABLE referral_earnings ADD COLUMN IF NOT EXISTS payout_reference TEXT`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS payout_email TEXT`);
     console.log('Database schema ready — all tables OK including trading_plans, coach_sessions');
   } catch (err) {
     console.error('Schema creation failed:', err.message);
