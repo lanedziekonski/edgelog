@@ -30,12 +30,14 @@ export default function Profile({ onNavigate, onSignUp, onLogin }) {
   const PLAN_ORDER = ['free', 'trader', 'pro', 'elite'];
   const planIdx = PLAN_ORDER.indexOf(user?.plan || 'free');
 
-  const handleBillingPortal = async () => {
+  const handlePortalClick = async () => {
     setPortalError('');
     setPortalLoading(true);
     try {
-      const authToken = localStorage.getItem('tradeascend_token');
-      if (!authToken) throw new Error('Not authenticated. Please log in again.');
+      const authToken = localStorage.getItem('traderascend_token');
+      if (!authToken) {
+        throw new Error('Not authenticated. Please log in again.');
+      }
       const API_URL = import.meta.env.VITE_API_URL || 'https://edgelog.onrender.com';
       const res = await fetch(`${API_URL}/api/stripe/create-portal-session`, {
         method: 'POST',
@@ -54,7 +56,9 @@ export default function Profile({ onNavigate, onSignUp, onLogin }) {
         }
         throw new Error(data.error || `Request failed (${res.status})`);
       }
-      if (!data.url) throw new Error('No portal URL returned from server.');
+      if (!data.url) {
+        throw new Error('No portal URL returned from server.');
+      }
       window.location.href = data.url;
     } catch (err) {
       setPortalError(err.message);
@@ -408,7 +412,7 @@ export default function Profile({ onNavigate, onSignUp, onLogin }) {
             <motion.button
               type="button"
               whileTap={{ scale: 0.97 }}
-              onClick={handleBillingPortal}
+              onClick={handlePortalClick}
               disabled={portalLoading}
               style={{
                 width: '100%', padding: '11px', borderRadius: 8,
