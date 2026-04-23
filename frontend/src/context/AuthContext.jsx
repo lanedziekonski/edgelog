@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../services/api';
 
 const AuthContext = createContext(null);
@@ -7,56 +7,73 @@ const TOKEN_KEY = 'traderascend_token';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
   const [loading, setLoading] = useState(true);
 
-  // On mount: check for ?token= in URL (cross-subdomain handoff from website),
-  // then validate whichever token we have (URL token takes priority over localStorage).
-  useEffect(() => {
-    // 1. Extract URL token and strip it from the URL immediately so it never
-    //    lingers in browser history or gets accidentally shared.
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlToken  = urlParams.get('token') || null;
+  // Tracks whether the token on this mount came from a URL param.
+  // Set synchronously inside the token useState initializer below so we
+  // can log correctly in the useEffect without another URL read.
+  const urlTokenRef = useRef(null);
+
+  // Initialize token SYNCHRONOUSLY during render (before any effects run).
+  //
+  // Why here and not in useEffect?
+  // React runs child effects BEFORE parent effects. AppInner (a child of
+  // AuthProvider) has a useEffect that cleans the /pricing URL to "/",
+  // stripping ALL query params — including ?token=. If we waited for a
+  // useEffect to read ?token=, AppInner's effect would already have wiped
+  // it from the URL. A useState initializer runs during the render phase,
+  // which happens before any effects fire, guaranteeing we read the token
+  // before any cleanup effect can destroy it.
+  const [token, setToken] = useState(() => {
+    const params   = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token') || null;
+
     if (urlToken) {
-      urlParams.delete('token');
-      const newSearch = urlParams.toString();
-      const newUrl    = window.location.pathname +
-                        (newSearch ? `?${newSearch}` : '') +
-                        window.location.hash;
-      window.history.replaceState({}, '', newUrl);
+      // Strip ?token= immediately but keep other params (?plan=, ?billing=, ?ref=).
+      params.delete('token');
+      const newSearch = params.toString();
+      window.history.replaceState(
+        {},
+        '',
+        window.location.pathname + (newSearch ? `?${newSearch}` : '') + window.location.hash
+      );
+      // Persist so the useEffect validator (and anything that reads
+      // localStorage directly) picks it up automatically.
+      localStorage.setItem(TOKEN_KEY, urlToken);
+      urlTokenRef.current = true;
+      return urlToken;
     }
 
-    // Snapshot the localStorage token so the async closure below doesn't
-    // capture stale state from potential future renders.
-    const storedToken = token;
+    return localStorage.getItem(TOKEN_KEY);
+  });
 
-    async function init() {
-      // 2. Try URL token first (it's fresher — came straight from the website's signup).
-      if (urlToken) {
-        try {
-          const data = await api.me(urlToken);
-          localStorage.setItem(TOKEN_KEY, urlToken);
-          setToken(urlToken);
-          setUser(data.user);
-          console.log('[Auth] Logged in via URL token for user:', data.user.email);
-          return; // done — skip localStorage check
-        } catch {
-          // URL token is invalid/expired — fall through to try localStorage token.
-        }
-      }
+  // Validate whichever token we have (URL-sourced or localStorage) once on mount.
+  useEffect(() => {
+    console.log('[Auth] Initial mount: checking URL for token...');
 
-      // 3. Fall back to localStorage token (existing behavior).
-      if (!storedToken) { setLoading(false); return; }
-      try {
-        const data = await api.me(storedToken);
+    if (urlTokenRef.current) {
+      console.log('[Auth] URL token found, validating...');
+    } else if (token) {
+      console.log('[Auth] No URL token, falling back to localStorage');
+    } else {
+      console.log('[Auth] No valid auth, user is logged out');
+      setLoading(false);
+      return;
+    }
+
+    api.me(token)
+      .then(data => {
         setUser(data.user);
-      } catch {
+        if (urlTokenRef.current) {
+          console.log('[Auth] URL token valid, logging in user', data.user.email);
+        }
+      })
+      .catch(() => {
+        console.log('[Auth] No valid auth, user is logged out');
         localStorage.removeItem(TOKEN_KEY);
         setToken(null);
-      }
-    }
-
-    init().finally(() => setLoading(false));
+      })
+      .finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const login = useCallback(async (email, password) => {
@@ -91,9 +108,6 @@ export function AuthProvider({ children }) {
     try {
       const data = await api.me(token);
       setUser(data.user);
-      // Re-sign token with new plan — server handles this on next me() call,
-      // but we need to refetch a fresh token on plan change.
-      // For simplicity, we'll just update the local user object.
     } catch { /* ignore */ }
   }, [token]);
 
