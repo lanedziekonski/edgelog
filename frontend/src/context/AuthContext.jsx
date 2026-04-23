@@ -10,16 +10,53 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
   const [loading, setLoading] = useState(true);
 
-  // On mount, validate stored token
+  // On mount: check for ?token= in URL (cross-subdomain handoff from website),
+  // then validate whichever token we have (URL token takes priority over localStorage).
   useEffect(() => {
-    if (!token) { setLoading(false); return; }
-    api.me(token)
-      .then(data => setUser(data.user))
-      .catch(() => {
+    // 1. Extract URL token and strip it from the URL immediately so it never
+    //    lingers in browser history or gets accidentally shared.
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken  = urlParams.get('token') || null;
+    if (urlToken) {
+      urlParams.delete('token');
+      const newSearch = urlParams.toString();
+      const newUrl    = window.location.pathname +
+                        (newSearch ? `?${newSearch}` : '') +
+                        window.location.hash;
+      window.history.replaceState({}, '', newUrl);
+    }
+
+    // Snapshot the localStorage token so the async closure below doesn't
+    // capture stale state from potential future renders.
+    const storedToken = token;
+
+    async function init() {
+      // 2. Try URL token first (it's fresher — came straight from the website's signup).
+      if (urlToken) {
+        try {
+          const data = await api.me(urlToken);
+          localStorage.setItem(TOKEN_KEY, urlToken);
+          setToken(urlToken);
+          setUser(data.user);
+          console.log('[Auth] Logged in via URL token for user:', data.user.email);
+          return; // done — skip localStorage check
+        } catch {
+          // URL token is invalid/expired — fall through to try localStorage token.
+        }
+      }
+
+      // 3. Fall back to localStorage token (existing behavior).
+      if (!storedToken) { setLoading(false); return; }
+      try {
+        const data = await api.me(storedToken);
+        setUser(data.user);
+      } catch {
         localStorage.removeItem(TOKEN_KEY);
         setToken(null);
-      })
-      .finally(() => setLoading(false));
+      }
+    }
+
+    init().finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const login = useCallback(async (email, password) => {
