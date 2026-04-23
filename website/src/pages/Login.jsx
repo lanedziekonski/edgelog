@@ -20,8 +20,17 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      await login(email.trim(), password);
-      window.location.href = 'https://app.traderascend.com/dashboard';
+      const data = await login(email.trim(), password);
+      const pending = sessionStorage.getItem('pending_plan_redirect');
+      let dest;
+      if (pending) {
+        const { plan, billing } = JSON.parse(pending);
+        sessionStorage.removeItem('pending_plan_redirect');
+        dest = `https://app.traderascend.com/pricing?token=${encodeURIComponent(data.token)}&plan=${plan}&billing=${billing}`;
+      } else {
+        dest = `https://app.traderascend.com/dashboard?token=${encodeURIComponent(data.token)}`;
+      }
+      window.location.href = dest;
     } catch (err) {
       setError(err.message || 'Invalid email or password');
     } finally {
