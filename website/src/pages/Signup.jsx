@@ -28,7 +28,7 @@ export default function Signup() {
     setLoading(true);
     try {
       await signup(email.trim(), password, name.trim() || undefined);
-      navigate('/dashboard');
+      window.location.href = 'https://app.traderascend.com/dashboard';
     } catch (err) {
       setError(err.message || 'Signup failed — please try again');
     } finally {

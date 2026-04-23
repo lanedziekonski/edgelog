@@ -21,7 +21,7 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email.trim(), password);
-      navigate('/dashboard');
+      window.location.href = 'https://app.traderascend.com/dashboard';
     } catch (err) {
       setError(err.message || 'Invalid email or password');
     } finally {
