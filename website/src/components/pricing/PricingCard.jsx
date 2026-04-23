@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
 import { Check, ArrowRight } from 'lucide-react';
-import Button from '../ui/Button';
 
 const APP_URL = 'https://app.traderascend.com';
 
@@ -12,6 +11,12 @@ export default function PricingCard({ tier, billing }) {
     tier.id === 'free'
       ? `${APP_URL}/signup`
       : `${APP_URL}/pricing?plan=${tier.id}&billing=${billingParam}`;
+
+  const ctaBase =
+    'inline-flex w-full items-center justify-center gap-2 px-6 py-3 text-base font-medium rounded-md border tracking-tight transition-all duration-200 select-none';
+  const ctaClass = tier.popular
+    ? `${ctaBase} bg-neon text-black border-neon hover:shadow-neon hover:bg-neon/90`
+    : `${ctaBase} bg-transparent text-neon border-neon hover:bg-neon/10 hover:shadow-neon-soft`;
 
   return (
     <motion.div
@@ -66,14 +71,10 @@ export default function PricingCard({ tier, billing }) {
       </ul>
 
       <div className="mt-8">
-        <Button
-          href={ctaHref}
-          variant={tier.popular ? 'primary' : 'ghost'}
-          size="md"
-          className="w-full"
-        >
+        {/* Plain <a> — no React Router, no Button wrapper. Navigates to external app. */}
+        <a href={ctaHref} className={ctaClass}>
           {tier.cta} <ArrowRight className="w-4 h-4" />
-        </Button>
+        </a>
       </div>
     </motion.div>
   );
