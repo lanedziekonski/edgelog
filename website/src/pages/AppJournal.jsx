@@ -66,18 +66,18 @@ export default function AppJournal() {
     setForm({
       symbol: t.symbol || '',
       date: t.date || new Date().toISOString().split('T')[0],
-      direction: t.direction || 'LONG',
+      direction: t.side || t.direction || 'LONG',
       setup: t.setup || 'ORB',
       pnl: String(t.pnl ?? ''),
       quantity: String(t.quantity ?? '1'),
       account: t.account || '',
-      entryPrice: t.entry_price != null ? String(t.entry_price) : '',
-      exitPrice: t.exit_price != null ? String(t.exit_price) : '',
-      stopPrice: t.stop_price != null ? String(t.stop_price) : '',
-      entryTime: t.entry_time || '',
-      exitTime: t.exit_time || '',
-      emotionBefore: t.emotion_before || 'Calm',
-      emotionAfter: t.emotion_after || 'Neutral',
+      entryPrice: t.entryPrice != null ? String(t.entryPrice) : '',
+      exitPrice: t.exitPrice != null ? String(t.exitPrice) : '',
+      stopPrice: t.stopPrice != null ? String(t.stopPrice) : '',
+      entryTime: t.entryTime || '',
+      exitTime: t.exitTime || '',
+      emotionBefore: t.emotionBefore || 'Calm',
+      emotionAfter: t.emotionAfter || 'Neutral',
       notes: t.notes || '',
       followedPlan: !!t.followedPlan,
     });
@@ -467,11 +467,16 @@ function TradeRow({ trade: t, expanded, onToggle, onDelete, onEdit, onUploadScre
   return (
     <div className="rounded-xl overflow-hidden" style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.06)' }}>
       <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors" onClick={onToggle}>
-        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0"
-          style={{ background: t.direction === 'LONG' ? `${G}18` : 'rgba(255,77,77,0.12)', color: t.direction === 'LONG' ? G : '#ff6b6b' }}>
-          {t.direction ?? '—'}
-        </span>
-        <span className="font-semibold">{t.symbol}</span>
+        <span className="font-semibold" style={{ color: t.pnl > 0 ? G : t.pnl < 0 ? '#ff4d4d' : undefined }}>{t.symbol}</span>
+        {t.side && (
+          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0"
+            style={{
+              background: t.followedPlan === true ? `${G}18` : t.followedPlan === false ? 'rgba(255,77,77,0.12)' : 'rgba(255,255,255,0.08)',
+              color:      t.followedPlan === true ? G         : t.followedPlan === false ? '#ff6b6b'              : 'rgba(255,255,255,0.4)',
+            }}>
+            {t.side}
+          </span>
+        )}
         <span className="text-sm hidden sm:block" style={{ color: 'rgba(255,255,255,0.35)' }}>{t.setup}</span>
         {!t.followedPlan && (
           <span className="text-[10px] px-1.5 py-0.5 rounded font-mono flex-shrink-0" style={{ background: 'rgba(255,165,0,0.12)', color: '#ffaa33' }}>Rule Break</span>
@@ -488,21 +493,34 @@ function TradeRow({ trade: t, expanded, onToggle, onDelete, onEdit, onUploadScre
               <div className="grid grid-cols-3 gap-3 pt-3">
                 <Info label="Qty" value={t.quantity ?? '—'} />
                 <Info label="Account" value={t.account || '—'} />
-                <Info label="Rule Clean" value={t.followedPlan ? 'Yes' : 'No'} valueColor={t.followedPlan ? G : '#ffaa33'} />
+                <Info
+                  label="Plan"
+                  value={t.followedPlan == null ? '—' : t.followedPlan ? 'Followed' : 'Not Followed'}
+                  valueColor={t.followedPlan == null ? undefined : t.followedPlan ? G : '#ffaa33'}
+                />
               </div>
-              {(t.entry_price != null || t.exit_price != null || t.stop_price != null) && (
-                <div className="grid grid-cols-3 gap-3">
-                  <Info label="Entry $" value={t.entry_price != null ? `$${t.entry_price}` : '—'} />
-                  <Info label="Exit $" value={t.exit_price != null ? `$${t.exit_price}` : '—'} />
-                  <Info label="Stop $" value={t.stop_price != null ? `$${t.stop_price}` : '—'} />
+              {(t.entryPrice != null || t.exitPrice != null || t.stopPrice != null) && (
+                <div className="grid grid-cols-4 gap-3">
+                  <Info label="Entry $" value={t.entryPrice != null ? `$${t.entryPrice}` : '—'} />
+                  <Info label="Exit $" value={t.exitPrice != null ? `$${t.exitPrice}` : '—'} />
+                  <Info label="Stop $" value={t.stopPrice != null ? `$${t.stopPrice}` : '—'} />
+                  <Info label="Actual R:R" value={(() => {
+                    const entry = t.entryPrice, exit = t.exitPrice, stop = t.stopPrice;
+                    if (stop == null || entry == null || exit == null) return '—';
+                    const isLong = (t.side || t.direction || '').toUpperCase() === 'LONG';
+                    const reward = isLong ? exit - entry : entry - exit;
+                    const risk   = isLong ? entry - stop : stop - entry;
+                    if (risk <= 0) return '—';
+                    return `${(reward / risk).toFixed(1)}R`;
+                  })()} />
                 </div>
               )}
-              {(t.entry_time || t.exit_time || t.emotion_before || t.emotion_after) && (
+              {(t.entryTime || t.exitTime || t.emotionBefore || t.emotionAfter) && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {t.entry_time && <Info label="Entry Time" value={t.entry_time} />}
-                  {t.exit_time && <Info label="Exit Time" value={t.exit_time} />}
-                  {t.emotion_before && <Info label="Mood Before" value={t.emotion_before} />}
-                  {t.emotion_after && <Info label="Mood After" value={t.emotion_after} />}
+                  {t.entryTime && <Info label="Entry Time" value={t.entryTime} />}
+                  {t.exitTime && <Info label="Exit Time" value={t.exitTime} />}
+                  {t.emotionBefore && <Info label="Mood Before" value={t.emotionBefore} />}
+                  {t.emotionAfter && <Info label="Mood After" value={t.emotionAfter} />}
                 </div>
               )}
               {t.notes && <p className="text-sm rounded-lg px-3 py-2" style={{ background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.6)' }}>{t.notes}</p>}
