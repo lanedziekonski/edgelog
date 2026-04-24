@@ -3,7 +3,7 @@ export const homeFeatures = [
   {
     icon: 'BookOpen',
     title: 'Trade Journal',
-    description: 'Log every trade manually, via CSV import, or directly from your broker.',
+    description: 'Log every trade manually or via CSV import. Direct broker linking coming soon.',
   },
   {
     icon: 'Brain',
@@ -54,10 +54,10 @@ export const detailedFeatures = [
   },
   {
     icon: 'Link2',
-    eyebrow: 'Integration',
+    eyebrow: 'Coming Soon',
     title: 'Broker Account Linking',
     description:
-      'Securely connect your live brokerage account and pull executions automatically. No more end-of-day exports.',
+      'Securely connect your live brokerage account and pull executions automatically. No more end-of-day exports. Currently in development — CSV import available today.',
     bullets: ['Real-time fill sync', 'Encrypted credentials', 'Multiple linked accounts per user'],
     mockType: 'broker',
   },

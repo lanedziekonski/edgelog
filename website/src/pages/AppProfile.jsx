@@ -178,7 +178,7 @@ export default function AppProfile() {
             <p className="font-semibold">{plan.label} plan</p>
             <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
               {effectivePlan === 'free'
-                ? 'Upgrade to unlock AI coaching, broker linking, and more'
+                ? 'Upgrade to unlock AI coaching and more — broker linking coming soon'
                 : 'Manage your billing and subscription below'}
             </p>
           </div>

@@ -5,7 +5,7 @@ import SectionEyebrow from '../ui/SectionEyebrow';
 const STATS = [
   { value: 10_000, suffix: '+', label: 'Trades Logged', eyebrow: 'Volume' },
   { value: 95, suffix: '%', label: 'Improve R:R in 30 Days', eyebrow: 'Outcome' },
-  { value: 5, suffix: '', label: 'Broker Integrations', eyebrow: 'Coverage' },
+  { value: 5, suffix: '', label: 'CSV Broker Formats', eyebrow: 'Coverage' },
   { value: 24, suffix: '/7', label: 'AI Coaching', eyebrow: 'Always On' },
 ];
 
