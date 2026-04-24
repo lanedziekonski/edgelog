@@ -21,12 +21,17 @@ export default function AppProfile() {
   const navigate         = useNavigate();
   const stats = useMemo(() => calcStats(trades), [trades]);
 
-  const [referralCode, setReferralCode]       = useState('');
-  const [referralTotal, setReferralTotal]     = useState(0);
-  const [referralCount, setReferralCount]     = useState(0);
-  const [referralLoading, setReferralLoading] = useState(true);
-  const [referralError, setReferralError]     = useState('');
-  const [copied, setCopied]                   = useState(false);
+  const [referralCode, setReferralCode]         = useState('');
+  const [referralTotal, setReferralTotal]       = useState(0);
+  const [referralAllCount, setReferralAllCount] = useState(0);
+  const [paymentCount, setPaymentCount]         = useState(0);
+  const [pendingPayout, setPendingPayout]       = useState(0);
+  const [paidOutTotal, setPaidOutTotal]         = useState(0);
+  const [payoutEligible, setPayoutEligible]     = useState(false);
+  const [minPayout, setMinPayout]               = useState(25);
+  const [referralLoading, setReferralLoading]   = useState(true);
+  const [referralError, setReferralError]       = useState('');
+  const [copied, setCopied]                     = useState(false);
 
   // Stripe portal
   const [portalLoading, setPortalLoading] = useState(false);
@@ -47,7 +52,12 @@ export default function AppProfile() {
       .then(([codeData, earningsData]) => {
         if (codeData.code) setReferralCode(codeData.code);
         setReferralTotal(earningsData.total_earned ?? 0);
-        setReferralCount(earningsData.payment_count ?? earningsData.referral_count ?? 0);
+        setReferralAllCount(earningsData.referral_count ?? 0);
+        setPaymentCount(earningsData.payment_count ?? 0);
+        setPendingPayout(earningsData.pending_payout ?? 0);
+        setPaidOutTotal(earningsData.paid_out_total ?? 0);
+        setPayoutEligible(earningsData.payout_eligible ?? false);
+        setMinPayout(earningsData.minimum_payout_threshold ?? 25);
       })
       .catch(() => setReferralError("Couldn't load referral data — please refresh"))
       .finally(() => setReferralLoading(false));
@@ -211,36 +221,64 @@ export default function AppProfile() {
           <Gift className="w-4 h-4 flex-shrink-0" style={{ color: G }} />
           <p className="text-xs font-mono uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>Referral Program</p>
         </div>
-        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>Share your code and earn rewards when friends subscribe.</p>
+
         {referralLoading ? (
           <div className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>Loading…</div>
-        ) : referralCode ? (
-          <div className="flex items-center gap-2">
-            <div className="flex-1 px-4 py-2.5 rounded-lg font-mono text-sm tracking-widest" style={{ background: `${G}10`, border: `1px solid ${G}30`, color: G }}>
-              {referralCode}
-            </div>
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium flex-shrink-0 transition-all"
-              style={{ background: copied ? `${G}20` : 'rgba(255,255,255,0.05)', color: copied ? G : 'rgba(255,255,255,0.6)', border: `1px solid ${copied ? `${G}40` : 'rgba(255,255,255,0.1)'}` }}
-            >
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              {copied ? 'Copied!' : 'Copy'}
-            </button>
-          </div>
         ) : (
-          <div className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>Generating your code…</div>
+          <>
+            {/* 1 — Referral code */}
+            {referralCode ? (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 px-4 py-2.5 rounded-lg font-mono text-sm tracking-widest" style={{ background: `${G}10`, border: `1px solid ${G}30`, color: G }}>
+                  {referralCode}
+                </div>
+                <button
+                  onClick={handleCopy}
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium flex-shrink-0 transition-all"
+                  style={{ background: copied ? `${G}20` : 'rgba(255,255,255,0.05)', color: copied ? G : 'rgba(255,255,255,0.6)', border: `1px solid ${copied ? `${G}40` : 'rgba(255,255,255,0.1)'}` }}
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+            ) : (
+              <div className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>Generating your code…</div>
+            )}
+
+            {/* 2 — Stat cards */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="px-4 py-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>Total Earned</p>
+                <p className="text-xl font-bold" style={{ color: G }}>${referralTotal.toFixed(2)}</p>
+                <p className="text-[11px] mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  {referralAllCount} referral{referralAllCount !== 1 ? 's' : ''} &middot; {paymentCount} payment{paymentCount !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <div className="px-4 py-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>Pending Payout</p>
+                <p className="text-xl font-bold" style={{ color: G }}>${pendingPayout.toFixed(2)}</p>
+                <p className="text-[11px] mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>${paidOutTotal.toFixed(2)} paid out</p>
+              </div>
+            </div>
+
+            {/* 3 — Payout threshold banner */}
+            {payoutEligible ? (
+              <div className="px-4 py-3 rounded-lg text-sm" style={{ background: `${G}0d`, border: `1px solid ${G}30`, color: G }}>
+                You're eligible for payout! Contact us at hello@traderascend.com to request your payment.
+              </div>
+            ) : (
+              <div className="px-4 py-3 rounded-lg text-sm" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}>
+                Minimum ${minPayout} to request payout. Earn ${Math.max(0, minPayout - referralTotal).toFixed(2)} more to unlock.
+              </div>
+            )}
+
+            {/* 5 — Explainer */}
+            <div className="px-4 py-3 rounded-lg text-xs leading-relaxed" style={{ background: `${G}05`, border: `1px solid ${G}10`, color: 'rgba(255,255,255,0.35)' }}>
+              Share your code with other traders — they get <span style={{ color: G, fontWeight: 700 }}>20% off</span> their first 3 months on a monthly plan, or <span style={{ color: G, fontWeight: 700 }}>20% off</span> their entire first year on an annual plan. You earn <span style={{ color: G, fontWeight: 700 }}>15%</span> of whatever they pay during that discounted period.
+            </div>
+          </>
         )}
-        <div className="grid grid-cols-2 gap-3 pt-1">
-          <div className="px-4 py-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
-            <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>Referrals</p>
-            <p className="text-xl font-bold">{referralLoading ? '—' : referralCount}</p>
-          </div>
-          <div className="px-4 py-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
-            <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>Earnings</p>
-            <p className="text-xl font-bold" style={{ color: G }}>{referralLoading ? '—' : `$${referralTotal.toFixed(2)}`}</p>
-          </div>
-        </div>
+
         {referralError && (
           <p className="text-xs" style={{ color: '#ff6b6b' }}>{referralError}</p>
         )}
