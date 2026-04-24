@@ -225,9 +225,9 @@ export default function Pricing() {
       </section>
 
       <CTABanner
-        title="Try Pro free for 7 days"
-        subtitle="Get the AI Trading Plan Builder, full broker integrations, and pattern detection. No card upfront."
-        ctaLabel="Start 7-Day Trial"
+        title="Ready to find your edge?"
+        subtitle="AI Trading Plan Builder, live broker integrations, and pattern detection — everything serious traders need, in one tool."
+        ctaLabel="Go Pro"
       />
     </>
   );
