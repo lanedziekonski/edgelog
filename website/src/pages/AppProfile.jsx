@@ -46,8 +46,8 @@ export default function AppProfile() {
     ])
       .then(([codeData, earningsData]) => {
         if (codeData.code) setReferralCode(codeData.code);
-        setReferralTotal(earningsData.total ?? 0);
-        setReferralCount(earningsData.referral_count ?? 0);
+        setReferralTotal(earningsData.total_earned ?? 0);
+        setReferralCount(earningsData.payment_count ?? earningsData.referral_count ?? 0);
       })
       .catch(() => setReferralError("Couldn't load referral data — please refresh"))
       .finally(() => setReferralLoading(false));
