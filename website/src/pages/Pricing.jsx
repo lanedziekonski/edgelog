@@ -228,6 +228,7 @@ export default function Pricing() {
         title="Ready to find your edge?"
         subtitle="AI Trading Plan Builder, live broker integrations, and pattern detection — everything serious traders need, in one tool."
         ctaLabel="Go Pro"
+        hideSecondary
       />
     </>
   );
