@@ -89,10 +89,6 @@ export const faq = [
     a: 'Bank-grade encryption at rest and in transit. We never sell, share, or train models on your trade data. Your PnL is yours.',
   },
   {
-    q: 'Do you offer a free trial of Pro or Elite?',
-    a: 'The Free plan is permanent — no card required. Pro and Elite include a 7-day trial when you upgrade, and you can downgrade back to Free anytime.',
-  },
-  {
     q: 'What exactly does the AI Coach do?',
     a: 'Each morning the AI Coach reads yesterday\'s trades, your journal entries, and your trading plan. It identifies what worked, what broke your rules, and gives you one specific thing to improve today.',
   },
