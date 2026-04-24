@@ -2,9 +2,11 @@ import { useAuth } from '../context/AuthContext';
 import { useTrades, calcStats } from '../hooks/useTrades';
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { User, LogOut, ExternalLink, Copy, Check, Gift, KeyRound } from 'lucide-react';
+import { User, LogOut, ExternalLink, Copy, Check, Gift, KeyRound, Loader2, X } from 'lucide-react';
+import { createPortalSession } from '../lib/stripe';
 
 const G = '#00ff41';
+const API = 'https://edgelog.onrender.com/api';
 
 const PLAN_LABELS = {
   free:   { label: 'Free',   color: 'rgba(255,255,255,0.5)',  bg: 'rgba(255,255,255,0.06)' },
@@ -13,8 +15,6 @@ const PLAN_LABELS = {
   elite:  { label: 'Elite',  color: '#f59e0b',                bg: 'rgba(245,158,11,0.1)' },
 };
 
-const API = 'https://edgelog.onrender.com/api';
-
 export default function AppProfile() {
   const { user, token, logout } = useAuth();
   const { trades }       = useTrades();
@@ -22,20 +22,49 @@ export default function AppProfile() {
   const stats = useMemo(() => calcStats(trades), [trades]);
 
   const [referralCode, setReferralCode]       = useState('');
-  const [referralEarnings, setReferralEarnings] = useState({ total: 0, referral_count: 0 });
+  const [referralTotal, setReferralTotal]     = useState(0);
+  const [referralCount, setReferralCount]     = useState(0);
+  const [referralLoading, setReferralLoading] = useState(true);
+  const [referralError, setReferralError]     = useState('');
   const [copied, setCopied]                   = useState(false);
 
+  // Stripe portal
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError, setPortalError]     = useState('');
+
+  // Checkout success banner + refreshed plan
+  const [successBanner, setSuccessBanner] = useState(false);
+  const [freshPlan, setFreshPlan]         = useState(null);
+
   useEffect(() => {
-    if (!token) return;
-    fetch(`${API}/referrals/my-code`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => { if (d.code) setReferralCode(d.code); })
-      .catch(() => {});
-    fetch(`${API}/referrals/earnings`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => { if (d.total != null) setReferralEarnings(d); })
-      .catch(() => {});
+    if (!token) { setReferralLoading(false); return; }
+    setReferralLoading(true);
+    setReferralError('');
+    Promise.all([
+      fetch(`${API}/referrals/my-code`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch(`${API}/referrals/earnings`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+    ])
+      .then(([codeData, earningsData]) => {
+        if (codeData.code) setReferralCode(codeData.code);
+        setReferralTotal(earningsData.total_earned ?? 0);
+        setReferralCount(earningsData.payment_count ?? earningsData.referral_count ?? 0);
+      })
+      .catch(() => setReferralError("Couldn't load referral data — please refresh"))
+      .finally(() => setReferralLoading(false));
   }, [token]);
+
+  // Detect ?checkout=success and refresh user plan from backend
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('checkout') !== 'success') return;
+    setSuccessBanner(true);
+    window.history.replaceState({}, document.title, '/profile');
+    if (!token) return;
+    fetch(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.user?.plan) setFreshPlan(data.user.plan); })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCopy = () => {
     if (!referralCode) return;
@@ -44,9 +73,25 @@ export default function AppProfile() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const plan = PLAN_LABELS[user?.plan] || PLAN_LABELS.free;
+  const handlePortal = async () => {
+    setPortalLoading(true);
+    setPortalError('');
+    try {
+      await createPortalSession(token);
+    } catch (err) {
+      const msg = typeof err?.message === 'string' && err.message
+        ? err.message
+        : 'Unable to open billing portal — please try again';
+      setPortalError(msg);
+      setPortalLoading(false);
+    }
+  };
 
   const handleLogout = () => { logout(); navigate('/'); };
+
+  // Use freshPlan (from post-checkout re-fetch) if available
+  const effectivePlan = freshPlan || user?.plan || 'free';
+  const plan = PLAN_LABELS[effectivePlan] || PLAN_LABELS.free;
 
   return (
     <div className="space-y-8 max-w-2xl">
@@ -54,6 +99,25 @@ export default function AppProfile() {
         <p className="text-xs font-mono uppercase tracking-widest mb-1" style={{ color: G }}>Profile</p>
         <h1 className="text-3xl font-bold tracking-tight">Your Account</h1>
       </div>
+
+      {/* Checkout success banner */}
+      {successBanner && (
+        <div
+          className="flex items-center justify-between gap-3 px-5 py-4 rounded-xl"
+          style={{ background: `${G}12`, border: `1px solid ${G}40` }}
+        >
+          <p className="text-sm font-medium" style={{ color: G }}>
+            Subscription activated! Welcome to {plan.label}. Your plan is now active.
+          </p>
+          <button
+            onClick={() => setSuccessBanner(false)}
+            className="flex-shrink-0 transition-opacity hover:opacity-60"
+            style={{ color: G }}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Identity card */}
       <div className="rounded-xl p-6 flex items-start gap-4" style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.07)' }}>
@@ -69,7 +133,7 @@ export default function AppProfile() {
               style={{ background: plan.bg, color: plan.color }}>
               {plan.label} plan
             </span>
-            {user?.plan !== 'elite' && (
+            {effectivePlan !== 'elite' && (
               <a href="/pricing" className="text-xs font-medium hover:underline" style={{ color: 'rgba(255,255,255,0.35)' }}>
                 Upgrade →
               </a>
@@ -103,18 +167,41 @@ export default function AppProfile() {
           <div>
             <p className="font-semibold">{plan.label} plan</p>
             <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              {user?.plan === 'free'
-                ? 'Upgrade to unlock journals, AI coaching, and more'
-                : 'Manage your subscription below'}
+              {effectivePlan === 'free'
+                ? 'Upgrade to unlock AI coaching, broker linking, and more'
+                : 'Manage your billing and subscription below'}
             </p>
           </div>
-          <a
-            href={user?.plan === 'free' ? '/pricing' : 'https://edgelog.onrender.com/api/stripe/create-portal-session'}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium border transition-colors hover:border-white/20"
-            style={{ border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}
-          >
-            {user?.plan === 'free' ? 'View Plans' : (<><ExternalLink className="w-3.5 h-3.5" /> Billing Portal</>)}
-          </a>
+          {effectivePlan === 'free' ? (
+            <a
+              href="/pricing"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium border transition-colors hover:border-white/20"
+              style={{ border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}
+            >
+              View Plans
+            </a>
+          ) : (
+            <div className="flex flex-col items-end gap-1">
+              <button
+                onClick={handlePortal}
+                disabled={portalLoading}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium border transition-colors hover:border-white/20"
+                style={{
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: portalLoading ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.6)',
+                  cursor: portalLoading ? 'wait' : 'pointer',
+                  background: 'transparent',
+                }}
+              >
+                {portalLoading
+                  ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Opening…</>
+                  : <><ExternalLink className="w-3.5 h-3.5" />Billing Portal</>}
+              </button>
+              {portalError && (
+                <p className="text-xs" style={{ color: '#ff6b6b' }}>{portalError}</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -125,7 +212,9 @@ export default function AppProfile() {
           <p className="text-xs font-mono uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>Referral Program</p>
         </div>
         <p className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>Share your code and earn rewards when friends subscribe.</p>
-        {referralCode ? (
+        {referralLoading ? (
+          <div className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>Loading…</div>
+        ) : referralCode ? (
           <div className="flex items-center gap-2">
             <div className="flex-1 px-4 py-2.5 rounded-lg font-mono text-sm tracking-widest" style={{ background: `${G}10`, border: `1px solid ${G}30`, color: G }}>
               {referralCode}
@@ -145,13 +234,16 @@ export default function AppProfile() {
         <div className="grid grid-cols-2 gap-3 pt-1">
           <div className="px-4 py-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
             <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>Referrals</p>
-            <p className="text-xl font-bold">{referralEarnings.referral_count ?? 0}</p>
+            <p className="text-xl font-bold">{referralLoading ? '—' : referralCount}</p>
           </div>
           <div className="px-4 py-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
             <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>Earnings</p>
-            <p className="text-xl font-bold" style={{ color: G }}>${(referralEarnings.total ?? 0).toFixed(2)}</p>
+            <p className="text-xl font-bold" style={{ color: G }}>{referralLoading ? '—' : `$${referralTotal.toFixed(2)}`}</p>
           </div>
         </div>
+        {referralError && (
+          <p className="text-xs" style={{ color: '#ff6b6b' }}>{referralError}</p>
+        )}
       </div>
 
       {/* Account settings */}
