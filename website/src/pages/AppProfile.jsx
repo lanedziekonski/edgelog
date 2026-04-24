@@ -21,9 +21,12 @@ export default function AppProfile() {
   const navigate         = useNavigate();
   const stats = useMemo(() => calcStats(trades), [trades]);
 
-  const [referralCode, setReferralCode]         = useState('');
-  const [referralEarnings, setReferralEarnings] = useState({ total: 0, referral_count: 0 });
-  const [copied, setCopied]                     = useState(false);
+  const [referralCode, setReferralCode]       = useState('');
+  const [referralTotal, setReferralTotal]     = useState(0);
+  const [referralCount, setReferralCount]     = useState(0);
+  const [referralLoading, setReferralLoading] = useState(true);
+  const [referralError, setReferralError]     = useState('');
+  const [copied, setCopied]                   = useState(false);
 
   // Stripe portal
   const [portalLoading, setPortalLoading] = useState(false);
@@ -34,15 +37,20 @@ export default function AppProfile() {
   const [freshPlan, setFreshPlan]         = useState(null);
 
   useEffect(() => {
-    if (!token) return;
-    fetch(`${API}/referrals/my-code`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => { if (d.code) setReferralCode(d.code); })
-      .catch(() => {});
-    fetch(`${API}/referrals/earnings`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => { if (d.total != null) setReferralEarnings(d); })
-      .catch(() => {});
+    if (!token) { setReferralLoading(false); return; }
+    setReferralLoading(true);
+    setReferralError('');
+    Promise.all([
+      fetch(`${API}/referrals/my-code`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch(`${API}/referrals/earnings`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+    ])
+      .then(([codeData, earningsData]) => {
+        if (codeData.code) setReferralCode(codeData.code);
+        setReferralTotal(earningsData.total ?? 0);
+        setReferralCount(earningsData.referral_count ?? 0);
+      })
+      .catch(() => setReferralError("Couldn't load referral data — please refresh"))
+      .finally(() => setReferralLoading(false));
   }, [token]);
 
   // Detect ?checkout=success and refresh user plan from backend
@@ -204,7 +212,9 @@ export default function AppProfile() {
           <p className="text-xs font-mono uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>Referral Program</p>
         </div>
         <p className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>Share your code and earn rewards when friends subscribe.</p>
-        {referralCode ? (
+        {referralLoading ? (
+          <div className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>Loading…</div>
+        ) : referralCode ? (
           <div className="flex items-center gap-2">
             <div className="flex-1 px-4 py-2.5 rounded-lg font-mono text-sm tracking-widest" style={{ background: `${G}10`, border: `1px solid ${G}30`, color: G }}>
               {referralCode}
@@ -224,13 +234,16 @@ export default function AppProfile() {
         <div className="grid grid-cols-2 gap-3 pt-1">
           <div className="px-4 py-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
             <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>Referrals</p>
-            <p className="text-xl font-bold">{referralEarnings.referral_count ?? 0}</p>
+            <p className="text-xl font-bold">{referralLoading ? '—' : referralCount}</p>
           </div>
           <div className="px-4 py-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
             <p className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>Earnings</p>
-            <p className="text-xl font-bold" style={{ color: G }}>${(referralEarnings.total ?? 0).toFixed(2)}</p>
+            <p className="text-xl font-bold" style={{ color: G }}>{referralLoading ? '—' : `$${referralTotal.toFixed(2)}`}</p>
           </div>
         </div>
+        {referralError && (
+          <p className="text-xs" style={{ color: '#ff6b6b' }}>{referralError}</p>
+        )}
       </div>
 
       {/* Account settings */}
