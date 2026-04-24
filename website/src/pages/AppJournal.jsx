@@ -471,8 +471,8 @@ function TradeRow({ trade: t, expanded, onToggle, onDelete, onEdit, onUploadScre
         {t.side && (
           <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0"
             style={{
-              background: t.side === 'LONG' ? `${G}18` : 'rgba(255,77,77,0.12)',
-              color: t.side === 'LONG' ? G : '#ff6b6b',
+              background: t.followedPlan === true ? `${G}18` : t.followedPlan === false ? 'rgba(255,77,77,0.12)' : 'rgba(255,255,255,0.08)',
+              color:      t.followedPlan === true ? G         : t.followedPlan === false ? '#ff6b6b'              : 'rgba(255,255,255,0.4)',
             }}>
             {t.side}
           </span>
