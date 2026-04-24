@@ -86,7 +86,7 @@ export const faq = [
   },
   {
     q: 'Is my trading data secure?',
-    a: 'Bank-grade encryption at rest and in transit. We never sell, share, or train models on your trade data. Your PnL is yours.',
+    a: 'Bank-grade encryption at rest and in transit. We never sell or share your trade data. Your PnL is yours.',
   },
   {
     q: 'What exactly does the AI Coach do?',
