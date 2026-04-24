@@ -71,16 +71,6 @@ export default function Hero() {
           </Button>
         </motion.div>
 
-        <motion.p
-          variants={fadeUp}
-          initial="hidden"
-          animate="visible"
-          custom={3}
-          className="mt-4 text-center text-xs text-muted font-mono uppercase tracking-[0.18em]"
-        >
-          Free forever · No credit card · Cancel anytime
-        </motion.p>
-
         {/* Dashboard + floating side cards */}
         <motion.div
           initial={{ opacity: 0, y: 60 }}
