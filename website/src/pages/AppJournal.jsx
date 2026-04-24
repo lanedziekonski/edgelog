@@ -467,7 +467,16 @@ function TradeRow({ trade: t, expanded, onToggle, onDelete, onEdit, onUploadScre
   return (
     <div className="rounded-xl overflow-hidden" style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.06)' }}>
       <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors" onClick={onToggle}>
-        <span className="font-semibold">{t.symbol}</span>
+        <span className="font-semibold" style={{ color: t.pnl > 0 ? G : t.pnl < 0 ? '#ff4d4d' : undefined }}>{t.symbol}</span>
+        {t.side && (
+          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0"
+            style={{
+              background: t.side === 'LONG' ? `${G}18` : 'rgba(255,77,77,0.12)',
+              color: t.side === 'LONG' ? G : '#ff6b6b',
+            }}>
+            {t.side}
+          </span>
+        )}
         <span className="text-sm hidden sm:block" style={{ color: 'rgba(255,255,255,0.35)' }}>{t.setup}</span>
         {!t.followedPlan && (
           <span className="text-[10px] px-1.5 py-0.5 rounded font-mono flex-shrink-0" style={{ background: 'rgba(255,165,0,0.12)', color: '#ffaa33' }}>Rule Break</span>
