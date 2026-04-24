@@ -71,8 +71,6 @@ export const tiers = [
       'Trade screenshot analysis',
       'Payout & violation tracker',
       'Funded account dashboard',
-      '1-on-1 onboarding call',
-      'Priority chat support',
     ],
   },
 ];
