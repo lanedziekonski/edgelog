@@ -1,10 +1,22 @@
 import { motion } from 'framer-motion';
-import { Check, ArrowRight } from 'lucide-react';
+import { Check, ArrowRight, Loader2 } from 'lucide-react';
 import Button from '../ui/Button';
 
-export default function PricingCard({ tier, billing }) {
-  const price = billing === 'annual' ? tier.annual : tier.monthly;
+const motionProps = {
+  whileHover: { scale: 1.02 },
+  whileTap:   { scale: 0.98 },
+  transition: { type: 'spring', stiffness: 400, damping: 24 },
+};
+
+export default function PricingCard({ tier, billing, onSubscribe, loading, error }) {
+  const price  = billing === 'annual' ? tier.annual : tier.monthly;
   const isPaid = price > 0;
+
+  const btnBase =
+    'inline-flex w-full items-center justify-center gap-2 px-6 py-3 text-base font-medium rounded-md border tracking-tight transition-all duration-200 select-none';
+  const btnVariant = tier.popular
+    ? `${btnBase} bg-neon text-black border-neon hover:shadow-neon hover:bg-neon/90`
+    : `${btnBase} bg-transparent text-neon border-neon hover:bg-neon/10 hover:shadow-neon-soft`;
 
   return (
     <motion.div
@@ -59,14 +71,28 @@ export default function PricingCard({ tier, billing }) {
       </ul>
 
       <div className="mt-8">
-        <Button
-          to="/signup"
-          variant={tier.popular ? 'primary' : 'ghost'}
-          size="md"
-          className="w-full"
-        >
-          {tier.cta} <ArrowRight className="w-4 h-4" />
-        </Button>
+        {isPaid ? (
+          <>
+            <motion.button
+              type="button"
+              onClick={() => onSubscribe?.(tier.id)}
+              disabled={loading}
+              {...(loading ? {} : motionProps)}
+              className={`${btnVariant} ${loading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+            >
+              {loading
+                ? <><Loader2 className="w-4 h-4 animate-spin" />Starting…</>
+                : <>{tier.cta}<ArrowRight className="w-4 h-4" /></>}
+            </motion.button>
+            {error && (
+              <p className="mt-2 text-xs text-center" style={{ color: '#ff6b6b' }}>{error}</p>
+            )}
+          </>
+        ) : (
+          <Button to="/signup" variant="ghost" size="md" className="w-full">
+            {tier.cta} <ArrowRight className="w-4 h-4" />
+          </Button>
+        )}
       </div>
     </motion.div>
   );

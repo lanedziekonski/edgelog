@@ -21,6 +21,19 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email.trim(), password);
+      // Resume pending checkout intent if present and fresh (< 10 min)
+      const raw = sessionStorage.getItem('pending_checkout');
+      if (raw) {
+        try {
+          const intent = JSON.parse(raw);
+          if (typeof intent?.ts === 'number' && Date.now() - intent.ts < 600_000) {
+            sessionStorage.removeItem('pending_checkout');
+            navigate('/pricing', { state: { resumeCheckout: intent } });
+            return;
+          }
+        } catch { /* malformed — fall through */ }
+        sessionStorage.removeItem('pending_checkout');
+      }
       navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Invalid email or password');
