@@ -882,12 +882,30 @@ app.post('/api/plan-chat', requireAuth, requirePlan('pro'), async (req, res) => 
 
 // ─── STRIPE ───────────────────────────────────────────────────────────────
 
+const ALLOWED_REDIRECT_HOSTS = new Set([
+  'traderascend.com',
+  'www.traderascend.com',
+  'app.traderascend.com',
+  'localhost',
+]);
+
+function validateRedirectUrl(raw) {
+  if (!raw) return null;
+  let parsed;
+  try { parsed = new URL(raw); } catch { return 'Invalid redirect URL'; }
+  const isLocalhost = parsed.hostname === 'localhost';
+  if (isLocalhost && parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return 'Invalid redirect URL';
+  if (!isLocalhost && parsed.protocol !== 'https:') return 'Invalid redirect URL';
+  if (!ALLOWED_REDIRECT_HOSTS.has(parsed.hostname)) return 'Invalid redirect URL';
+  return null; // null = valid
+}
+
 app.post('/api/stripe/create-checkout-session', requireAuth, async (req, res) => {
   if (!stripe) {
     const missing = !process.env.STRIPE_SECRET_KEY ? 'STRIPE_SECRET_KEY' : 'Stripe SDK';
     return res.status(503).json({ error: `Stripe not configured: ${missing} is missing` });
   }
-  const { plan, billing = 'monthly', referralCode } = req.body;
+  const { plan, billing = 'monthly', referralCode, successUrl, cancelUrl } = req.body;
   const interval = billing === 'yearly' ? 'yearly' : 'monthly';
   const priceKey = `${plan}_${interval}`;
   const priceId = PLAN_PRICES[priceKey];
@@ -895,6 +913,11 @@ app.post('/api/stripe/create-checkout-session', requireAuth, async (req, res) =>
     const envVar = `STRIPE_PRICE_${plan.toUpperCase()}_${interval.toUpperCase()}`;
     return res.status(400).json({ error: `No Stripe price configured for ${plan}/${interval} — set ${envVar} on Render` });
   }
+
+  const successErr = validateRedirectUrl(successUrl);
+  if (successErr) return res.status(400).json({ error: successErr });
+  const cancelErr = validateRedirectUrl(cancelUrl);
+  if (cancelErr) return res.status(400).json({ error: cancelErr });
 
   try {
     const { rows } = await pool.query(`SELECT * FROM users WHERE id = $1`, [req.userId]);
@@ -908,13 +931,16 @@ app.post('/api/stripe/create-checkout-session', requireAuth, async (req, res) =>
       await pool.query(`UPDATE users SET stripe_customer_id = $1 WHERE id = $2`, [customerId, req.userId]);
     }
 
+    const resolvedSuccessUrl = successUrl || `${appUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
+    const resolvedCancelUrl  = cancelUrl  || `${appUrl}?payment=cancelled`;
+
     const sessionParams = {
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${appUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url:  `${appUrl}?payment=cancelled`,
+      success_url: resolvedSuccessUrl,
+      cancel_url:  resolvedCancelUrl,
       subscription_data: { metadata: { userId: String(req.userId), plan } },
     };
 
@@ -936,6 +962,7 @@ app.post('/api/stripe/create-checkout-session', requireAuth, async (req, res) =>
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
+    console.log(`[stripe] checkout session created for user ${req.userId} with successUrl=${resolvedSuccessUrl}`);
     res.json({ url: session.url });
   } catch (err) {
     console.error('Stripe checkout error:', err.message);
@@ -948,13 +975,17 @@ app.post('/api/stripe/create-portal-session', requireAuth, async (req, res) => {
     const missing = !process.env.STRIPE_SECRET_KEY ? 'STRIPE_SECRET_KEY' : 'Stripe SDK';
     return res.status(503).json({ error: `Stripe not configured: ${missing} is missing` });
   }
+  const { returnUrl } = req.body;
+  const returnErr = validateRedirectUrl(returnUrl);
+  if (returnErr) return res.status(400).json({ error: returnErr });
+
   try {
     const { rows } = await pool.query(`SELECT * FROM users WHERE id = $1`, [req.userId]);
     const user = rows[0];
     if (!user.stripe_customer_id) return res.status(400).json({ error: 'No billing account found' });
     const session = await stripe.billingPortal.sessions.create({
       customer:   user.stripe_customer_id,
-      return_url: process.env.APP_URL || 'http://localhost:5173',
+      return_url: returnUrl || process.env.APP_URL || 'http://localhost:5173',
     });
     res.json({ url: session.url });
   } catch (err) {
