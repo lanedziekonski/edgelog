@@ -8,37 +8,30 @@ export const steps = [
   },
   {
     n: '02',
-    icon: 'Link2',
-    title: 'Connect your broker or import a CSV',
-    description:
-      'Link Tradovate, IBKR, ThinkorSwim, TradeStation, or Webull — or drag and drop your statement. We handle the parsing.',
-  },
-  {
-    n: '03',
     icon: 'Tag',
     title: 'Log and tag your trades',
     description:
-      'Every trade gets a setup tag, a conviction score, and an optional screenshot. The faster you log, the more the AI learns.',
+      'Every trade gets a setup tag, entry and exit, P&L, and an optional screenshot. Build a complete record of every decision you make at the desk.',
+  },
+  {
+    n: '03',
+    icon: 'CalendarDays',
+    title: 'Review your calendar view',
+    description:
+      'See daily P&L at a glance on the calendar. Spot the days you trade best — and the ones you shouldn\'t trade at all.',
   },
   {
     n: '04',
-    icon: 'Map',
-    title: 'Get your AI-generated trading plan',
-    description:
-      'Answer 10 questions about your strategy and goals. TraderAscend writes a complete trading plan you can edit and reset anytime.',
-  },
-  {
-    n: '05',
-    icon: 'Brain',
-    title: 'Start daily AI coaching sessions',
-    description:
-      'Every morning at 8AM the AI Coach reviews yesterday\'s trades against your plan and tells you the one thing to fix today.',
-  },
-  {
-    n: '06',
     icon: 'TrendingUp',
     title: 'Track your growth on the dashboard',
     description:
-      'Equity curve, R:R, win rate, payout history — everything you need to know if you\'re actually improving, in one cinematic view.',
+      'Equity curve, win rate, average R:R, and top setups. Know exactly where your edge is and isn\'t, all in one cinematic view.',
+  },
+  {
+    n: '05',
+    icon: 'Users',
+    title: 'Learn with the community',
+    description:
+      'Swap setups, retrospectives, and lessons with traders walking the same path. Upgrade when you\'re ready for broker linking and AI coaching.',
   },
 ];

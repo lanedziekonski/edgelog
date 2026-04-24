@@ -14,8 +14,8 @@ export default function HowItWorks() {
         <div className="relative max-w-7xl mx-auto px-6">
           <PageHeading
             eyebrow="How It Works"
-            title="Six steps from signup to consistent edge."
-            subtitle="No setup wizards. No 30-minute onboarding. Be journaling your first trade in five minutes."
+            title="Five steps from signup to your first journaled trade."
+            subtitle="No setup wizards. No credit card. Be journaling your first trade in five minutes — completely free."
             watermark="PROCESS"
           />
         </div>
