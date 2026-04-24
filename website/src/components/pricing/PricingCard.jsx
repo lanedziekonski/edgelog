@@ -1,37 +1,10 @@
 import { motion } from 'framer-motion';
 import { Check, ArrowRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-
-const APP_URL = 'https://app.traderascend.com';
+import Button from '../ui/Button';
 
 export default function PricingCard({ tier, billing }) {
-  const { token } = useAuth();
-  const navigate   = useNavigate();
   const price = billing === 'annual' ? tier.annual : tier.monthly;
   const isPaid = price > 0;
-  const billingParam = billing === 'annual' ? 'yearly' : 'monthly';
-
-  const handleCta = () => {
-    if (token) {
-      // Already logged in on website — hand off to app with token
-      if (tier.id === 'free') {
-        window.location.href = `${APP_URL}/dashboard?token=${encodeURIComponent(token)}`;
-      } else {
-        window.location.href = `${APP_URL}/pricing?token=${encodeURIComponent(token)}&plan=${tier.id}&billing=${billingParam}`;
-      }
-    } else {
-      // Not logged in — save plan intent and send to signup
-      sessionStorage.setItem('pending_plan_redirect', JSON.stringify({ plan: tier.id, billing: billingParam }));
-      navigate('/signup');
-    }
-  };
-
-  const ctaBase =
-    'inline-flex w-full items-center justify-center gap-2 px-6 py-3 text-base font-medium rounded-md border tracking-tight transition-all duration-200 select-none cursor-pointer';
-  const ctaClass = tier.popular
-    ? `${ctaBase} bg-neon text-black border-neon hover:shadow-neon hover:bg-neon/90`
-    : `${ctaBase} bg-transparent text-neon border-neon hover:bg-neon/10 hover:shadow-neon-soft`;
 
   return (
     <motion.div
@@ -86,9 +59,14 @@ export default function PricingCard({ tier, billing }) {
       </ul>
 
       <div className="mt-8">
-        <button onClick={handleCta} className={ctaClass}>
+        <Button
+          to="/signup"
+          variant={tier.popular ? 'primary' : 'ghost'}
+          size="md"
+          className="w-full"
+        >
           {tier.cta} <ArrowRight className="w-4 h-4" />
-        </button>
+        </Button>
       </div>
     </motion.div>
   );

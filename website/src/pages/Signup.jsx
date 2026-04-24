@@ -27,17 +27,8 @@ export default function Signup() {
     if (password.length < 6) { setError('Password must be at least 6 characters'); return; }
     setLoading(true);
     try {
-      const data = await signup(email.trim(), password, name.trim() || undefined);
-      const pending = sessionStorage.getItem('pending_plan_redirect');
-      let dest;
-      if (pending) {
-        const { plan, billing } = JSON.parse(pending);
-        sessionStorage.removeItem('pending_plan_redirect');
-        dest = `https://app.traderascend.com/pricing?token=${encodeURIComponent(data.token)}&plan=${plan}&billing=${billing}`;
-      } else {
-        dest = `https://app.traderascend.com/dashboard?token=${encodeURIComponent(data.token)}`;
-      }
-      window.location.href = dest;
+      await signup(email.trim(), password, name.trim() || undefined);
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Signup failed — please try again');
     } finally {

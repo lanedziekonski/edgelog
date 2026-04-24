@@ -70,7 +70,7 @@ export default function AppProfile() {
               {plan.label} plan
             </span>
             {user?.plan !== 'elite' && (
-              <a href="https://app.traderascend.com/pricing" className="text-xs font-medium hover:underline" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              <a href="/pricing" className="text-xs font-medium hover:underline" style={{ color: 'rgba(255,255,255,0.35)' }}>
                 Upgrade →
               </a>
             )}
@@ -109,7 +109,7 @@ export default function AppProfile() {
             </p>
           </div>
           <a
-            href={user?.plan === 'free' ? 'https://app.traderascend.com/pricing' : 'https://app.traderascend.com/profile'}
+            href={user?.plan === 'free' ? '/pricing' : 'https://edgelog.onrender.com/api/stripe/create-portal-session'}
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium border transition-colors hover:border-white/20"
             style={{ border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}
           >
