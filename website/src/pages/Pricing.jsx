@@ -127,7 +127,7 @@ export default function Pricing() {
           <PageHeading
             eyebrow="Pricing"
             title="Pick a plan that fits your edge."
-            subtitle="Free forever for manual journaling. Unlock broker linking, AI plans, and the AI Coach when you're ready."
+            subtitle="Free forever for manual journaling. Unlock AI plans and the AI Coach when you're ready — broker linking coming soon."
             watermark="PRICING"
           />
           <FadeUp delay={0.2} className="mt-4 pb-10 flex justify-center">
@@ -226,7 +226,7 @@ export default function Pricing() {
 
       <CTABanner
         title="Ready to find your edge?"
-        subtitle="AI Trading Plan Builder, live broker integrations, and pattern detection — everything serious traders need, in one tool."
+        subtitle="AI Trading Plan Builder, pattern detection, and CSV import — everything serious traders need. Broker linking coming soon."
         ctaLabel="Go Pro"
         hideSecondary
       />

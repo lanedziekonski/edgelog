@@ -23,7 +23,7 @@ export const tiers = [
   {
     id: 'trader',
     name: 'Trader',
-    tagline: 'Broker linking & CSV import',
+    tagline: 'CSV import & multi-account',
     monthly: 9.99,
     annual: annual(9.99),
     annualTotal: annualTotal(9.99),
@@ -31,7 +31,7 @@ export const tiers = [
     popular: false,
     features: [
       'Everything in Free',
-      'Broker account linking',
+      'Broker account linking (coming soon)',
       'CSV import (5 brokers)',
       'Multi-account support',
       'Advanced filters & tags',
@@ -82,7 +82,7 @@ export const faq = [
   },
   {
     q: 'Which brokers do you support?',
-    a: 'We currently support Tradovate, Interactive Brokers (IBKR), ThinkorSwim, TradeStation, and Webull via CSV import or direct linking. New brokers are added every month based on user requests.',
+    a: 'CSV import currently supports Tradovate, Interactive Brokers (IBKR), ThinkorSwim, TradeStation, and Webull. Direct broker account linking is coming soon — new brokers are added based on user requests.',
   },
   {
     q: 'Is my trading data secure?',

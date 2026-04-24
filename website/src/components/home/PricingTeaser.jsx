@@ -11,7 +11,7 @@ export default function PricingTeaser() {
         <SectionHeading
           eyebrow="Pricing"
           title="Plans that scale with you"
-          subtitle="Start free. Upgrade when you're ready to add brokers, AI plans, or daily coaching."
+          subtitle="Start free. Upgrade when you're ready for CSV import, AI plans, or daily coaching."
         />
 
         <div className="mt-14 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

@@ -82,7 +82,7 @@ export default function AccountsScreen() {
       <Modal
         open={linkOpen}
         onClose={() => setLinkOpen(false)}
-        subtitle="Connect Broker"
+        subtitle="Connect Broker · Coming Soon"
         title="Link an Account"
         size="md"
       >

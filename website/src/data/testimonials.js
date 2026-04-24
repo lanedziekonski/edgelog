@@ -25,5 +25,5 @@ export const testimonials = [
 export const stats = [
   { value: '10,000+', label: 'Trades logged' },
   { value: '95%', label: 'Improve R:R within 30 days' },
-  { value: '5', label: 'Broker integrations' },
+  { value: '5', label: 'CSV broker formats' },
 ];

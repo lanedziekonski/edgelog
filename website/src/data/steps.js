@@ -32,6 +32,6 @@ export const steps = [
     icon: 'Users',
     title: 'Learn with the community',
     description:
-      'Swap setups, retrospectives, and lessons with traders walking the same path. Upgrade when you\'re ready for broker linking and AI coaching.',
+      'Swap setups, retrospectives, and lessons with traders walking the same path. Upgrade when you\'re ready for AI coaching — broker linking coming soon.',
   },
 ];
