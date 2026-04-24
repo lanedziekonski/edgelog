@@ -3,7 +3,7 @@ export const NAV_LINKS = [
   { to: '/features', label: 'Features' },
   { to: '/how-it-works', label: 'How It Works' },
   { to: '/pricing', label: 'Pricing' },
-  { to: '/preview', label: 'Dashboard', highlight: true },
+  { to: '/preview', label: 'Demo Dashboard', highlight: true },
 ];
 
 export const SOCIAL = {
