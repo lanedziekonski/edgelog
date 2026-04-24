@@ -28,7 +28,7 @@ export default function Logo({ to = '/', className = '' }) {
         <span className="absolute inset-0 rounded-full bg-neon/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
       </span>
       <span className="font-display font-semibold text-lg tracking-tight">
-        <span className="text-neon glow-text">Trade</span>
+        <span className="text-neon glow-text">Trader</span>
         <span className="text-ink">Ascend</span>
       </span>
     </Link>
