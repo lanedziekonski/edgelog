@@ -1,4 +1,4 @@
-const API = import.meta.env.VITE_API_URL || 'https://edgelog.onrender.com/api';
+const API = 'https://edgelog.onrender.com/api';
 
 const SUCCESS_URL     = 'https://traderascend.com/profile?checkout=success';
 const CANCEL_URL      = 'https://traderascend.com/pricing?checkout=cancelled';
