@@ -58,6 +58,7 @@ Object.entries(STRIPE_VARS).forEach(([key, val]) => {
   console.log(`  ${key}: ${val ? 'SET' : 'MISSING'}`);
 });
 console.log(`  APP_URL: ${process.env.APP_URL || '(not set — will fall back to http://localhost:5173)'}`);
+console.log(`  RESEND_FROM_EMAIL: ${process.env.RESEND_FROM_EMAIL ? 'SET' : 'MISSING (will use default noreply@traderascend.com)'}`);
 console.log('──────────────────────────────────────────────────────');
 
 let stripe = null;
@@ -262,7 +263,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
     await resend.emails.send({
-      from: 'TraderAscend <onboarding@resend.dev>',
+      from: process.env.RESEND_FROM_EMAIL || 'TraderAscend <noreply@traderascend.com>',
       to: email,
       subject: 'Reset your TraderAscend password',
       html: `<div style="background:#0a0a0a;color:#fff;padding:40px;font-family:sans-serif;"><h2 style="color:#00ff41">Reset Your Password</h2><p>Click the link below to reset your password. It expires in 1 hour.</p><a href="${resetUrl}" style="background:#00ff41;color:#000;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block;margin-top:16px">Reset Password</a></div>`,
