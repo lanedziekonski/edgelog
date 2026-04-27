@@ -101,8 +101,8 @@ export default function AppShell() {
   );
 
   return (
-    <div style={{ position: 'relative', overflow: 'clip', minHeight: '100vh', background: '#080c08', color: '#fff' }}>
-      <AnimatedBackground variant="marketing" />
+    <div style={{ position: 'relative', overflow: 'clip', minHeight: '100vh', background: 'transparent', color: '#fff' }}>
+      <AnimatedBackground fixed variant="marketing" />
       <div className="flex min-h-screen" style={{ position: 'relative', zIndex: 1 }}>
       {/* Desktop sidebar */}
       <motion.aside

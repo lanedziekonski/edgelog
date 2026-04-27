@@ -129,7 +129,7 @@ export default function AnimatedBackground({ fixed = false, variant = 'marketing
   return (
     <div
       aria-hidden
-      className={`${positionClass} inset-0 overflow-hidden pointer-events-none z-0`}
+      className={`${positionClass} inset-0 overflow-hidden pointer-events-none z-0 hidden md:block`}
     >
       <div className="absolute inset-0 bg-black" />
 

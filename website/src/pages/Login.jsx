@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import AnimatedBackground from '../components/effects/AnimatedBackground';
 
 const G = '#00ff41';
 
@@ -45,8 +46,9 @@ export default function Login() {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-6"
-      style={{ background: '#080c08' }}
+      style={{ background: 'transparent' }}
     >
+      <AnimatedBackground fixed variant="marketing" />
       {/* Ambient glow */}
       <div
         aria-hidden

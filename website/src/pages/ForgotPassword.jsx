@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, CheckCircle } from 'lucide-react';
+import AnimatedBackground from '../components/effects/AnimatedBackground';
 
 const G = '#00ff41';
 const API = 'https://edgelog.onrender.com/api';
@@ -31,7 +32,8 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: '#080c08' }}>
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'transparent' }}>
+      <AnimatedBackground fixed variant="marketing" />
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0"
